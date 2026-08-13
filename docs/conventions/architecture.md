@@ -42,16 +42,16 @@ nothing about the layers above it.
 | `lib/services/**` | `lib/services/**`, `lib/schemas/**`, `lib/db`, leaf modules, node built-ins, SDKs | `app/**`, `components/**`, `hooks/**`, `react`, `next/**` |
 | `lib/schemas/**`  | `zod` only                                                                        | everything else                                           |
 
-`lib/schemas/` importing nothing but Zod is deliberate: schemas are shared between
-client and server, so anything they drag in gets bundled for the browser.
-
-`eslint.config.mjs` encodes this table. A violation fails `pnpm verify`.
-
 A **leaf module** is a file directly under `lib/` that imports nothing but `zod`
 and other leaf modules: `utils.ts`, `config.ts`, `week.ts`, `aisles.ts`. They
 carry constants and pure arithmetic, they reach neither the database nor the
 network, and both layers may import them. Anything that grows a dependency
 outside that set stops being a leaf and moves into `lib/services/`.
+
+`lib/schemas/` importing nothing but Zod is deliberate: schemas are shared between
+client and server, so anything they drag in gets bundled for the browser.
+
+`eslint.config.mjs` encodes this table. A violation fails `pnpm verify`.
 
 ### Three rules that are easy to get wrong
 
