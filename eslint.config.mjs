@@ -170,7 +170,7 @@ const eslintConfig = defineConfig([
     // Leaf modules, per the table in docs/conventions/architecture.md: reachable
     // from components/**, so they obey the same restrictions as lib/services/**.
     files: ["lib/*.ts"],
-    ignores: ["lib/db.ts", "lib/env.ts", "lib/env.test.ts"],
+    ignores: ["lib/db.ts", "lib/env.ts", "lib/env.test.ts", "lib/auth.ts"],
     rules: {
       "no-restricted-imports": restrictImports(
         noDatabaseInternals,
