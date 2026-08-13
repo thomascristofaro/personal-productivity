@@ -129,6 +129,26 @@ describe("aggregateShoppingList", () => {
     expect(byName.get("patate")).toBe(175)
   })
 
+  it("rounds a countable up even when rounding to nearest would round it down", () => {
+    const result = aggregate([
+      slot([{ name: "uova", quantity: 2, unit: null }], { recipeServings: 10 }),
+    ])
+
+    // 2 * (2 / 10) = 0.4: Math.round would give 0, Math.ceil must give 1.
+    expect(result[0].quantity).toBe(1)
+  })
+
+  it("rounds a named countable unit up even when rounding to nearest would round it down", () => {
+    const result = aggregate([
+      slot([{ name: "pomodori", quantity: 1, unit: "confezione" }], {
+        recipeServings: 10,
+      }),
+    ])
+
+    // 1 * (2 / 10) = 0.2: Math.round would give 0, Math.ceil must give 1.
+    expect(result[0].quantity).toBe(1)
+  })
+
   it("keeps manual items across a regeneration", () => {
     const detersivo = item({
       name: "detersivo",
@@ -163,6 +183,56 @@ describe("aggregateShoppingList", () => {
     )
 
     expect(result[0]).toMatchObject({
+      checked: true,
+      checkedById: "user-1",
+      checkedAt,
+    })
+  })
+
+  it("unchecks an item whose quantity has risen since the previous list", () => {
+    const result = aggregate(
+      [slot([{ name: "spaghetti", quantity: 200, unit: "g" }])],
+      [
+        item({
+          name: "spaghetti",
+          unit: "g",
+          quantity: 100,
+          aisle: "dispensa",
+          checked: true,
+          checkedById: "user-1",
+          checkedAt: new Date("2026-08-13T10:00:00Z"),
+        }),
+      ]
+    )
+
+    expect(result[0]).toMatchObject({
+      quantity: 200,
+      checked: false,
+      checkedById: null,
+      checkedAt: null,
+    })
+  })
+
+  it("keeps the checked state of an item whose quantity has fallen since the previous list", () => {
+    const checkedAt = new Date("2026-08-13T10:00:00Z")
+
+    const result = aggregate(
+      [slot([{ name: "spaghetti", quantity: 100, unit: "g" }])],
+      [
+        item({
+          name: "spaghetti",
+          unit: "g",
+          quantity: 200,
+          aisle: "dispensa",
+          checked: true,
+          checkedById: "user-1",
+          checkedAt,
+        }),
+      ]
+    )
+
+    expect(result[0]).toMatchObject({
+      quantity: 100,
       checked: true,
       checkedById: "user-1",
       checkedAt,

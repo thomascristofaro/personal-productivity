@@ -14,24 +14,22 @@ describe("aisleRank", () => {
     }
   })
 
-  it("puts an aisle it has never heard of last", () => {
-    expect(aisleRank("reparto immaginario")).toBeGreaterThanOrEqual(
-      aisleRank(AISLE_UNKNOWN)
-    )
+  it("ranks an aisle it has never heard of alongside the catch-all, not after it", () => {
+    expect(aisleRank("reparto immaginario")).toBe(aisleRank(AISLE_UNKNOWN))
   })
 
-  it("sorts a shuffled list back into walking order", () => {
+  it("sorts a shuffled list back into walking order, with an unrecognised aisle landing in the catch-all group rather than after it", () => {
     const shuffled = [
       "dispensa",
       "reparto immaginario",
       "ortofrutta",
       AISLE_UNKNOWN,
     ]
-    expect([...shuffled].sort((a, b) => aisleRank(a) - aisleRank(b))).toEqual([
-      "ortofrutta",
-      "dispensa",
-      AISLE_UNKNOWN,
-      "reparto immaginario",
-    ])
+    const sorted = [...shuffled].sort((a, b) => aisleRank(a) - aisleRank(b))
+
+    expect(sorted.slice(0, 2)).toEqual(["ortofrutta", "dispensa"])
+    expect(new Set(sorted.slice(2))).toEqual(
+      new Set(["reparto immaginario", AISLE_UNKNOWN])
+    )
   })
 })

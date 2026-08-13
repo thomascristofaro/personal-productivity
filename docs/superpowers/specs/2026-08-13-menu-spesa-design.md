@@ -398,7 +398,9 @@ Pure computation, no LLM:
 5. Round: countable units (`pz`, `uova`, `spicchi`) up to the next whole item; weights and volumes stay exact.
 6. Assign an aisle from `IngredientAisle`; unknown names go to an "altro" group and prompt a one-time assignment.
 7. Sort by aisle, in supermarket walking order, with "altro" last.
-8. Preserve `manual` items and existing `checked` state across regeneration.
+8. Preserve `manual` items across regeneration, and the `checked` state of every
+   item whose quantity did not rise. An item whose quantity grew comes back
+   unchecked: the tick meant "I have enough of this", and it no longer does.
 
 Rounding up the countables is deliberate: half an egg left over costs nothing,
 and an egg missing is discovered at the stove. Rounding a weight would instead

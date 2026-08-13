@@ -51,8 +51,12 @@ const isCountable = (unit: string | null) =>
 // Half an egg left over costs nothing; an egg missing is found at the stove.
 // Rounding a weight would instead misstate what the recipe asked for, so weights
 // only lose the floating-point noise that scaling introduces.
+// Ceiling is rounded to a fixed precision first, or scaling's floating-point
+// noise (21 * (9 / 7) === 27.000000000000004) ceils to one unit too many.
 const round = (quantity: number, unit: string | null) =>
-  isCountable(unit) ? Math.ceil(quantity) : Math.round(quantity * 100) / 100
+  isCountable(unit)
+    ? Math.ceil(Math.round(quantity * 1e6) / 1e6)
+    : Math.round(quantity * 100) / 100
 
 const scaleFactor = (slot: AggregatorSlot) =>
   (slot.servings ?? HOUSEHOLD_SERVINGS) /
@@ -125,16 +129,27 @@ export function aggregateShoppingList(input: {
 
   const generated = totalsFor(slots).map<ShoppingItem>((total) => {
     const prior = previous.get(itemKey(total.name, total.unit))
+    const quantity =
+      total.quantity === null ? null : round(total.quantity, total.unit)
+
+    // A tick means "I have enough of this". If the list now asks for more than
+    // it did before, that stops being true, so the tick — and who and when —
+    // does not survive. A lower or unquantified either side still means what
+    // it meant, so those keep the tick.
+    const quantityRose =
+      prior !== undefined &&
+      prior.quantity !== null &&
+      quantity !== null &&
+      quantity > prior.quantity
 
     return {
       name: total.name,
-      quantity:
-        total.quantity === null ? null : round(total.quantity, total.unit),
+      quantity,
       unit: total.unit,
       aisle: aisles[total.name] ?? AISLE_UNKNOWN,
-      checked: prior?.checked ?? false,
-      checkedById: prior?.checkedById ?? null,
-      checkedAt: prior?.checkedAt ?? null,
+      checked: quantityRose ? false : (prior?.checked ?? false),
+      checkedById: quantityRose ? null : (prior?.checkedById ?? null),
+      checkedAt: quantityRose ? null : (prior?.checkedAt ?? null),
       manual: false,
     }
   })

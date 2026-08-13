@@ -20,5 +20,7 @@ export const AISLE_ORDER = [
 
 export function aisleRank(aisle: string): number {
   const position = AISLE_ORDER.indexOf(aisle as (typeof AISLE_ORDER)[number])
-  return position === -1 ? AISLE_ORDER.length : position
+  // An aisle nobody has assigned yet ranks with the catch-all, not after it —
+  // a manual item or a typo must not sort off the end of the walking order.
+  return position === -1 ? AISLE_ORDER.indexOf(AISLE_UNKNOWN) : position
 }
