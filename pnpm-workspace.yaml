@@ -1,5 +1,9 @@
 packages: []
 
+# `pnpm exec` and `pnpm run` otherwise run an implicit install first, which is
+# unacceptable inside a git hook: committing would run postinstall scripts.
+verifyDepsBeforeRun: false
+
 allowBuilds:
   sharp: true
   unrs-resolver: true
