@@ -3,6 +3,12 @@
 const LEADING_PARTICLE =
   /^(?:(?:di|del|dello|della|dei|degli|delle|il|lo|la|i|gli|le)\s+|[dl]')/
 
+// Scraped and LLM-produced text spells the elision with a typographic
+// apostrophe (U+2019, U+2018, U+02BC), not the ASCII one. Folding it early,
+// everywhere in the string, keeps "d'aglio" and "d’aglio" one key instead
+// of two.
+const APOSTROPHE_FOLD = /[‘’ʼ]/g
+
 /**
  * Reduces an ingredient name to the form used as a key.
  *
@@ -19,6 +25,7 @@ export function normaliseIngredientName(raw: string): string {
   return raw
     .normalize("NFC")
     .toLowerCase()
+    .replace(APOSTROPHE_FOLD, "'")
     .replace(/\s+/g, " ")
     .trim()
     .replace(LEADING_PARTICLE, "")

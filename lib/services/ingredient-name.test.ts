@@ -11,6 +11,9 @@ describe("normaliseIngredientName", () => {
     ["d'aglio", "aglio"],
     ["le patate", "patate"],
     ["della panna", "panna"],
+    ["d’aglio", "aglio"],
+    ["Olio extravergine d’oliva", "olio extravergine d'oliva"],
+    ["l’aglio", "aglio"],
   ])("normalises %j to %j", (raw, expected) => {
     expect(normaliseIngredientName(raw)).toBe(expected)
   })
