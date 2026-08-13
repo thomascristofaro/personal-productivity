@@ -680,9 +680,11 @@ annoys someone. One module owns this; see the note in §5 on why changing it lat
 requires a migration.
 
 **3. Week boundary.** Monday, confirmed. Already binding in
-`docs/conventions/data.md`: `Menu.weekStart` is Monday at 00:00 local and
-`MenuSlot.day` runs `0 = Monday … 6 = Sunday`, which is not `Date.getDay()`. One
-helper module owns the conversion.
+`docs/conventions/data.md`: `Menu.weekStart` is a Postgres `date`
+(`DateTime @db.Date`) identifying a week, not a timestamp marking an instant.
+Which week a moment falls in is decided in `APP_TIMEZONE` from `lib/config.ts`,
+never the server's timezone. `MenuSlot.day` runs `0 = Monday … 6 = Sunday`,
+which is not `Date.getDay()`. All of it lives in `lib/week.ts`.
 
 **4. Servings default.** Per-slot override over a household default. `Recipe.servings`
 keeps the source's yield, `HOUSEHOLD_SERVINGS` is a constant of 2, and

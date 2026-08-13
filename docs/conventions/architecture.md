@@ -22,6 +22,9 @@ lib/
   env.ts                  validated environment variables
   auth.ts                 session handling
   utils.ts                cn() and similar leaf helpers
+  config.ts               tunable constants — timezone, household servings, cooldown window
+  week.ts                 week boundary and day-index conversions
+  aisles.ts               aisle order and ranking for the shopping list
 prisma/
   schema.prisma
 test/stubs/               module stubs used by Vitest
@@ -42,10 +45,13 @@ nothing about the layers above it.
 | `lib/services/**` | `lib/services/**`, `lib/schemas/**`, `lib/db`, leaf modules, node built-ins, SDKs | `app/**`, `components/**`, `hooks/**`, `react`, `next/**` |
 | `lib/schemas/**`  | `zod` only                                                                        | everything else                                           |
 
-A **leaf module** is a file directly under `lib/` that imports nothing but `zod`
-and other leaf modules: `utils.ts`, `config.ts`, `week.ts`, `aisles.ts`. They
-carry constants and pure arithmetic, they reach neither the database nor the
-network, and both layers may import them. Anything that grows a dependency
+A **leaf module** is a file directly under `lib/` that carries constants and
+pure computation: it reaches neither the database nor the network nor the
+framework, imports no upper layer and no service, and may depend on a small
+pure library — `utils.ts`, `config.ts`, `week.ts`, `aisles.ts`. `db.ts` and
+`env.ts` sit directly under `lib/` too, but the first reaches the database and
+the second reads `process.env`, so neither is a leaf module, and the table
+above does not let components import either. Anything that grows a dependency
 outside that set stops being a leaf and moves into `lib/services/`.
 
 `lib/schemas/` importing nothing but Zod is deliberate: schemas are shared between
