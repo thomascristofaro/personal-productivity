@@ -68,6 +68,18 @@ query, in well under a second. Two consequences:
 - Wrap multi-write operations in a transaction. Regenerating a shopping list
   deletes and recreates rows; a half-applied regeneration is a lying list.
 
+### Running services from a script
+
+`lib/db.ts` imports `server-only`, whose default entry point throws. A script
+that imports the domain layer must therefore run with the `react-server`
+condition, which resolves that guard to an empty module:
+
+    node --conditions=react-server --import tsx <script>.ts
+
+`prisma db seed` is configured this way in `prisma.config.ts`. Vitest solves the
+same problem differently, aliasing `server-only` to `test/stubs/server-only.ts`.
+Neither weakens the guard: it still fires in a browser bundle, which is its job.
+
 ### Migrations
 
 - Every schema change goes through `pnpm db:migrate`. Migration files are
