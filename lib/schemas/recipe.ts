@@ -2,6 +2,7 @@ import { z } from "zod"
 
 export const RECIPE_TITLE_MAX = 200
 export const RECIPE_NOTES_MAX = 2000
+export const RECIPE_SOURCE_URL_MAX = 2000
 
 // A zero would reach the shopping-list aggregator as a divisor and produce
 // Infinity; a fraction cannot be a number of people.
@@ -11,9 +12,12 @@ const servings = z.int().positive().max(50).optional()
 const sourceUrl = z
   .union([
     z.literal(""),
-    z.url().refine((value) => /^https?:\/\//.test(value), {
-      message: "L'indirizzo deve iniziare con http:// o https://",
-    }),
+    z
+      .url()
+      .max(RECIPE_SOURCE_URL_MAX)
+      .refine((value) => /^https?:\/\//i.test(value), {
+        message: "L'indirizzo deve iniziare con http:// o https://",
+      }),
   ])
   .default("")
 

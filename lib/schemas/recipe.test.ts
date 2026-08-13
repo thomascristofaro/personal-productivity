@@ -70,6 +70,22 @@ describe("RecipeInputSchema", () => {
     )
   })
 
+  it("rejects a source URL longer than the practical limit for a URL", () => {
+    const url = "https://example.com/" + "a".repeat(2000)
+    expect(parse({ sourceUrl: url }).success).toBe(false)
+  })
+
+  it("accepts a source URL comfortably under the limit", () => {
+    const url = "https://example.com/" + "a".repeat(100)
+    expect(parse({ sourceUrl: url }).success).toBe(true)
+  })
+
+  it("accepts a source URL with an uppercase scheme", () => {
+    expect(parse({ sourceUrl: "HTTPS://example.com/ricetta" }).success).toBe(
+      true
+    )
+  })
+
   it("rejects a title longer than the column is meant to hold", () => {
     expect(parse({ title: "a".repeat(201) }).success).toBe(false)
   })
