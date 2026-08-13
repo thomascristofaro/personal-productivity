@@ -1,0 +1,12 @@
+// Prisma schema. Connection URLs live in ../prisma.config.ts (Prisma 7).
+// The data model is defined by docs/superpowers/specs/2026-08-13-menu-spesa-design.md
+// and is added by the implementation plan.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}

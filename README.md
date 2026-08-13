@@ -1,21 +1,32 @@
-# Next.js template
+# personal-productivity
 
-This is a Next.js template with shadcn/ui.
+A personal app for two people. The first module plans the weekly menu and derives
+the shopping list from it; personal finance and a filtered news reader are planned
+as later modules sharing the same shell, database and deployment.
 
-## Adding components
+Next.js on Vercel, Postgres on Neon, shadcn/ui, Prisma, Vitest.
 
-To add components to your app, run the following command:
+## Getting started
 
 ```bash
-npx shadcn@latest add button
+pnpm install
+cp .env.example .env      # fill in the values
+pnpm db:migrate
+pnpm dev
 ```
 
-This will place the ui components in the `components` directory.
+## Commands
 
-## Using components
+| Command           | Purpose                                       |
+| ----------------- | --------------------------------------------- |
+| `pnpm dev`        | development server                            |
+| `pnpm verify`     | typecheck + lint + tests — run before pushing |
+| `pnpm test`       | tests only                                    |
+| `pnpm db:migrate` | create and apply a migration                  |
+| `pnpm db:studio`  | browse the database                           |
 
-To use the components in your app, import them as follows:
+## Documentation
 
-```tsx
-import { Button } from "@/components/ui/button";
-```
+- [`CLAUDE.md`](CLAUDE.md) — the binding development rules
+- [`docs/conventions/`](docs/conventions/) — architecture, UI, data and testing conventions
+- [`docs/superpowers/specs/`](docs/superpowers/specs/) — design documents

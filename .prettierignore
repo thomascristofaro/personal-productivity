@@ -5,3 +5,9 @@ node_modules/
 coverage/
 pnpm-lock.yaml
 .pnpm-store/
+
+# Vendor skills — keep byte-identical to upstream so `skills update` diffs
+# show real changes, not our formatting.
+.agents/
+skills-lock.json
+lib/generated/

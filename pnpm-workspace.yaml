@@ -4,3 +4,9 @@ allowBuilds:
   sharp: true
   unrs-resolver: true
   msw: false
+  "@prisma/engines": true
+  prisma: true
+  simple-git-hooks: true
+
+minimumReleaseAgeExclude:
+  - '@rolldown/binding-linux-s390x-gnu@1.2.4'
