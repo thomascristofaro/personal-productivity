@@ -111,11 +111,16 @@ someone typed is worse than no regeneration.
 
 - Store `DateTime` in UTC; Prisma and Postgres handle that. Format for display at
   the edge, in the component.
-- The week starts on **Monday**. `Menu.weekStart` is Monday at 00:00 local time.
-  Do not scatter alternative week-boundary logic through the codebase — one
-  helper, used everywhere.
+- The week starts on **Monday**. `Menu.weekStart` is a Postgres `date`
+  (`DateTime @db.Date`), not a timestamp: it identifies a week, it does not mark
+  an instant. Stored as a timestamp it would mean a different moment depending on
+  the server's timezone, and `@unique` would then admit two rows for one week.
+- **Which** week a moment falls in does depend on a timezone, and that one is
+  `APP_TIMEZONE` in `lib/config.ts`, never the server's. Vercel runs in UTC; at
+  01:00 on a Roman Monday it is still Sunday there.
 - `MenuSlot.day` is `0 = Monday … 6 = Sunday`, which is not JavaScript's
   `getDay()`. Convert in one place.
+- All of the above lives in `lib/week.ts` and nowhere else.
 
 ## Environment variables
 

@@ -26,7 +26,7 @@ Expected set for the first module: `button`, `input`, `textarea`, `card`,
 
 **This installation is built on Base UI, not Radix.** Almost every shadcn example
 online is written against Radix, so prop names and composition patterns do not
-always transfer. Read `.agents/skills/shadcn/references/base-vs-radix.md` rather
+always transfer. Read `.agents/skills/shadcn/rules/base-vs-radix.md` rather
 than adapting a blog post by guesswork.
 
 ## Server and client

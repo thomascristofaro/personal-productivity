@@ -208,7 +208,7 @@ Vendor documentation on disk, current where training data is not:
 - `node_modules/next/dist/docs/` — Next.js breaking changes
 - `.agents/skills/prisma-*/` — Prisma 7 generates into `lib/generated/prisma`, needs
   an explicit driver adapter, keeps URLs in `prisma.config.ts`
-- `.agents/skills/shadcn/` — including `references/base-vs-radix.md`; this project
+- `.agents/skills/shadcn/` — including `rules/base-vs-radix.md`; this project
   is on Base UI, so most shadcn examples online do not transfer verbatim
 - `.agents/skills/vercel-*`, `.agents/skills/web-design-guidelines/`
 
