@@ -182,8 +182,9 @@ is to be introduced, and no base component is to be hand-written.
   library.
 
 Expected component set for v1: `button`, `input`, `textarea`, `card`, `dialog`,
-`drawer`, `sheet`, `checkbox`, `select`, `command`, `form`, `label`, `tabs`,
-`badge`, `separator`, `skeleton`, `sonner`, `alert-dialog`.
+`drawer`, `sheet`, `checkbox`, `select`, `command`, `field`, `tabs`, `badge`,
+`separator`, `skeleton`, `sonner`, `alert-dialog`. Forms are composed from
+`field`; this installation's style has no `form` component.
 
 Mobile notes: prefer `drawer` (bottom sheet) over `dialog` on small viewports;
 verify touch targets meet ~44px; the app is phone-first, desktop-tolerable.

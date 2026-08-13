@@ -21,8 +21,13 @@ Binding (design document §4.3).
   component.
 
 Expected set for the first module: `button`, `input`, `textarea`, `card`,
-`dialog`, `drawer`, `sheet`, `checkbox`, `select`, `command`, `form`, `label`,
+`dialog`, `drawer`, `sheet`, `checkbox`, `select`, `command`, `field`,
 `tabs`, `badge`, `separator`, `skeleton`, `sonner`, `alert-dialog`.
+
+Forms are built from `field` — `FieldGroup`, `Field`, `FieldLabel`,
+`FieldDescription` — not from a `form` component and not from a `div` with
+`space-y-*`. An earlier revision of this list named `form` and `label`; that
+predates this installation's style, which has no `form` component.
 
 **This installation is built on Base UI, not Radix.** Almost every shadcn example
 online is written against Radix, so prop names and composition patterns do not
@@ -47,8 +52,14 @@ interactive state.
 - **Phone first, desktop tolerable.** Design at 390px wide and let it grow. On
   small viewports prefer `drawer` (bottom sheet) over `dialog`: thumbs reach the
   bottom of the screen, not a centred modal's corner.
-- **Touch targets at least 44px**, including shopping-list checkboxes, which are
-  tapped one-handed while holding a basket (design document §4.3).
+- **Touch targets: the shadcn scale, unmodified.** The design document asked for
+  44px, reasoning about shopping-list checkboxes tapped one-handed while holding
+  a basket (§4.3). The `base-mira` style generates a 28px scale instead, and we
+  take it as it comes: staying stock keeps every component upgradeable and keeps
+  the diff against the registry empty. This is a deliberate trade-off, made
+  before real use rather than after it. Revisit it the first time someone
+  mis-taps something on a phone — the fix is then to edit the size variants in
+  `components/ui/` in place, which is what owning the source is for.
 - **Every screen that fetches has three designed states**: loading, empty, error.
   The menu and the shopping list start empty every week, so empty is a normal
   state, not an edge case.
