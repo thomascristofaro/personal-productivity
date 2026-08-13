@@ -1,7 +1,7 @@
 // Word-final particles must be followed by whitespace, or "lardo" normalises to
 // "rdo". The elided forms carry their own boundary in the apostrophe.
 const LEADING_PARTICLE =
-  /^(?:(?:di|del|dello|della|dei|degli|delle|il|lo|la|i|gli|le)\s+|[dl]')/
+  /^(?:(?:di|del|dello|della|dei|degli|delle|il|lo|la|i|gli|le)\s+|[dl]'|dell'|degl')/
 
 // Scraped and LLM-produced text spells the elision with a typographic
 // apostrophe (U+2019, U+2018, U+02BC), not the ASCII one. Folding it early,

@@ -14,6 +14,8 @@ describe("normaliseIngredientName", () => {
     ["d’aglio", "aglio"],
     ["Olio extravergine d’oliva", "olio extravergine d'oliva"],
     ["l’aglio", "aglio"],
+    ["dell'olio", "olio"],
+    ["dell’aceto", "aceto"],
   ])("normalises %j to %j", (raw, expected) => {
     expect(normaliseIngredientName(raw)).toBe(expected)
   })
@@ -24,6 +26,7 @@ describe("normaliseIngredientName", () => {
     ["limone", "limone"],
     ["dattero", "dattero"],
     ["ilex", "ilex"],
+    ["delfino", "delfino"],
   ])(
     "leaves %j alone, because a particle needs a word after it",
     (raw, expected) => {

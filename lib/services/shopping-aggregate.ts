@@ -146,7 +146,9 @@ export function aggregateShoppingList(input: {
       name: total.name,
       quantity,
       unit: total.unit,
-      aisle: aisles[total.name] ?? AISLE_UNKNOWN,
+      aisle: Object.hasOwn(aisles, total.name)
+        ? aisles[total.name]
+        : AISLE_UNKNOWN,
       checked: quantityRose ? false : (prior?.checked ?? false),
       checkedById: quantityRose ? null : (prior?.checkedById ?? null),
       checkedAt: quantityRose ? null : (prior?.checkedAt ?? null),
