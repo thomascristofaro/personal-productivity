@@ -6,6 +6,11 @@
 **Revision:** 2026-08-13 — hosting moved from self-hosted Docker + Cloudflare Tunnel
 to Vercel Hobby + Neon free. Sections 3, 4.1, 9.1, 9.3, 10 and 11 revised. The
 application design (4.2 onward) is unchanged.
+**Revision:** 2026-08-13 — the open questions of §12 are resolved during planning.
+Three carry consequences elsewhere in this document: recipe instructions become
+plain text (§5, §9.4), a menu slot may override its servings (§5, §6.3), and
+credential storage leaves the data model pending an authentication decision
+(§5, §6.4). Section 6.3 also records the sync mechanism.
 
 ---
 
@@ -191,12 +196,12 @@ Prisma sketch. Field-level detail will be finalised during implementation; the
 shape and the relationships are the design commitment.
 
 ```prisma
+// Identity only. Credential storage is deliberately absent — see §6.4.
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  name         String
-  passwordHash String
-  createdAt    DateTime @default(now())
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  createdAt DateTime @default(now())
 }
 
 model Recipe {
@@ -205,7 +210,7 @@ model Recipe {
   sourceUrl     String?
   servings      Int?
   totalMinutes  Int?
-  instructions  String?            // markdown
+  instructions  String?            // plain text, newlines significant
   notes         String?
   tags          String[]           // "pesce", "veloce", "vegetariano"
   ingredients   RecipeIngredient[]
@@ -250,6 +255,7 @@ model MenuSlot {
   recipeId String?
   recipe   Recipe?  @relation(fields: [recipeId], references: [id], onDelete: SetNull)
   freeText String?  // "fuori a cena", "avanzi" — excluded from the shopping list
+  servings Int?     // null = the household default; set only for an exception
 
   @@unique([menuId, day, meal])
 }
@@ -274,6 +280,7 @@ model ShoppingListItem {
   aisle       String
   checked     Boolean  @default(false)
   checkedById String?
+  checkedBy   User?    @relation(fields: [checkedById], references: [id], onDelete: SetNull)
   checkedAt   DateTime?
   manual      Boolean  @default(false)  // added by hand, survives regeneration
 }
@@ -292,6 +299,19 @@ nothing is lost.
 **`IngredientAisle` is learned, not configured.** The first time an ingredient
 appears, its aisle is guessed (dictionary first, LLM as fallback) and confirmed
 by the user; from then on it is free and instant.
+
+**The normalised name is a primary key, so the normaliser is a contract.**
+`IngredientAisle.name` and `RecipeIngredient.name` both hold the output of one
+function, which lives in one module. Changing that function silently orphans
+every aisle ever learned, so a change to it requires a migration that remaps the
+existing keys. Treat it as schema, not as a helper.
+
+**`MenuSlot.servings` is an exception, not a field to fill in.** `null` means the
+household default and is the normal case, so the menu grid carries no numeric
+input. A number appears only where someone deliberately cooked for a different
+count. The scaling factor applied to a slot's ingredients is
+`(slot.servings ?? HOUSEHOLD_SERVINGS) / (recipe.servings ?? HOUSEHOLD_SERVINGS)`,
+and the recipe row is never copied or modified to express it.
 
 **`ShoppingListItem.manual`** exists so that regenerating a list after editing
 the menu does not delete items added by hand ("sacchetti", "detersivo").
@@ -372,30 +392,61 @@ The grid is the source of truth; the LLM is a convenience over it.
 Pure computation, no LLM:
 
 1. Collect every `MenuSlot` with a `recipeId` (free-text and empty slots ignored).
-2. Expand to `RecipeIngredient` rows, scaled if servings differ from the recipe default.
+2. Expand to `RecipeIngredient` rows, scaled by the slot's factor (see §5).
 3. Aggregate by `(name, unit)`, summing quantities. Incompatible units stay as separate lines rather than being coerced.
 4. Ingredients with no quantity ("sale", "olio q.b.") collapse to a single unquantified line.
-5. Assign an aisle from `IngredientAisle`; unknown names go to an "altro" group and prompt a one-time assignment.
-6. Preserve `manual` items and existing `checked` state across regeneration.
+5. Round: countable units (`pz`, `uova`, `spicchi`) up to the next whole item; weights and volumes stay exact.
+6. Assign an aisle from `IngredientAisle`; unknown names go to an "altro" group and prompt a one-time assignment.
+7. Sort by aisle, in supermarket walking order, with "altro" last.
+8. Preserve `manual` items and existing `checked` state across regeneration.
+
+Rounding up the countables is deliberate: half an egg left over costs nothing,
+and an egg missing is discovered at the stove. Rounding a weight would instead
+misstate what the recipe asked for, so weights are left alone.
+
+The aisle order is a named constant, not the alphabetical order of the strings.
+A list sorted alphabetically sends the shopper back and forth across the shop.
 
 **Sync between the two users** is required (one person shops, the other adds an
-item from home). v1 uses polling: refetch on window focus, plus a short interval
-while the list screen is open. Item state is last-write-wins per item, which is
-adequate for two people and a checkbox. Server-sent events are a v2 upgrade if
-polling proves insufficient.
+item from home). v1 keeps the list a server component: ticking an item is a
+server action with an optimistic update, and freshness comes from
+`router.refresh()` on window focus plus a short interval while the screen is
+open. No JSON endpoint and no client-side fetching library is introduced. Item
+state is last-write-wins per item, which is adequate for two people and a
+checkbox. Server-sent events are a v2 upgrade if this proves insufficient.
+
+This diverges from the `client-swr-dedup` skill, which recommends SWR. SWR solves
+deduplication between several consumers of one key; with a single screen there is
+nothing to deduplicate, and adopting it would mean adding a route handler to
+authenticate and validate for no gain.
 
 ### 6.4 Authentication
 
 Two fixed users, seeded — no registration flow, no password reset UI (reset is a
 CLI/manual operation).
 
-- Password hashing with argon2id, via `@node-rs/argon2`. The conventional `argon2`
-  and `bcrypt` packages are native addons and are a recurring source of failure on
-  serverless runtimes; `@node-rs/argon2` ships prebuilt binaries that work there.
+**The mechanism is not yet chosen.** A hand-rolled signed cookie and an
+off-the-shelf library (`better-auth` is the candidate under evaluation) are both
+open; the decision is deferred to its own investigation and does not block the
+data model. What the rest of the design depends on is fixed regardless:
+
+- The `User` model above carries identity only. Whatever authentication lands
+  owns credential and session storage and brings its own tables in its own
+  migration. Nothing else in the schema changes.
+- The rest of the application sees one function, `requireSession()` in
+  `lib/auth.ts`, and never learns what implements it.
+
+Requirements the chosen mechanism must satisfy:
+
+- Password hashing with argon2id. If hand-rolled, use `@node-rs/argon2`: the
+  conventional `argon2` and `bcrypt` packages are native addons and a recurring
+  source of failure on serverless runtimes, and `@node-rs/argon2` ships prebuilt
+  binaries that work there.
 - Session cookie: `httpOnly`, `Secure`, `SameSite=Lax`, long expiry — the partner
   must not be asked to log in repeatedly. Re-login friction directly threatens
   success criterion 3.
-- Rate limiting on the login endpoint (see §9.2).
+- Rate limiting on the login endpoint (see §9.2). Serverless functions share no
+  memory, so a counter must be persisted — in Postgres, or by the library.
 - All routes except `/login` and the auth endpoint require a session.
 - **Every server action authenticates and authorises inside itself.** A server
   action is a public endpoint: it can be invoked directly, so a session check in
@@ -504,7 +555,11 @@ Mandatory controls:
 
 - Zod validation at every route handler boundary; never trust request bodies.
 - Prisma parameterises queries; no raw SQL with interpolation.
-- Recipe instructions are user/LLM-sourced markdown — sanitise before rendering.
+- Recipe instructions are stored and rendered as plain text, with newlines
+  preserved by CSS. An earlier revision stored them as markdown and required
+  sanitisation before rendering; dropping the formatting removes the injection
+  surface instead of defending it, and a list of cooking steps does not need
+  bold. Reversible without a migration if it ever proves too plain.
 
 ---
 
@@ -605,17 +660,40 @@ browser):**
 
 ---
 
-## 12. Open questions
+## 12. Resolved questions
 
-Resolve during implementation; none block starting.
+The four questions this section listed were resolved during planning, on
+2026-08-13. They are recorded closed so they are not reopened by accident.
 
-1. **App name and hostname.**: `personal-productivity.cristofaro.dev`
-2. **Ingredient name normalisation depth.** Are "pomodori pelati" and "pelati"
-   the same shopping-list line? A synonym table may be needed; start without one
-   and add it when the first duplicate annoys someone.
-3. **Week boundary.** Monday-start assumed. Confirm.
-4. **Servings default.** Fixed at 2, or per-recipe with scaling at menu time?
-   The model supports scaling; the UI decision is open.
+**1. App name and hostname.** The host is `personal-productivity.cristofaro.dev`.
+The PWA is named for the shell, not for this module — `Personal Productivity`,
+short name `Productivity` — because finance and news will install to the same
+icon. "Menù e spesa" is the title of this section of the app only.
+
+**2. Ingredient name normalisation depth.** Minimal and deterministic: lowercase,
+trim, collapse internal whitespace, strip a leading article or preposition (`di`,
+`d'`, `del`, `della`, `lo`, `gli`). No stemming, no singularisation, no synonym
+table. "Pomodori pelati" and "pelati" remain two lines until that actually
+annoys someone. One module owns this; see the note in §5 on why changing it later
+requires a migration.
+
+**3. Week boundary.** Monday, confirmed. Already binding in
+`docs/conventions/data.md`: `Menu.weekStart` is Monday at 00:00 local and
+`MenuSlot.day` runs `0 = Monday … 6 = Sunday`, which is not `Date.getDay()`. One
+helper module owns the conversion.
+
+**4. Servings default.** Per-slot override over a household default. `Recipe.servings`
+keeps the source's yield, `HOUSEHOLD_SERVINGS` is a constant of 2, and
+`MenuSlot.servings` is null except where someone cooked for a different number.
+The number is edited in the slot detail panel, never in the grid. See §5 for the
+scaling factor and §6.3 step 5 for the rounding rule.
+
+### Still open, deliberately
+
+**Authentication mechanism** (§6.4). Hand-rolled signed cookie versus
+`better-auth`, pending its own investigation. It does not block the data model:
+`User` carries identity only, and the rest of the application depends on
+`requireSession()` rather than on what implements it.
 
 ---
 
