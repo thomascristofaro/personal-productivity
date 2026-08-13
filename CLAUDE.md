@@ -32,6 +32,26 @@ Where they disagree, the project document wins — and say so out loud rather th
 silently following one or the other. If the skill is right, change the project
 document; do not work around it.
 
+### Craft or platform: the portability test
+
+A `vendor-` prefix names the author, not the scope. Vercel writes React guidance
+because it employs the people who build React and Next.js; that guidance is craft
+and travels anywhere. But a vendor also has a legitimate interest in patterns that
+work best on its own platform — `client-swr-dedup` recommends SWR, which is a
+Vercel library. Not bad faith, just perspective.
+
+Before adopting a rule, ask:
+
+> **Would this still make sense if this app moved to a plain VPS tomorrow?**
+
+- "Don't define components inside other components" — yes, always. Craft, adopt it.
+- "Use `after()` for non-blocking work" — depends on the runtime. Weigh it.
+- "Store files in Vercel Blob" — no. Platform, and outside our decisions.
+
+The same test applies to the database: we use Postgres through Prisma with the
+generic `pg` adapter, and no Neon-specific feature, so moving provider is two
+environment variables. Keep it that way.
+
 ### When to consult which skill
 
 | Situation                                                     | Skill                                               |
