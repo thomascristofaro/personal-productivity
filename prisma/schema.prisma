@@ -1,6 +1,5 @@
 // Prisma schema. Connection URLs live in ../prisma.config.ts (Prisma 7).
-// The data model is defined by docs/superpowers/specs/2026-08-13-menu-spesa-design.md
-// and is added by the implementation plan.
+// The data model is defined by docs/superpowers/specs/2026-08-13-menu-spesa-design.md.
 
 generator client {
   provider = "prisma-client"
@@ -9,4 +8,104 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+// Identity only. Credential storage belongs to whatever authentication lands,
+// and arrives in its own migration. See design document section 6.4.
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  createdAt DateTime @default(now())
+
+  checkedItems ShoppingListItem[]
+}
+
+model Recipe {
+  id           String             @id @default(cuid())
+  title        String
+  sourceUrl    String?
+  servings     Int?
+  totalMinutes Int?
+  instructions String?
+  notes        String?
+  tags         String[]
+  ingredients  RecipeIngredient[]
+  slots        MenuSlot[]
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+}
+
+model RecipeIngredient {
+  id       String  @id @default(cuid())
+  recipeId String
+  recipe   Recipe  @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  raw      String
+  name     String
+  quantity Float?
+  unit     String?
+  position Int
+
+  // The aggregation loads every ingredient of every selected recipe at once.
+  @@index([recipeId])
+}
+
+// Learned mapping from a normalised ingredient name to a supermarket aisle.
+// The key is the output of normaliseIngredientName; changing that function
+// orphans every row here and needs a migration that remaps them.
+model IngredientAisle {
+  name  String @id
+  aisle String
+}
+
+model Menu {
+  id        String        @id @default(cuid())
+  weekStart DateTime      @unique @db.Date
+  slots     MenuSlot[]
+  list      ShoppingList?
+  createdAt DateTime      @default(now())
+}
+
+model MenuSlot {
+  id       String   @id @default(cuid())
+  menuId   String
+  menu     Menu     @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  day      Int
+  meal     MealType
+  recipeId String?
+  recipe   Recipe?  @relation(fields: [recipeId], references: [id], onDelete: SetNull)
+  freeText String?
+  servings Int?
+
+  @@unique([menuId, day, meal])
+}
+
+enum MealType {
+  LUNCH
+  DINNER
+}
+
+model ShoppingList {
+  id        String             @id @default(cuid())
+  menuId    String             @unique
+  menu      Menu               @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  items     ShoppingListItem[]
+  createdAt DateTime           @default(now())
+}
+
+model ShoppingListItem {
+  id          String       @id @default(cuid())
+  listId      String
+  list        ShoppingList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  name        String
+  quantity    Float?
+  unit        String?
+  aisle       String
+  checked     Boolean      @default(false)
+  checkedById String?
+  checkedBy   User?        @relation(fields: [checkedById], references: [id], onDelete: SetNull)
+  checkedAt   DateTime?
+  manual      Boolean      @default(false)
+
+  @@index([listId])
 }
