@@ -187,7 +187,10 @@ Expected component set for v1: `button`, `input`, `textarea`, `card`, `dialog`,
 `field`; this installation's style has no `form` component.
 
 Mobile notes: prefer `drawer` (bottom sheet) over `dialog` on small viewports;
-verify touch targets meet ~44px; the app is phone-first, desktop-tolerable.
+the app is phone-first, desktop-tolerable. Control sizing is whatever the
+shadcn registry generates and is not adjusted — this section originally asked
+for ~44px targets, and `docs/conventions/ui.md` records why that was not
+adopted and what would justify revisiting it.
 
 ---
 
