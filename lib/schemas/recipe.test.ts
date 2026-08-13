@@ -1,0 +1,76 @@
+import { describe, expect, it } from "vitest"
+
+import { RecipeInputSchema } from "@/lib/schemas/recipe"
+
+const valid = {
+  title: "Spaghetti al pomodoro",
+  sourceUrl: "",
+  servings: 4,
+  totalMinutes: 25,
+  instructions: "Bollire l'acqua.\nCuocere la pasta.",
+  notes: "",
+  tags: "veloce, vegetariano",
+  ingredients: "320 g di spaghetti\n400 g di pomodori pelati",
+}
+
+const parse = (overrides: Record<string, unknown>) =>
+  RecipeInputSchema.safeParse({ ...valid, ...overrides })
+
+describe("RecipeInputSchema", () => {
+  it("accepts a complete recipe", () => {
+    expect(parse({}).success).toBe(true)
+  })
+
+  it("rejects an empty title, because a recipe with no name cannot be found again", () => {
+    expect(parse({ title: "   " }).success).toBe(false)
+  })
+
+  it("trims the title rather than storing the user's stray spaces", () => {
+    const result = parse({ title: "  Carbonara  " })
+    expect(result.success && result.data.title).toBe("Carbonara")
+  })
+
+  it("rejects zero servings, because the shopping list divides by it", () => {
+    expect(parse({ servings: 0 }).success).toBe(false)
+  })
+
+  it("rejects negative servings", () => {
+    expect(parse({ servings: -2 }).success).toBe(false)
+  })
+
+  it("rejects fractional servings", () => {
+    expect(parse({ servings: 1.5 }).success).toBe(false)
+  })
+
+  it("allows servings to be absent, because not every source states a yield", () => {
+    const result = parse({ servings: undefined })
+    expect(result.success && result.data.servings).toBeUndefined()
+  })
+
+  it("rejects zero total minutes but allows it to be absent", () => {
+    expect(parse({ totalMinutes: 0 }).success).toBe(false)
+    expect(parse({ totalMinutes: undefined }).success).toBe(true)
+  })
+
+  it("requires at least one ingredient line", () => {
+    expect(parse({ ingredients: "   \n  " }).success).toBe(false)
+  })
+
+  it("accepts an empty source URL, because a dictated recipe has none", () => {
+    expect(parse({ sourceUrl: "" }).success).toBe(true)
+  })
+
+  it("rejects a source URL that is not http or https", () => {
+    expect(parse({ sourceUrl: "javascript:alert(1)" }).success).toBe(false)
+  })
+
+  it("accepts an https source URL", () => {
+    expect(parse({ sourceUrl: "https://example.com/ricetta" }).success).toBe(
+      true
+    )
+  })
+
+  it("rejects a title longer than the column is meant to hold", () => {
+    expect(parse({ title: "a".repeat(201) }).success).toBe(false)
+  })
+})
