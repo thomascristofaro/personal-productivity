@@ -106,9 +106,9 @@ interactive state.
   before real use rather than after it. Revisit it the first time someone
   mis-taps something on a phone — the fix is then to edit the size variants in
   `components/ui/` in place, which is what owning the source is for.
-- **Every screen that fetches has three designed states**: loading, empty, error.
-  The menu and the shopping list start empty every week, so empty is a normal
-  state, not an edge case.
+- **Every screen that fetches has four designed states**, enumerated under "Page
+  primitives" above. The menu and the shopping list start empty every week, so
+  empty is a normal state, not an edge case.
 - **User-visible text is Italian**, written the way the two users speak. "Fuori a
   cena", not "Pasto consumato fuori sede". Error messages say what happened and
   what to do next.
