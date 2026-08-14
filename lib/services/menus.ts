@@ -65,6 +65,20 @@ export function buildWeekSlots(
 }
 
 /**
+ * Says whether a shopping list has been overtaken by its menu.
+ *
+ * Exported for its own test. Equal instants are not stale: generating the list
+ * straight after editing the menu is the normal case, not a warning.
+ *
+ * @param slotsUpdatedAt When a slot of the week last changed.
+ * @param generatedAt When the list was last built.
+ * @returns True when the menu moved after the list was built.
+ */
+export function isListStale(slotsUpdatedAt: Date, generatedAt: Date): boolean {
+  return slotsUpdatedAt.getTime() > generatedAt.getTime()
+}
+
+/**
  * Reads one week as fourteen slots.
  *
  * A week nobody has touched has no `Menu` row at all; it comes back as fourteen
@@ -120,7 +134,12 @@ export async function setSlot(
   const menu = await db.menu.upsert({
     where: { weekStart },
     create: { weekStart },
-    update: {},
+    // The week itself has not changed, but its slots are about to, and the
+    // shopping list needs to know. Touched before the slot write on purpose: a
+    // failed write then leaves the list claiming to be stale when it is not,
+    // which costs one needless regeneration. The opposite error sends someone
+    // to the shop with a list that quietly no longer matches.
+    update: { slotsUpdatedAt: new Date() },
     select: { id: true },
   })
 
@@ -161,5 +180,13 @@ export async function clearSlot(
 
   if (menu === null) return
 
-  await db.menuSlot.deleteMany({ where: { menuId: menu.id, day, meal } })
+  // One transaction: a delete that landed without its touch would leave the
+  // shopping list claiming to be current while an item had just left the menu.
+  await db.$transaction([
+    db.menuSlot.deleteMany({ where: { menuId: menu.id, day, meal } }),
+    db.menu.update({
+      where: { id: menu.id },
+      data: { slotsUpdatedAt: new Date() },
+    }),
+  ])
 }

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest"
 
-import { buildWeekSlots, type MenuSlotView } from "@/lib/services/menus"
+import {
+  buildWeekSlots,
+  isListStale,
+  type MenuSlotView,
+} from "@/lib/services/menus"
 
 const stored = (over: Partial<MenuSlotView>): MenuSlotView => ({
   day: 0,
@@ -58,5 +62,30 @@ describe("buildWeekSlots", () => {
     // Nothing in the database constrains `day` to 0..6, so a bad row must not
     // reach the screen as an eighth day.
     expect(buildWeekSlots([stored({ day: 9 })])).toHaveLength(14)
+  })
+})
+
+describe("isListStale", () => {
+  it("is stale when the menu changed after the list was built", () => {
+    expect(
+      isListStale(
+        new Date("2026-08-14T10:00:00Z"),
+        new Date("2026-08-14T09:00:00Z")
+      )
+    ).toBe(true)
+  })
+
+  it("is not stale when the list was built after the menu changed", () => {
+    expect(
+      isListStale(
+        new Date("2026-08-14T09:00:00Z"),
+        new Date("2026-08-14T10:00:00Z")
+      )
+    ).toBe(false)
+  })
+
+  it("is not stale on the same instant — generating right after an edit is the normal case", () => {
+    const now = new Date("2026-08-14T10:00:00Z")
+    expect(isListStale(now, now)).toBe(false)
   })
 })

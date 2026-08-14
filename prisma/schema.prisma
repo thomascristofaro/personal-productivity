@@ -74,6 +74,10 @@ model Menu {
   slots     MenuSlot[]
   list      ShoppingList?
   createdAt DateTime      @default(now())
+  // Written deliberately by setSlot and clearSlot. Not `@updatedAt`: writing a
+  // MenuSlot does not update its Menu, so `@updatedAt` would never fire for the
+  // change that actually matters — the one the shopping list needs to see.
+  slotsUpdatedAt DateTime @default(now())
 }
 
 model MenuSlot {
@@ -101,6 +105,9 @@ model ShoppingList {
   menu      Menu               @relation(fields: [menuId], references: [id], onDelete: Cascade)
   items     ShoppingListItem[]
   createdAt DateTime           @default(now())
+  // Set on every regeneration. Replacing the child items does not touch this
+  // row, so `@updatedAt` would stand still across exactly the event it names.
+  generatedAt DateTime         @default(now())
 }
 
 model ShoppingListItem {
