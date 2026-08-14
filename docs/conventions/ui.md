@@ -65,6 +65,10 @@ is the thing this directory exists to prevent.
 right one: the parent supplies the data the child renders, the case
 `vercel-composition-patterns` names as appropriate for them.
 
+The catalogue screens under `app/(app)/ingredients/` are the second module built
+on these, and they added no primitive and changed none. That is the bar: if a
+third module needs one bent, bend the primitive rather than forking it.
+
 ## The app shell
 
 `app/(app)/layout.tsx` mounts a stock shadcn `sidebar`: a rail on desktop, a

@@ -77,6 +77,16 @@ export function IngredientForm({
   // submit runs. Reading the echoed value first keeps what the user typed.
   const valueOf = (field: keyof IngredientFormValues) =>
     state.values?.[field] ?? values[field] ?? ""
+  const describedBy = (
+    field: keyof IngredientFormValues,
+    hasDescription = false
+  ) =>
+    [
+      hasDescription ? `${field}-description` : null,
+      errorOf(field) ? `${field}-error` : null,
+    ]
+      .filter((id) => id !== null)
+      .join(" ") || undefined
 
   useEffect(() => {
     const firstInvalid = FIELD_ORDER.find(
@@ -106,7 +116,7 @@ export function IngredientForm({
             defaultValue={valueOf("name")}
             autoComplete="off"
             aria-invalid={errorOf("name") ? true : undefined}
-            aria-describedby={errorOf("name") ? "name-error" : undefined}
+            aria-describedby={describedBy("name")}
             required
           />
           <FieldError id="name-error">{errorOf("name")}</FieldError>
@@ -122,7 +132,7 @@ export function IngredientForm({
             autoComplete="off"
             spellCheck={false}
             aria-invalid={errorOf("defaultUnit") ? true : undefined}
-            aria-describedby="defaultUnit-description"
+            aria-describedby={describedBy("defaultUnit", true)}
           />
           <datalist id="unit-suggestions">
             {units.map((unit) => (
@@ -140,7 +150,11 @@ export function IngredientForm({
         <Field data-invalid={invalid("aisle")}>
           <FieldLabel htmlFor="aisle">Reparto</FieldLabel>
           <Select name="aisle" defaultValue={valueOf("aisle")}>
-            <SelectTrigger id="aisle">
+            <SelectTrigger
+              id="aisle"
+              aria-invalid={errorOf("aisle") ? true : undefined}
+              aria-describedby={describedBy("aisle", true)}
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
