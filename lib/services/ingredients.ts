@@ -96,6 +96,24 @@ export async function listIngredients(): Promise<IngredientOption[]> {
   })
 }
 
+export type CatalogueOption = IngredientOption & { aisle: string }
+
+/**
+ * Lists the catalogue with each entry's aisle, for the manual-item form.
+ *
+ * Distinct from `listIngredients`, which the recipe form uses and which has no
+ * need of the aisle, and from `listIngredientsWithUsage`, which counts recipes
+ * per entry and is the catalogue screen's query.
+ *
+ * @returns Every ingredient with its preferred unit and its aisle, by name.
+ */
+export async function listIngredientsWithAisle(): Promise<CatalogueOption[]> {
+  return db.ingredient.findMany({
+    select: { name: true, defaultUnit: true, aisle: true },
+    orderBy: { name: "asc" },
+  })
+}
+
 /**
  * Finds one catalogue entry by its exact name.
  *
