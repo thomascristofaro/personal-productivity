@@ -36,26 +36,36 @@ model Recipe {
   updatedAt    DateTime           @updatedAt
 }
 
+// The curated catalogue. Keyed on the name, which is unique by definition and
+// is what every other table wants to talk about — see docs/conventions/data.md
+// for why this one model carries no surrogate key. `defaultUnit` is free text
+// on purpose: a hint that pre-fills a recipe row, not a controlled vocabulary.
+// `aisle` lives here rather than in a learned lookup, so it is set once per
+// ingredient and the shopping list groups correctly from then on.
+model Ingredient {
+  name        String             @id
+  defaultUnit String?
+  aisle       String             @default("altro")
+  usedIn      RecipeIngredient[]
+}
+
 model RecipeIngredient {
-  id       String  @id @default(cuid())
-  recipeId String
-  recipe   Recipe  @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  raw      String
-  name     String
-  quantity Float?
-  unit     String?
-  position Int
+  id             String     @id @default(cuid())
+  recipeId       String
+  recipe         Recipe     @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  ingredientName String
+  // Restrict on delete: removing an ingredient a recipe still uses must fail
+  // loudly rather than quietly empty the recipe. Cascade on update: renaming an
+  // ingredient is a legitimate edit, and Postgres rewrites the references
+  // atomically, which is what makes a natural key safe here.
+  ingredient     Ingredient @relation(fields: [ingredientName], references: [name], onDelete: Restrict, onUpdate: Cascade)
+  quantity       Float?
+  unit           String?
+  position       Int
 
   // The aggregation loads every ingredient of every selected recipe at once.
   @@index([recipeId])
-}
-
-// Learned mapping from a normalised ingredient name to a supermarket aisle.
-// The key is the output of normaliseIngredientName; changing that function
-// orphans every row here and needs a migration that remaps them.
-model IngredientAisle {
-  name  String @id
-  aisle String
+  @@index([ingredientName])
 }
 
 model Menu {
