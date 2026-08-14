@@ -58,6 +58,19 @@ export function RecipeForm({
   const errorOf = (field: keyof RecipeFormValues) => state.errors[field]?.[0]
   const invalid = (field: keyof RecipeFormValues) =>
     errorOf(field) ? "true" : undefined
+  // React 19 resets the form to its `defaultValue`s before an action-driven
+  // submit runs, unconditionally. Echoing the submitted value back through
+  // `state.values` and reading it here first means a failed save re-renders
+  // the form with what the user typed, not the original prop.
+  const valueOf = (field: keyof RecipeFormValues) =>
+    state.values?.[field] ?? values[field] ?? ""
+  const describedBy = (field: keyof RecipeFormValues, hasDescription = false) =>
+    [
+      hasDescription ? `${field}-description` : null,
+      errorOf(field) ? `${field}-error` : null,
+    ]
+      .filter((id) => id !== null)
+      .join(" ") || undefined
 
   useEffect(() => {
     const firstInvalidField = FIELD_ORDER.find(
@@ -71,7 +84,7 @@ export function RecipeForm({
   return (
     <form action={formAction} className="flex flex-col gap-6">
       {values.id === undefined ? null : (
-        <input type="hidden" name="id" value={values.id} />
+        <input type="hidden" name="id" value={valueOf("id")} />
       )}
 
       <FieldGroup>
@@ -80,11 +93,12 @@ export function RecipeForm({
           <Input
             id="title"
             name="title"
-            defaultValue={values.title}
+            defaultValue={valueOf("title")}
             aria-invalid={errorOf("title") ? true : undefined}
+            aria-describedby={describedBy("title")}
             required
           />
-          <FieldError>{errorOf("title")}</FieldError>
+          <FieldError id="title-error">{errorOf("title")}</FieldError>
         </Field>
 
         <Field data-invalid={invalid("ingredients")}>
@@ -92,16 +106,19 @@ export function RecipeForm({
           <Textarea
             id="ingredients"
             name="ingredients"
-            defaultValue={values.ingredients}
+            defaultValue={valueOf("ingredients")}
             rows={8}
             placeholder={"320 g di spaghetti\n2 uova\nsale q.b."}
             aria-invalid={errorOf("ingredients") ? true : undefined}
+            aria-describedby={describedBy("ingredients", true)}
             required
           />
-          <FieldDescription>
+          <FieldDescription id="ingredients-description">
             Uno per riga, come lo scriveresti a mano.
           </FieldDescription>
-          <FieldError>{errorOf("ingredients")}</FieldError>
+          <FieldError id="ingredients-error">
+            {errorOf("ingredients")}
+          </FieldError>
         </Field>
 
         <div className="grid grid-cols-2 gap-4">
@@ -113,10 +130,11 @@ export function RecipeForm({
               type="number"
               inputMode="numeric"
               min={1}
-              defaultValue={values.servings}
+              defaultValue={valueOf("servings")}
               aria-invalid={errorOf("servings") ? true : undefined}
+              aria-describedby={describedBy("servings")}
             />
-            <FieldError>{errorOf("servings")}</FieldError>
+            <FieldError id="servings-error">{errorOf("servings")}</FieldError>
           </Field>
 
           <Field data-invalid={invalid("totalMinutes")}>
@@ -127,10 +145,13 @@ export function RecipeForm({
               type="number"
               inputMode="numeric"
               min={1}
-              defaultValue={values.totalMinutes}
+              defaultValue={valueOf("totalMinutes")}
               aria-invalid={errorOf("totalMinutes") ? true : undefined}
+              aria-describedby={describedBy("totalMinutes")}
             />
-            <FieldError>{errorOf("totalMinutes")}</FieldError>
+            <FieldError id="totalMinutes-error">
+              {errorOf("totalMinutes")}
+            </FieldError>
           </Field>
         </div>
 
@@ -139,11 +160,14 @@ export function RecipeForm({
           <Textarea
             id="instructions"
             name="instructions"
-            defaultValue={values.instructions}
+            defaultValue={valueOf("instructions")}
             rows={8}
             aria-invalid={errorOf("instructions") ? true : undefined}
+            aria-describedby={describedBy("instructions")}
           />
-          <FieldError>{errorOf("instructions")}</FieldError>
+          <FieldError id="instructions-error">
+            {errorOf("instructions")}
+          </FieldError>
         </Field>
 
         <Field data-invalid={invalid("tags")}>
@@ -151,12 +175,15 @@ export function RecipeForm({
           <Input
             id="tags"
             name="tags"
-            defaultValue={values.tags}
+            defaultValue={valueOf("tags")}
             placeholder="pesce, veloce"
             aria-invalid={errorOf("tags") ? true : undefined}
+            aria-describedby={describedBy("tags", true)}
           />
-          <FieldDescription>Separate da virgola.</FieldDescription>
-          <FieldError>{errorOf("tags")}</FieldError>
+          <FieldDescription id="tags-description">
+            Separate da virgola.
+          </FieldDescription>
+          <FieldError id="tags-error">{errorOf("tags")}</FieldError>
         </Field>
 
         <Field data-invalid={invalid("sourceUrl")}>
@@ -167,10 +194,11 @@ export function RecipeForm({
             type="url"
             inputMode="url"
             spellCheck={false}
-            defaultValue={values.sourceUrl}
+            defaultValue={valueOf("sourceUrl")}
             aria-invalid={errorOf("sourceUrl") ? true : undefined}
+            aria-describedby={describedBy("sourceUrl")}
           />
-          <FieldError>{errorOf("sourceUrl")}</FieldError>
+          <FieldError id="sourceUrl-error">{errorOf("sourceUrl")}</FieldError>
         </Field>
 
         <Field data-invalid={invalid("notes")}>
@@ -178,11 +206,12 @@ export function RecipeForm({
           <Textarea
             id="notes"
             name="notes"
-            defaultValue={values.notes}
+            defaultValue={valueOf("notes")}
             rows={3}
             aria-invalid={errorOf("notes") ? true : undefined}
+            aria-describedby={describedBy("notes")}
           />
-          <FieldError>{errorOf("notes")}</FieldError>
+          <FieldError id="notes-error">{errorOf("notes")}</FieldError>
         </Field>
       </FieldGroup>
 

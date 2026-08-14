@@ -16,10 +16,38 @@ import {
 
 const RecipeIdSchema = z.cuid()
 
+const FORM_FIELDS = [
+  "title",
+  "sourceUrl",
+  "servings",
+  "totalMinutes",
+  "instructions",
+  "notes",
+  "tags",
+  "ingredients",
+] as const
+
 // An empty numeric field arrives as "", which is not an absent value to Zod.
 function optionalNumber(value: FormDataEntryValue | null) {
   const text = typeof value === "string" ? value.trim() : ""
   return text === "" ? undefined : Number(text)
+}
+
+// Echoes exactly what was submitted, so a failed save can re-render the form
+// from these values instead of losing them to React's form reset — see
+// components/recipes/recipe-form-state.ts.
+function valuesFrom(formData: FormData): Record<string, string> {
+  const values: Record<string, string> = {}
+
+  for (const field of FORM_FIELDS) {
+    const value = formData.get(field)
+    values[field] = typeof value === "string" ? value : ""
+  }
+
+  const id = formData.get("id")
+  if (typeof id === "string") values.id = id
+
+  return values
 }
 
 // Built from `issues` rather than a version-specific flatten helper.
@@ -54,6 +82,7 @@ export async function saveRecipe(
     return {
       errors: fieldErrorsFrom(parsed.error),
       message: "Controlla i campi segnalati.",
+      values: valuesFrom(formData),
     }
   }
 
@@ -74,13 +103,21 @@ export async function saveRecipe(
       await updateRecipe(existing.data, parsed.data)
     } catch (error) {
       if (error instanceof RecipeNotFoundError) {
-        return { errors: {}, message: "Questa ricetta non esiste più." }
+        return {
+          errors: {},
+          message: "Questa ricetta non esiste più.",
+          values: valuesFrom(formData),
+        }
       }
       throw error
     }
     target = existing.data
   } else {
-    return { errors: {}, message: "Questa ricetta non esiste più." }
+    return {
+      errors: {},
+      message: "Questa ricetta non esiste più.",
+      values: valuesFrom(formData),
+    }
   }
 
   revalidatePath("/recipes")
