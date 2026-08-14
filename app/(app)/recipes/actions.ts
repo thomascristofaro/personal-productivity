@@ -10,6 +10,7 @@ import { RecipeInputSchema } from "@/lib/schemas/recipe"
 import {
   createRecipe,
   deleteRecipe,
+  RecipeNotFoundError,
   updateRecipe,
 } from "@/lib/services/recipes"
 
@@ -69,7 +70,14 @@ export async function saveRecipe(
   if (existing === null) {
     target = await createRecipe(parsed.data)
   } else if (existing.success) {
-    await updateRecipe(existing.data, parsed.data)
+    try {
+      await updateRecipe(existing.data, parsed.data)
+    } catch (error) {
+      if (error instanceof RecipeNotFoundError) {
+        return { errors: {}, message: "Questa ricetta non esiste più." }
+      }
+      throw error
+    }
     target = existing.data
   } else {
     return { errors: {}, message: "Questa ricetta non esiste più." }
@@ -85,7 +93,15 @@ export async function removeRecipe(id: string): Promise<void> {
   if (!parsed.success) return
 
   await requireSession()
-  await deleteRecipe(parsed.data)
+
+  try {
+    await deleteRecipe(parsed.data)
+  } catch (error) {
+    // Already gone — the caller's intent (no such recipe) is satisfied either
+    // way, so this redirects like a normal success rather than surfacing an
+    // error for a delete that already happened.
+    if (!(error instanceof RecipeNotFoundError)) throw error
+  }
 
   revalidatePath("/recipes")
   redirect("/recipes")

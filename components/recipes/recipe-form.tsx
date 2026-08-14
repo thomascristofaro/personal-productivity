@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button"
 import {
   Field,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field"
@@ -42,6 +43,8 @@ export function RecipeForm({
   )
 
   const errorOf = (field: keyof RecipeFormValues) => state.errors[field]?.[0]
+  const invalid = (field: keyof RecipeFormValues) =>
+    errorOf(field) ? "true" : undefined
 
   return (
     <form action={formAction} className="flex flex-col gap-6">
@@ -50,7 +53,7 @@ export function RecipeForm({
       )}
 
       <FieldGroup>
-        <Field data-invalid={errorOf("title") ? "" : undefined}>
+        <Field data-invalid={invalid("title")}>
           <FieldLabel htmlFor="title">Nome</FieldLabel>
           <Input
             id="title"
@@ -59,12 +62,10 @@ export function RecipeForm({
             aria-invalid={errorOf("title") ? true : undefined}
             required
           />
-          {errorOf("title") ? (
-            <FieldDescription>{errorOf("title")}</FieldDescription>
-          ) : null}
+          <FieldError>{errorOf("title")}</FieldError>
         </Field>
 
-        <Field data-invalid={errorOf("ingredients") ? "" : undefined}>
+        <Field data-invalid={invalid("ingredients")}>
           <FieldLabel htmlFor="ingredients">Ingredienti</FieldLabel>
           <Textarea
             id="ingredients"
@@ -76,13 +77,13 @@ export function RecipeForm({
             required
           />
           <FieldDescription>
-            {errorOf("ingredients") ??
-              "Uno per riga, come lo scriveresti a mano."}
+            Uno per riga, come lo scriveresti a mano.
           </FieldDescription>
+          <FieldError>{errorOf("ingredients")}</FieldError>
         </Field>
 
         <div className="grid grid-cols-2 gap-4">
-          <Field data-invalid={errorOf("servings") ? "" : undefined}>
+          <Field data-invalid={invalid("servings")}>
             <FieldLabel htmlFor="servings">Porzioni</FieldLabel>
             <Input
               id="servings"
@@ -93,12 +94,10 @@ export function RecipeForm({
               defaultValue={values.servings}
               aria-invalid={errorOf("servings") ? true : undefined}
             />
-            {errorOf("servings") ? (
-              <FieldDescription>{errorOf("servings")}</FieldDescription>
-            ) : null}
+            <FieldError>{errorOf("servings")}</FieldError>
           </Field>
 
-          <Field data-invalid={errorOf("totalMinutes") ? "" : undefined}>
+          <Field data-invalid={invalid("totalMinutes")}>
             <FieldLabel htmlFor="totalMinutes">Minuti</FieldLabel>
             <Input
               id="totalMinutes"
@@ -109,36 +108,36 @@ export function RecipeForm({
               defaultValue={values.totalMinutes}
               aria-invalid={errorOf("totalMinutes") ? true : undefined}
             />
-            {errorOf("totalMinutes") ? (
-              <FieldDescription>{errorOf("totalMinutes")}</FieldDescription>
-            ) : null}
+            <FieldError>{errorOf("totalMinutes")}</FieldError>
           </Field>
         </div>
 
-        <Field>
+        <Field data-invalid={invalid("instructions")}>
           <FieldLabel htmlFor="instructions">Preparazione</FieldLabel>
           <Textarea
             id="instructions"
             name="instructions"
             defaultValue={values.instructions}
             rows={8}
+            aria-invalid={errorOf("instructions") ? true : undefined}
           />
+          <FieldError>{errorOf("instructions")}</FieldError>
         </Field>
 
-        <Field data-invalid={errorOf("tags") ? "" : undefined}>
+        <Field data-invalid={invalid("tags")}>
           <FieldLabel htmlFor="tags">Etichette</FieldLabel>
           <Input
             id="tags"
             name="tags"
             defaultValue={values.tags}
             placeholder="pesce, veloce"
+            aria-invalid={errorOf("tags") ? true : undefined}
           />
-          <FieldDescription>
-            {errorOf("tags") ?? "Separate da virgola."}
-          </FieldDescription>
+          <FieldDescription>Separate da virgola.</FieldDescription>
+          <FieldError>{errorOf("tags")}</FieldError>
         </Field>
 
-        <Field data-invalid={errorOf("sourceUrl") ? "" : undefined}>
+        <Field data-invalid={invalid("sourceUrl")}>
           <FieldLabel htmlFor="sourceUrl">Fonte</FieldLabel>
           <Input
             id="sourceUrl"
@@ -148,19 +147,19 @@ export function RecipeForm({
             defaultValue={values.sourceUrl}
             aria-invalid={errorOf("sourceUrl") ? true : undefined}
           />
-          {errorOf("sourceUrl") ? (
-            <FieldDescription>{errorOf("sourceUrl")}</FieldDescription>
-          ) : null}
+          <FieldError>{errorOf("sourceUrl")}</FieldError>
         </Field>
 
-        <Field>
+        <Field data-invalid={invalid("notes")}>
           <FieldLabel htmlFor="notes">Note</FieldLabel>
           <Textarea
             id="notes"
             name="notes"
             defaultValue={values.notes}
             rows={3}
+            aria-invalid={errorOf("notes") ? true : undefined}
           />
+          <FieldError>{errorOf("notes")}</FieldError>
         </Field>
       </FieldGroup>
 

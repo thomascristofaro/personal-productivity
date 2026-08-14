@@ -2,6 +2,28 @@ import { db } from "@/lib/db"
 import type { RecipeInput } from "@/lib/schemas/recipe"
 import { ingredientRowsFrom } from "@/lib/services/recipe-ingredients"
 
+/**
+ * Thrown by `updateRecipe` and `deleteRecipe` when the target id no longer
+ * exists — typically because another session deleted it first.
+ */
+export class RecipeNotFoundError extends Error {
+  constructor() {
+    super("Nessuna ricetta con questo id.")
+    this.name = "RecipeNotFoundError"
+  }
+}
+
+// Prisma's "record to update/delete not found" failure (P2025), read
+// structurally so this module never imports a Prisma type outside lib/db.ts.
+function isRecordNotFoundError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "P2025"
+  )
+}
+
 export type RecipeSummary = {
   id: string
   title: string
@@ -116,22 +138,27 @@ export async function createRecipe(input: RecipeInput): Promise<string> {
  * @param id The recipe's id.
  * @param input The validated recipe as the form supplied it.
  * @returns Nothing.
- * @throws When no recipe has that id.
+ * @throws RecipeNotFoundError when no recipe has that id.
  */
 export async function updateRecipe(
   id: string,
   input: RecipeInput
 ): Promise<void> {
-  await db.$transaction([
-    db.recipeIngredient.deleteMany({ where: { recipeId: id } }),
-    db.recipe.update({
-      where: { id },
-      data: {
-        ...toColumns(input),
-        ingredients: { create: ingredientRowsFrom(input.ingredients) },
-      },
-    }),
-  ])
+  try {
+    await db.$transaction([
+      db.recipeIngredient.deleteMany({ where: { recipeId: id } }),
+      db.recipe.update({
+        where: { id },
+        data: {
+          ...toColumns(input),
+          ingredients: { create: ingredientRowsFrom(input.ingredients) },
+        },
+      }),
+    ])
+  } catch (error) {
+    if (isRecordNotFoundError(error)) throw new RecipeNotFoundError()
+    throw error
+  }
 }
 
 /**
@@ -140,8 +167,13 @@ export async function updateRecipe(
  *
  * @param id The recipe's id.
  * @returns Nothing.
- * @throws When no recipe has that id.
+ * @throws RecipeNotFoundError when no recipe has that id.
  */
 export async function deleteRecipe(id: string): Promise<void> {
-  await db.recipe.delete({ where: { id } })
+  try {
+    await db.recipe.delete({ where: { id } })
+  } catch (error) {
+    if (isRecordNotFoundError(error)) throw new RecipeNotFoundError()
+    throw error
+  }
 }

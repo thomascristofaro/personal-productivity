@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { RecipeInputSchema } from "@/lib/schemas/recipe"
+import { RECIPE_NOTES_MAX, RecipeInputSchema } from "@/lib/schemas/recipe"
 
 const valid = {
   title: "Spaghetti al pomodoro",
@@ -88,5 +88,26 @@ describe("RecipeInputSchema", () => {
 
   it("rejects a title longer than the column is meant to hold", () => {
     expect(parse({ title: "a".repeat(201) }).success).toBe(false)
+  })
+
+  it("reports an empty title in Italian", () => {
+    const result = parse({ title: "" })
+    expect(!result.success && result.error.issues[0]?.message).toBe(
+      "Il nome non può essere vuoto."
+    )
+  })
+
+  it("reports zero servings in Italian", () => {
+    const result = parse({ servings: 0 })
+    expect(!result.success && result.error.issues[0]?.message).toBe(
+      "Le porzioni devono essere maggiori di zero."
+    )
+  })
+
+  it("reports an over-long note in Italian", () => {
+    const result = parse({ notes: "a".repeat(RECIPE_NOTES_MAX + 1) })
+    expect(!result.success && result.error.issues[0]?.message).toBe(
+      `Le note possono avere al massimo ${RECIPE_NOTES_MAX} caratteri.`
+    )
   })
 })
