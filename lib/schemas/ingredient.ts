@@ -11,6 +11,11 @@ export const IngredientNameSchema = z
     INGREDIENT_NAME_MAX,
     `Il nome dell’ingrediente può avere al massimo ${INGREDIENT_NAME_MAX} caratteri.`
   )
+  // The name addresses the ingredient in a URL path segment; an encoded slash
+  // is decoded back into a separator and the route stops matching.
+  .refine((value) => !value.includes("/"), {
+    message: "Il nome dell’ingrediente non può contenere «/».",
+  })
 
 // An empty unit is absent, not blank: the aggregator treats "" and null
 // differently, and a blank string would open a second line for the same thing.
@@ -34,3 +39,17 @@ export const RecipeIngredientRowSchema = z.object({
 })
 
 export type RecipeIngredientRow = z.infer<typeof RecipeIngredientRowSchema>
+
+export const IngredientInputSchema = z.object({
+  name: IngredientNameSchema,
+  defaultUnit: unit,
+  // A plain string, not an enum: lib/schemas may import Zod and nothing else,
+  // so AISLE_ORDER is out of reach. The service checks membership.
+  aisle: z
+    .string()
+    .trim()
+    .min(1, "Scegli un reparto.")
+    .max(50, "Il reparto può avere al massimo 50 caratteri."),
+})
+
+export type IngredientInput = z.infer<typeof IngredientInputSchema>

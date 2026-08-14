@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  IngredientInputSchema,
   IngredientNameSchema,
   RecipeIngredientRowSchema,
 } from "@/lib/schemas/ingredient"
@@ -84,5 +85,49 @@ describe("RecipeIngredientRowSchema", () => {
         quantity: 1,
       }).success
     ).toBe(false)
+  })
+})
+
+describe("IngredientNameSchema, slash rule", () => {
+  it("rejects a name containing a slash, which would break its URL", () => {
+    const result = IngredientNameSchema.safeParse("olio/burro")
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues[0].message).toBe(
+        "Il nome dell’ingrediente non può contenere «/»."
+      )
+    }
+  })
+
+  it("still accepts an ordinary name with spaces and accents", () => {
+    expect(IngredientNameSchema.parse("pasta brisée")).toBe("pasta brisée")
+  })
+})
+
+describe("IngredientInputSchema", () => {
+  const valid = { name: "spaghetti", defaultUnit: "g", aisle: "dispensa" }
+
+  it("accepts a complete ingredient", () => {
+    expect(IngredientInputSchema.parse(valid)).toEqual(valid)
+  })
+
+  it("turns an empty preferred unit into null — most ingredients are counted", () => {
+    expect(
+      IngredientInputSchema.parse({ ...valid, defaultUnit: "  " }).defaultUnit
+    ).toBeNull()
+  })
+
+  it("rejects an empty aisle, because the shopping list sorts by it", () => {
+    const result = IngredientInputSchema.safeParse({ ...valid, aisle: "" })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues[0].message).toBe("Scegli un reparto.")
+    }
+  })
+
+  it("trims the name", () => {
+    expect(
+      IngredientInputSchema.parse({ ...valid, name: "  sale  " }).name
+    ).toBe("sale")
   })
 })
