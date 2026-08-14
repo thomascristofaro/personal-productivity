@@ -47,7 +47,7 @@ export function AppSidebar() {
                     // this it stays open on top of the page just navigated to.
                     onClick={() => setOpenMobile(false)}
                   >
-                    <item.icon />
+                    <item.icon aria-hidden="true" />
                     <span>{item.label}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

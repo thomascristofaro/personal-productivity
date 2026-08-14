@@ -18,7 +18,7 @@ export function DataListRow({
           href={href}
           className="flex min-h-14 flex-col justify-center gap-1 px-4 py-3"
         >
-          <span className="font-medium">{title}</span>
+          <span className="font-medium break-words">{title}</span>
           {children === undefined ? null : (
             <span className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               {children}

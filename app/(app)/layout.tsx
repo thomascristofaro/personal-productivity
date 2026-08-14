@@ -15,7 +15,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <AppSidebar />
       <SidebarInset>
         <header className="sticky top-0 z-10 flex h-12 shrink-0 items-center border-b bg-background px-2">
-          <SidebarTrigger />
+          {/* The stock trigger carries an English screen-reader label. An
+              aria-label from here overrides it without editing generated
+              code — user-facing text is Italian (CLAUDE.md). */}
+          <SidebarTrigger aria-label="Apri il menu" />
         </header>
         <div className="mx-auto w-full max-w-2xl px-4 pb-24">{children}</div>
       </SidebarInset>
