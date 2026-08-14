@@ -17,18 +17,29 @@ Last updated: 2026-08-14. Work happens on one branch, `feat/app-shell`.
 | [`2026-08-14-ingredient-catalogue`](superpowers/plans/2026-08-14-ingredient-catalogue.md)                   | the `Ingredient` table keyed on its name, a 93-entry seed, ingredient rows in the recipe form, tags as chips, the aggregator re-keyed                                                         |
 | [`2026-08-14-ingredient-management`](superpowers/plans/2026-08-14-ingredient-management.md)                 | the `/ingredients` screens, `IngredientInputSchema`, the catalogue reads and writes, and the second module proving `components/page/` transfers                                               |
 | [`2026-08-14-weekly-menu`](superpowers/plans/2026-08-14-weekly-menu.md)                                     | `/menu/[weekStart]`, the fourteen-slot grid, the slot drawer and `lib/services/menus.ts` — all by hand, no LLM                                                                                |
+| [`2026-08-14-shopping-list`](superpowers/plans/2026-08-14-shopping-list.md)                                 | `/spesa/[weekStart]`, the aisle-grouped list, optimistic ticking, manual items, and the freshness signal over `Menu.slotsUpdatedAt`                                                           |
 
 ## In flight
 
-Nothing. Two plans landed on 2026-08-14 carrying the same debt: **neither
-manual browser checklist has been run.** Ingredient management is
-`8b327fe..c15946f`, the weekly menu `28ba487..603caf1`; `pnpm verify` is green
-for both and the routes were confirmed to render server-side, but nothing
-interactive has been exercised — not the rename cascade, not the React 19 form
-reset, not the recipe picker, not saving or clearing a slot.
+Nothing. **The product loop is closed**: plan a week, generate the list, shop
+from it. What is left is the LLM half, authentication and deployment.
 
-The `playwright` MCP server registered on 2026-08-14 can run both checklists in
-one pass. Do that before building on top of these.
+Three plans landed on 2026-08-14 carrying the same debt: **no manual browser
+checklist has been run.** Ingredient management is `8b327fe..c15946f`, the
+weekly menu `28ba487..603caf1`, the shopping list `3ce5794..61a57d2`. `pnpm
+verify` is green for all three, and the menu and ingredient routes were
+confirmed to render server-side, but nothing interactive has been exercised.
+
+**Start the next session by restarting `pnpm dev`.** The shopping-list migration
+added `Menu.slotsUpdatedAt` and `ShoppingList.generatedAt`; the dev server that
+was running at the time holds the pre-migration Prisma client and answers every
+`/spesa` request with `PrismaClientValidationError: Unknown field
+slotsUpdatedAt`. The migration is applied, the generated client on disk carries
+both fields, and `pnpm verify` passes — only the long-lived process is stale.
+`/spesa` has therefore never rendered, not even server-side.
+
+The `playwright` MCP server registered on 2026-08-14 can run all three
+checklists in one pass. Do that before building on top of these.
 
 ## Not started
 
@@ -46,14 +57,7 @@ quietly: **nothing in the schema records when a recipe was cooked**, so the
 cooldown of §6.2 has to derive "recently cooked" from the `MenuSlot` rows of
 past weeks. Settle that before writing the plan.
 
-### 2. Shopping list — spec §6.3
-
-`aggregateShoppingList` is written, pure and covered by 17 tests. What is missing
-is everything around it: the screen, the shared tick state between the two users,
-and persistence into `ShoppingList` / `ShoppingListItem`. The menu grid it reads
-from now exists, so this no longer waits on anything.
-
-### 3. Recipe import from a URL — spec §6.1
+### 2. Recipe import from a URL — spec §6.1
 
 JSON-LD extractor, LLM fallback, then matching the parsed lines against the
 catalogue. This is why `lib/services/ingredient-parse.ts` and
@@ -63,7 +67,7 @@ note in the spec's §5 design notes before deleting them as dead code.
 Also needs `lib/services/llm.ts`, and `app/manifest.ts` for the Android share
 target, which does not exist either.
 
-### 4. Authentication — spec §6.4
+### 3. Authentication — spec §6.4
 
 **This blocks going live.** `lib/auth.ts` throws `UnauthenticatedError` whenever
 `NODE_ENV === "production"`, deliberately, so nothing can serve a real request
@@ -73,10 +77,10 @@ works in `pnpm dev`.
 The owner wanted to evaluate Better Auth before committing to an approach. That
 evaluation has not happened.
 
-### 5. PWA and deployment — spec §9, §10
+### 4. PWA and deployment — spec §9, §10
 
 No `app/manifest.ts`, so no home-screen install and no share target. Never
-deployed to Vercel. Gated on §4 above.
+deployed to Vercel. Gated on §3 above.
 
 ## Standing decisions taken in conversation
 

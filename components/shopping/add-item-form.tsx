@@ -53,7 +53,11 @@ export function AddItemForm({
       <input type="hidden" name="name" value={name} />
 
       <Field>
-        <FieldLabel>Aggiungi alla lista</FieldLabel>
+        {/* The visible text and the picker's aria-label say the same thing on
+            purpose: the combobox names itself, so a label reading something
+            else would leave sighted and screen-reader users with two different
+            names for one control. */}
+        <FieldLabel>Che cosa serve</FieldLabel>
         <IngredientPicker
           names={catalogue.map((entry) => entry.name)}
           value={name === "" ? null : name}
@@ -74,7 +78,10 @@ export function AddItemForm({
             name="quantity"
             type="number"
             inputMode="decimal"
-            min={0}
+            // Not `min={0}`: the schema rejects a quantity of zero, and the
+            // action has no way to report it — so the browser must refuse it
+            // here rather than letting the submit vanish without a word.
+            min={0.01}
             step="any"
             autoComplete="off"
           />

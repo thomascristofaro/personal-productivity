@@ -54,8 +54,24 @@ export function ShoppingList({
     }
   }
 
+  const left = groups
+    .flatMap((group) => group.items)
+    .filter((item) => !item.checked).length
+
   return (
     <div className="flex flex-col gap-6">
+      {/* The other phone ticks items off and this screen refreshes silently.
+          A count is the one thing worth announcing: the rows themselves would
+          queue the whole list every thirty seconds. Identical text is not
+          re-announced, so a quiet refresh stays quiet. */}
+      <span role="status" aria-live="polite" className="sr-only">
+        {left === 0
+          ? "Tutto preso."
+          : left === 1
+            ? "1 articolo da prendere."
+            : `${left} articoli da prendere.`}
+      </span>
+
       {groups.map((group) => (
         <section key={group.aisle} className="flex flex-col gap-1">
           <h2 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
