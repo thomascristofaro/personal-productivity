@@ -1,10 +1,16 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
+import { cache } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { getRecipe } from "@/lib/services/recipes"
+
+// generateMetadata and the page both need the recipe; React.cache collapses
+// them into one query per request. The service cannot do this itself — the
+// domain layer may not import React.
+const recipeOnce = cache(getRecipe)
 
 export async function generateMetadata({
   params,
@@ -12,7 +18,7 @@ export async function generateMetadata({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const recipe = await getRecipe(id)
+  const recipe = await recipeOnce(id)
   return { title: recipe?.title ?? "Ricetta" }
 }
 
@@ -22,7 +28,7 @@ export default async function RecipePage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const recipe = await getRecipe(id)
+  const recipe = await recipeOnce(id)
 
   if (recipe === null) notFound()
 
