@@ -7,7 +7,7 @@ export type Session = { userId: string }
 
 export class UnauthenticatedError extends Error {
   constructor() {
-    super("Nessuna sessione attiva.")
+    super("No active session.")
     this.name = "UnauthenticatedError"
   }
 }

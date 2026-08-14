@@ -8,7 +8,7 @@ import { ingredientRowsFrom } from "@/lib/services/recipe-ingredients"
  */
 export class RecipeNotFoundError extends Error {
   constructor() {
-    super("Nessuna ricetta con questo id.")
+    super("No recipe with this id.")
     this.name = "RecipeNotFoundError"
   }
 }
@@ -63,10 +63,14 @@ function toColumns(input: RecipeInput) {
     totalMinutes: input.totalMinutes ?? null,
     instructions: input.instructions === "" ? null : input.instructions,
     notes: input.notes === "" ? null : input.notes,
-    tags: input.tags
-      .split(",")
-      .map((tag) => tag.trim().toLowerCase())
-      .filter((tag) => tag.length > 0),
+    tags: [
+      ...new Set(
+        input.tags
+          .split(",")
+          .map((tag) => tag.trim().toLowerCase())
+          .filter((tag) => tag.length > 0)
+      ),
+    ],
   }
 }
 

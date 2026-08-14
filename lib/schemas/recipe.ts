@@ -17,7 +17,7 @@ const sourceUrl = z
   .union([
     z.literal(""),
     z
-      .url()
+      .url("L'indirizzo deve essere un URL valido.")
       .max(RECIPE_SOURCE_URL_MAX)
       .refine((value) => /^https?:\/\//i.test(value), {
         message: "L'indirizzo deve iniziare con http:// o https://",

@@ -60,6 +60,7 @@ const noServerCode = {
     "@/lib/services/**",
     "@/lib/db",
     "@/lib/env",
+    "@/lib/auth",
     "@prisma/client",
     "pg",
   ],

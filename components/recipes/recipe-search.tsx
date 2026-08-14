@@ -14,15 +14,20 @@ export function RecipeSearch() {
   // Typing should not push a history entry per keystroke, and should not fetch
   // per keystroke either.
   useEffect(() => {
+    const next = value.trim()
+    // Landing on /recipes (or re-running after our own replace lands) leaves
+    // `value` matching the URL already — without this guard that still
+    // schedules a no-op replace, re-fetching the RSC payload for nothing.
+    if (next === (searchParams.get("q") ?? "")) return
+
     const timer = setTimeout(() => {
-      const next = value.trim()
       const target =
         next === "" ? "/recipes" : `/recipes?q=${encodeURIComponent(next)}`
       startTransition(() => router.replace(target, { scroll: false }))
     }, 250)
 
     return () => clearTimeout(timer)
-  }, [value, router])
+  }, [value, router, searchParams])
 
   return (
     <Input

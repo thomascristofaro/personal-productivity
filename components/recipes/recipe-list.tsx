@@ -30,7 +30,18 @@ export function RecipeList({
   isSearching: boolean
 }) {
   return (
-    <div role="status" aria-live="polite">
+    <div>
+      {/* Announces only the result count, not the full card list: a live
+          region around every card would queue the whole list's contents on
+          every debounced keystroke. */}
+      <span role="status" aria-live="polite" className="sr-only">
+        {recipes.length === 0
+          ? "Nessuna ricetta trovata."
+          : recipes.length === 1
+            ? "1 ricetta trovata."
+            : `${recipes.length} ricette trovate.`}
+      </span>
+
       {recipes.length === 0 ? (
         <EmptyState isSearching={isSearching} />
       ) : (

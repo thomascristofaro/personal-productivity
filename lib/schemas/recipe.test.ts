@@ -104,6 +104,13 @@ describe("RecipeInputSchema", () => {
     )
   })
 
+  it("reports a malformed source URL in Italian", () => {
+    const result = parse({ sourceUrl: "non è un indirizzo" })
+    expect(!result.success && result.error.issues[0]?.message).toBe(
+      "L'indirizzo deve essere un URL valido."
+    )
+  })
+
   it("reports an over-long note in Italian", () => {
     const result = parse({ notes: "a".repeat(RECIPE_NOTES_MAX + 1) })
     expect(!result.success && result.error.issues[0]?.message).toBe(

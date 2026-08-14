@@ -6,7 +6,7 @@ export default function Error({ reset }: { error: Error; reset: () => void }) {
   return (
     <main className="flex flex-col items-center gap-4 pt-24 text-center">
       <p role="alert" className="text-sm">
-        Non riesco a caricare il ricettario. Controlla la connessione e riprova.
+        Qualcosa è andato storto. Controlla la connessione e riprova.
       </p>
       <Button variant="outline" onClick={reset}>
         Riprova

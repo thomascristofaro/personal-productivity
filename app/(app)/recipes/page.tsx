@@ -11,9 +11,12 @@ export const metadata = { title: "Ricettario" }
 export default async function RecipesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>
+  // Next resolves a repeated `?q=` to a string array, not a string — the
+  // param must be typed as Next actually delivers it, then normalised below.
+  searchParams: Promise<{ q?: string | string[] }>
 }) {
-  const { q } = await searchParams
+  const { q: rawQuery } = await searchParams
+  const q = Array.isArray(rawQuery) ? rawQuery[0] : rawQuery
   const recipes = await listRecipes(q)
 
   return (
