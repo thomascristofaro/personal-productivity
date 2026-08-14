@@ -121,7 +121,7 @@ export function RecipeForm({
 
         {/* A fieldset rather than a Field: the rows are a group of controls,
             each already carrying its own label, not one labelled input. */}
-        <fieldset className="flex flex-col gap-2">
+        <fieldset>
           <legend className="mb-2 text-xs font-medium">Ingredienti</legend>
           <IngredientRows
             options={options}
@@ -185,7 +185,7 @@ export function RecipeForm({
           </FieldError>
         </Field>
 
-        <fieldset className="flex flex-col gap-2">
+        <fieldset>
           <legend className="mb-2 text-xs font-medium">Etichette</legend>
           <TagPicker suggestions={tagSuggestions} defaultTags={values.tags} />
           {errorOf("tags") === undefined ? null : (

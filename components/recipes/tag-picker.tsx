@@ -46,6 +46,7 @@ export function TagPicker({
       ))}
 
       <Combobox
+        autoComplete="off"
         multiple
         items={suggestions}
         value={tags}

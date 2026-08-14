@@ -40,6 +40,9 @@ export function IngredientPicker({
 
   return (
     <Combobox
+      // Off: a recipe ingredient is not a field a password
+      // manager or an address autofill has any business completing.
+      autoComplete="off"
       items={names}
       value={value}
       onValueChange={(name) => {
