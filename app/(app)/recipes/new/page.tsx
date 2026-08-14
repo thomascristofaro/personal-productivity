@@ -1,10 +1,18 @@
-import { saveRecipe } from "@/app/(app)/recipes/actions"
+import { addIngredient, saveRecipe } from "@/app/(app)/recipes/actions"
 import { PageHeader } from "@/components/page/page-header"
 import { RecipeForm } from "@/components/recipes/recipe-form"
+import { listIngredients, listUsedUnits } from "@/lib/services/ingredients"
 
 export const metadata = { title: "Nuova ricetta" }
 
-export default function NewRecipePage() {
+export default async function NewRecipePage() {
+  // In parallel: awaiting them in sequence is the waterfall the React
+  // guidelines rank CRITICAL.
+  const [options, units] = await Promise.all([
+    listIngredients(),
+    listUsedUnits(),
+  ])
+
   return (
     <main className="flex flex-col gap-6 pt-6">
       <PageHeader
@@ -13,6 +21,9 @@ export default function NewRecipePage() {
       />
       <RecipeForm
         action={saveRecipe}
+        options={options}
+        units={units}
+        onCreateIngredient={addIngredient}
         values={{
           title: "",
           sourceUrl: "",
@@ -21,7 +32,7 @@ export default function NewRecipePage() {
           instructions: "",
           notes: "",
           tags: "",
-          ingredients: "",
+          ingredients: [],
         }}
       />
     </main>

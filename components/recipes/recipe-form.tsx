@@ -3,6 +3,11 @@
 import Link from "next/link"
 import { useActionState, useEffect } from "react"
 
+import type { IngredientOption } from "@/components/ingredients/ingredient-picker"
+import {
+  IngredientRows,
+  type IngredientRowValue,
+} from "@/components/ingredients/ingredient-rows"
 import {
   EMPTY_FORM_STATE,
   type SaveRecipeAction,
@@ -27,14 +32,14 @@ export type RecipeFormValues = {
   instructions: string
   notes: string
   tags: string
-  ingredients: string
+  ingredients: IngredientRowValue[]
 }
 
-// DOM order of the fields, so the first invalid one can take focus after a
-// failed submit — the field ids double as this list.
+// DOM order of the flat fields, so the first invalid one can take focus after a
+// failed submit — the field ids double as this list. Ingredients are absent on
+// purpose: the rows have no single element carrying that id.
 const FIELD_ORDER: (keyof RecipeFormValues)[] = [
   "title",
-  "ingredients",
   "servings",
   "totalMinutes",
   "instructions",
@@ -45,9 +50,15 @@ const FIELD_ORDER: (keyof RecipeFormValues)[] = [
 export function RecipeForm({
   values,
   action,
+  options,
+  units,
+  onCreateIngredient,
 }: {
   values: RecipeFormValues
   action: SaveRecipeAction
+  options: IngredientOption[]
+  units: string[]
+  onCreateIngredient: (name: string) => Promise<IngredientOption | null>
 }) {
   const [state, formAction, isPending] = useActionState(
     action,
@@ -61,7 +72,8 @@ export function RecipeForm({
   // submit runs, unconditionally. Echoing the submitted value back through
   // `state.values` and reading it here first means a failed save re-renders
   // the form with what the user typed, not the original prop.
-  const valueOf = (field: keyof RecipeFormValues) =>
+  // Flat fields only — `values.ingredients` is an array and never reaches here.
+  const valueOf = (field: Exclude<keyof RecipeFormValues, "ingredients">) =>
     state.values?.[field] ?? values[field] ?? ""
   const describedBy = (field: keyof RecipeFormValues, hasDescription = false) =>
     [
@@ -104,25 +116,22 @@ export function RecipeForm({
           <FieldError id="title-error">{errorOf("title")}</FieldError>
         </Field>
 
-        <Field data-invalid={invalid("ingredients")}>
-          <FieldLabel htmlFor="ingredients">Ingredienti</FieldLabel>
-          <Textarea
-            id="ingredients"
-            name="ingredients"
-            defaultValue={valueOf("ingredients")}
-            rows={8}
-            placeholder={"320 g di spaghetti\n2 uova\nsale q.b."}
-            aria-invalid={errorOf("ingredients") ? true : undefined}
-            aria-describedby={describedBy("ingredients", true)}
-            required
+        {/* A fieldset rather than a Field: the rows are a group of controls,
+            each already carrying its own label, not one labelled input. */}
+        <fieldset className="flex flex-col gap-2">
+          <legend className="mb-2 text-xs font-medium">Ingredienti</legend>
+          <IngredientRows
+            options={options}
+            units={units}
+            defaultRows={values.ingredients}
+            onCreateIngredient={onCreateIngredient}
           />
-          <FieldDescription id="ingredients-description">
-            Uno per riga, come lo scriveresti a mano.
-          </FieldDescription>
-          <FieldError id="ingredients-error">
-            {errorOf("ingredients")}
-          </FieldError>
-        </Field>
+          {errorOf("ingredients") === undefined ? null : (
+            <p role="alert" className="text-xs text-destructive">
+              {errorOf("ingredients")}
+            </p>
+          )}
+        </fieldset>
 
         <div className="grid grid-cols-2 gap-4">
           <Field data-invalid={invalid("servings")}>

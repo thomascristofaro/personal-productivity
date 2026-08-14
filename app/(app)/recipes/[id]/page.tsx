@@ -94,7 +94,13 @@ export default async function RecipePage({
         <h2 className="text-sm font-semibold">Ingredienti</h2>
         <ul className="flex flex-col gap-1 text-sm">
           {recipe.ingredients.map((ingredient) => (
-            <li key={ingredient.id}>{ingredient.raw}</li>
+            <li key={ingredient.id}>
+              {/* An ingredient with no quantity renders as just its name,
+                  which is the "q.b." case reading correctly. */}
+              {[ingredient.quantity, ingredient.unit, ingredient.ingredientName]
+                .filter((part) => part !== null && part !== "")
+                .join(" ")}
+            </li>
           ))}
         </ul>
       </section>
