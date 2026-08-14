@@ -70,11 +70,27 @@ So each task verifies with `pnpm verify` (typecheck + lint must pass, the existi
 
 - The `EmptyState`, `<ul>`/`<li>`, `Card`/`Link` markup and the count live region currently inline in `components/recipes/recipe-list.tsx`. They move into `components/page/` and are not duplicated back.
 
-## A machine-specific hazard, before Task 1
+## A stale-environment hazard, before Task 1
 
-This repository's git hooks live in `.git/hooks/` and carry a local `export PATH=…` repair line, because a broken entry in the Windows user PATH truncates the PATH that MSYS hands to the hooks and leaves them without `node`. **Any `pnpm install` or `pnpm add` — including one the shadcn CLI runs to pull a dependency — overwrites those hooks and reintroduces the failure.**
+`simple-git-hooks` installs `.git/hooks/pre-commit` (`lint-staged`) and `pre-push` (`pnpm run verify`). Both spawn `node` through a Windows `.cmd` shim, so they need the Windows PATH that MSYS reconstructs when git launches them.
 
-If a commit in this plan fails with `"node" non è riconosciuto`, that is what happened. The hooks need the repair line put back before continuing. Do not commit with `--no-verify` to get around it.
+One PATH entry breaks that reconstruction:
+
+```
+C:\Users\thoma\AppData\Local\Programs\Paseo\resources\app.asar\node_modules\sherpa-onnx-win-x64
+```
+
+It points inside an `.asar` archive — a file, not a directory. The conversion stops there and everything after it is dropped, including `C:\Program Files\nodejs`, so the hook reports `"node" non è riconosciuto`.
+
+**It has been removed from the registry** (checked 2026-08-14: absent from both the user and machine `Path`). Any newly started process gets a clean PATH and the stock hooks work — verified by regenerating them without the workaround and committing successfully.
+
+A process started _before_ the removal still carries the stale value, because Windows reads the registry PATH once at process start. If a commit fails with `"node" non è riconosciuto`, the shell is one of those: restart it, or strip the entry for that command:
+
+```bash
+export PATH="$(echo "$PATH" | tr ':' '\n' | grep -v 'app\.asar' | paste -sd:)"
+```
+
+Never use `--no-verify` to get past it — that skips the gate this project relies on.
 
 ---
 
