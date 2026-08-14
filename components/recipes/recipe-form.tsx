@@ -40,7 +40,6 @@ const FIELD_ORDER: (keyof RecipeFormValues)[] = [
   "instructions",
   "tags",
   "sourceUrl",
-  "notes",
 ]
 
 export function RecipeForm({
@@ -86,6 +85,10 @@ export function RecipeForm({
       {values.id === undefined ? null : (
         <input type="hidden" name="id" value={valueOf("id")} />
       )}
+
+      {/* Notes are not editable in the UI for now, but the column and the
+          value survive: without this the next save would blank them. */}
+      <input type="hidden" name="notes" value={valueOf("notes")} />
 
       <FieldGroup>
         <Field data-invalid={invalid("title")}>
@@ -161,7 +164,7 @@ export function RecipeForm({
             id="instructions"
             name="instructions"
             defaultValue={valueOf("instructions")}
-            rows={8}
+            rows={14}
             aria-invalid={errorOf("instructions") ? true : undefined}
             aria-describedby={describedBy("instructions")}
           />
@@ -199,19 +202,6 @@ export function RecipeForm({
             aria-describedby={describedBy("sourceUrl")}
           />
           <FieldError id="sourceUrl-error">{errorOf("sourceUrl")}</FieldError>
-        </Field>
-
-        <Field data-invalid={invalid("notes")}>
-          <FieldLabel htmlFor="notes">Note</FieldLabel>
-          <Textarea
-            id="notes"
-            name="notes"
-            defaultValue={valueOf("notes")}
-            rows={3}
-            aria-invalid={errorOf("notes") ? true : undefined}
-            aria-describedby={describedBy("notes")}
-          />
-          <FieldError id="notes-error">{errorOf("notes")}</FieldError>
         </Field>
       </FieldGroup>
 

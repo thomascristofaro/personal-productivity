@@ -102,17 +102,8 @@ export default async function RecipePage({
       {recipe.instructions === null ? null : (
         <section className="flex flex-col gap-2">
           <h2 className="text-sm font-semibold">Preparazione</h2>
-          <p className="text-sm break-words whitespace-pre-wrap">
+          <p className="text-base leading-relaxed break-words whitespace-pre-wrap">
             {recipe.instructions}
-          </p>
-        </section>
-      )}
-
-      {recipe.notes === null ? null : (
-        <section className="flex flex-col gap-2">
-          <h2 className="text-sm font-semibold">Note</h2>
-          <p className="text-sm break-words whitespace-pre-wrap text-muted-foreground">
-            {recipe.notes}
           </p>
         </section>
       )}
