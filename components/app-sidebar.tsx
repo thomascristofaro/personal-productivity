@@ -1,6 +1,6 @@
 "use client"
 
-import { BookOpen, CalendarDays, Carrot } from "lucide-react"
+import { BookOpen, CalendarDays, Carrot, ShoppingCart } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
@@ -20,6 +20,7 @@ import {
 // users think in, not alphabetical.
 const NAV_ITEMS = [
   { href: "/menu", label: "Menù", icon: CalendarDays },
+  { href: "/spesa", label: "Spesa", icon: ShoppingCart },
   { href: "/recipes", label: "Ricettario", icon: BookOpen },
   { href: "/ingredients", label: "Ingredienti", icon: Carrot },
 ] as const

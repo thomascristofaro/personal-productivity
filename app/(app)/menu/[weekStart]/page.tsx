@@ -64,6 +64,13 @@ export default async function MenuWeekPage({
       <PageHeader title="Menù">
         <Button
           variant="outline"
+          render={<Link href={`/spesa/${iso(weekStart)}`} />}
+          nativeButton={false}
+        >
+          Spesa
+        </Button>
+        <Button
+          variant="outline"
           size="icon"
           aria-label="Settimana precedente"
           render={<Link href={`/menu/${previous}`} />}

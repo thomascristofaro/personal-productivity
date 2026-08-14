@@ -1,0 +1,78 @@
+"use client"
+
+import { useRouter } from "next/navigation"
+import { useEffect } from "react"
+
+import {
+  ShoppingItemRow,
+  type ShoppingRow,
+} from "@/components/shopping/shopping-item-row"
+
+export type ShoppingGroup = { aisle: string; items: ShoppingRow[] }
+
+// The other phone may be ticking items off at the same time. §6.3 settles the
+// mechanism: refresh the server component, no JSON endpoint and no fetching
+// library. Thirty seconds is slow enough to be invisible on a mobile connection
+// and quick enough that two people in one shop do not buy the same thing twice.
+const REFRESH_MS = 30_000
+
+export function ShoppingList({
+  groups,
+  weekStart,
+  toggleAction,
+  removeAction,
+}: {
+  groups: ShoppingGroup[]
+  weekStart: string
+  toggleAction: (formData: FormData) => Promise<void>
+  removeAction: (formData: FormData) => Promise<void>
+}) {
+  const router = useRouter()
+
+  useEffect(() => {
+    const refresh = () => {
+      // Nothing to fetch for a screen nobody is looking at, and a phone in a
+      // pocket must not poll.
+      if (document.visibilityState === "visible") router.refresh()
+    }
+
+    const timer = window.setInterval(refresh, REFRESH_MS)
+    window.addEventListener("focus", refresh)
+    document.addEventListener("visibilitychange", refresh)
+
+    return () => {
+      window.clearInterval(timer)
+      window.removeEventListener("focus", refresh)
+      document.removeEventListener("visibilitychange", refresh)
+    }
+  }, [router])
+
+  const withWeek = (action: (formData: FormData) => Promise<void>) => {
+    return async (formData: FormData) => {
+      formData.set("weekStart", weekStart)
+      return action(formData)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      {groups.map((group) => (
+        <section key={group.aisle} className="flex flex-col gap-1">
+          <h2 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+            {group.aisle}
+          </h2>
+          <ul className="flex flex-col">
+            {group.items.map((item) => (
+              <ShoppingItemRow
+                key={item.id}
+                item={item}
+                toggleAction={withWeek(toggleAction)}
+                removeAction={withWeek(removeAction)}
+              />
+            ))}
+          </ul>
+        </section>
+      ))}
+    </div>
+  )
+}
