@@ -1,7 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { redirect } from "next/navigation"
+import { redirect, RedirectType } from "next/navigation"
 import { z } from "zod"
 
 import type { RecipeFormState } from "@/components/recipes/recipe-form-state"
@@ -122,7 +122,11 @@ export async function saveRecipe(
 
   revalidatePath("/recipes")
   revalidatePath(`/recipes/${target}`)
-  redirect(`/recipes/${target}`)
+  // `redirect` defaults to `push` inside a Server Action — see
+  // node_modules/next/dist/docs/01-app/03-api-reference/04-functions/redirect.md.
+  // Pushing would leave the just-submitted form in the history, so Back from a
+  // new recipe lands on an empty create form instead of the list.
+  redirect(`/recipes/${target}`, RedirectType.replace)
 }
 
 export async function removeRecipe(id: string): Promise<void> {
@@ -141,5 +145,6 @@ export async function removeRecipe(id: string): Promise<void> {
   }
 
   revalidatePath("/recipes")
-  redirect("/recipes")
+  // Replace, so Back after a delete does not land on the deleted recipe's 404.
+  redirect("/recipes", RedirectType.replace)
 }

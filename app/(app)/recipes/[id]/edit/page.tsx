@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation"
 
 import { saveRecipe } from "@/app/(app)/recipes/actions"
+import { PageHeader } from "@/components/page/page-header"
 import { RecipeForm } from "@/components/recipes/recipe-form"
 import { getRecipe } from "@/lib/services/recipes"
 
@@ -18,7 +19,11 @@ export default async function EditRecipePage({
 
   return (
     <main className="flex flex-col gap-6 pt-6">
-      <h1 className="text-xl font-semibold">Modifica ricetta</h1>
+      {/* Labelled with the recipe's own title, so the link names where it goes. */}
+      <PageHeader
+        title="Modifica ricetta"
+        back={{ href: `/recipes/${recipe.id}`, label: recipe.title }}
+      />
       <RecipeForm
         action={saveRecipe}
         values={{

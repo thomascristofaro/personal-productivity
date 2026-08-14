@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 import { cache } from "react"
 
 import { removeRecipe } from "@/app/(app)/recipes/actions"
+import { PageHeader } from "@/components/page/page-header"
 import { DeleteRecipeDialog } from "@/components/recipes/delete-recipe-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -36,8 +37,11 @@ export default async function RecipePage({
 
   return (
     <main className="flex flex-col gap-6 pt-6">
-      <header className="flex flex-col gap-3">
-        <h1 className="text-xl font-semibold break-words">{recipe.title}</h1>
+      <div className="flex flex-col gap-3">
+        <PageHeader
+          title={recipe.title}
+          back={{ href: "/recipes", label: "Ricettario" }}
+        />
 
         <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           {recipe.servings === null ? null : <span>per {recipe.servings}</span>}
@@ -51,7 +55,9 @@ export default async function RecipePage({
           ))}
         </p>
 
-        <div className="flex gap-2">
+        {/* A toolbar below the header rather than in PageHeader's action
+            slot: at 390px three buttons do not fit beside a recipe title. */}
+        <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
             render={<Link href={`/recipes/${recipe.id}/edit`} />}
@@ -80,7 +86,7 @@ export default async function RecipePage({
             action={removeRecipe}
           />
         </div>
-      </header>
+      </div>
 
       <Separator />
 
