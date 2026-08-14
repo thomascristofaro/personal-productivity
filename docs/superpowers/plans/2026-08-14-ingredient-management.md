@@ -1182,7 +1182,7 @@ pnpm verify
 
 Expected: green.
 
-- [ ] **Step 8: Manual browser check**
+- [x] **Step 8: Manual browser check**
 
 At 390px, with `pnpm dev` running:
 

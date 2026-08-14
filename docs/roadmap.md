@@ -5,7 +5,7 @@ and state** — nothing else does. The design authority stays
 `docs/superpowers/specs/2026-08-13-menu-spesa-design.md`, and the decisions live
 in `docs/conventions/`. Do not restate either here; point at them.
 
-Last updated: 2026-08-14. Work happens on one branch, `feat/app-shell`.
+Last updated: 2026-08-15. Work happens on one branch, `feat/app-shell`.
 
 ## Shipped
 
@@ -22,24 +22,27 @@ Last updated: 2026-08-14. Work happens on one branch, `feat/app-shell`.
 ## In flight
 
 Nothing. **The product loop is closed**: plan a week, generate the list, shop
-from it. What is left is the LLM half, authentication and deployment.
+from it, and all three screens have now been driven end to end. What is left is
+the LLM half, authentication and deployment.
 
-Three plans landed on 2026-08-14 carrying the same debt: **no manual browser
-checklist has been run.** Ingredient management is `8b327fe..c15946f`, the
-weekly menu `28ba487..603caf1`, the shopping list `3ce5794..61a57d2`. `pnpm
-verify` is green for all three, and the menu and ingredient routes were
-confirmed to render server-side, but nothing interactive has been exercised.
+**The checklist debt is paid.** On 2026-08-15 all three manual browser
+checklists were executed at 390px through the `playwright` MCP server:
+ingredient management (8 points), the weekly menu (10) and the shopping list
+(11). Every point passed. The stale dev server was the only thing wrong with
+`/spesa` — restarting `pnpm dev` picked up the post-migration Prisma client and
+the route has rendered correctly ever since, so `Menu.slotsUpdatedAt` and
+`ShoppingList.generatedAt` are confirmed working against a real browser.
 
-**Start the next session by restarting `pnpm dev`.** The shopping-list migration
-added `Menu.slotsUpdatedAt` and `ShoppingList.generatedAt`; the dev server that
-was running at the time holds the pre-migration Prisma client and answers every
-`/spesa` request with `PrismaClientValidationError: Unknown field
-slotsUpdatedAt`. The migration is applied, the generated client on disk carries
-both fields, and `pnpm verify` passes — only the long-lived process is stale.
-`/spesa` has therefore never rendered, not even server-side.
+Nine defects surfaced along the way. None blocks anything and none was fixed
+inline; they are in **Parked defects** below. The two worth knowing about before
+touching the menu drawer are the stale `picked` after "Svuota" and the recipe
+field that reopens empty — both are in `components/menu/`.
 
-The `playwright` MCP server registered on 2026-08-14 can run all three
-checklists in one pass. Do that before building on top of these.
+The seed data the checklists needed was left in place: three recipes
+(`Spaghetti aglio e olio`, `Pollo all'aglio`, `Bruschette all'aglio`), a
+populated menu for the week of 2026-08-10, and its shopping list. The catalogue
+is at 92 entries — `birra` was deleted and `aglio` renamed to `aglio fresco`
+with its aisle moved to `dispensa`, all three as checklist steps.
 
 ## Not started
 
@@ -108,17 +111,24 @@ or `docs/conventions/` as it was decided.
 Real, small, and none of them blocking. Fold each into whichever plan next
 touches that file rather than making a plan for them.
 
-| Defect                                                                                                                                                                                                                                      | Where                                |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
-| A focused `type="number"` input silently reverts on implicit Enter submit                                                                                                                                                                   | `components/recipes/recipe-form.tsx` |
-| Dev-only Base UI `useControlled` warnings                                                                                                                                                                                                   | recipe form                          |
-| `sourceUrl`'s `.max()` still carries the English Zod default message                                                                                                                                                                        | `lib/schemas/recipe.ts`              |
-| No `touch-action: manipulation`, so a phone has the double-tap zoom delay                                                                                                                                                                   | `app/globals.css`                    |
-| `notFound()` renders the right page but answers **200**, because the layout shell has already streamed by the time it throws. Affects `/menu/[weekStart]` and `/ingredients/[name]/edit` alike; a genuinely unrouted path still answers 404 | `app/(app)/**`                       |
-| No `env(safe-area-inset-*)`, so the sticky header will sit under a notch once installed as a PWA                                                                                                                                            | `app/(app)/layout.tsx`               |
-| No `autoComplete` on the recipe form's flat fields, so password managers offer to fill "Nome"                                                                                                                                               | `components/recipes/recipe-form.tsx` |
-| No warning when leaving a form with unsaved changes — the back links made this easier to hit. **A product decision, not a bug to fix unasked.**                                                                                             | recipe and ingredient forms          |
-| `components/ui/drawer.tsx` is installed and unused                                                                                                                                                                                          | —                                    |
+| Defect                                                                                                                                                                                                                                      | Where                                   |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| A focused `type="number"` input silently reverts on implicit Enter submit                                                                                                                                                                   | `components/recipes/recipe-form.tsx`    |
+| Dev-only Base UI `useControlled` warnings                                                                                                                                                                                                   | recipe **and ingredient** forms         |
+| "Svuota" empties the slot but leaves the drawer open holding the old `picked`, so a note typed straight afterwards is refused with "una ricetta oppure una nota". Closing and reopening the drawer clears it                                | `components/menu/slot-drawer.tsx`       |
+| Reopening a slot that holds a recipe shows the Ricetta field **empty**: `inputValue` is driven by a `query` state that starts at `""`, so the label of the held value never renders. The recipe is still attached and still saves           | `components/menu/recipe-picker.tsx`     |
+| A refused slot save loses the note the user typed — the drawer does not echo submitted values back the way `ingredient-form.tsx` does                                                                                                       | `components/menu/slot-drawer.tsx`       |
+| The add-item form does not reset after a successful add: the name stays in the combobox and the aisle keeps the previous pick, so the next item's text concatenates onto the old one                                                        | `components/shopping/add-item-form.tsx` |
+| Only `recipes/[id]` has a `not-found.tsx`. `/menu/[weekStart]`, `/spesa/[weekStart]` and `/ingredients/[name]/edit` fall through to Next's built-in 404 — **in English**, against the Italian-for-users rule                                | `app/(app)/**`                          |
+| The active sidebar entry carries only `data-active`, never `aria-current`, so the highlight is visual only                                                                                                                                  | `components/app-sidebar.tsx`            |
+| Units are never pluralised: "3 spicchio aglio fresco" on a recipe, "5 spicchio" on the list                                                                                                                                                 | recipe detail, shopping list            |
+| `sourceUrl`'s `.max()` still carries the English Zod default message                                                                                                                                                                        | `lib/schemas/recipe.ts`                 |
+| No `touch-action: manipulation`, so a phone has the double-tap zoom delay                                                                                                                                                                   | `app/globals.css`                       |
+| `notFound()` renders the right page but answers **200**, because the layout shell has already streamed by the time it throws. Affects `/menu/[weekStart]` and `/ingredients/[name]/edit` alike; a genuinely unrouted path still answers 404 | `app/(app)/**`                          |
+| No `env(safe-area-inset-*)`, so the sticky header will sit under a notch once installed as a PWA                                                                                                                                            | `app/(app)/layout.tsx`                  |
+| No `autoComplete` on the recipe form's flat fields, so password managers offer to fill "Nome"                                                                                                                                               | `components/recipes/recipe-form.tsx`    |
+| No warning when leaving a form with unsaved changes — the back links made this easier to hit. **A product decision, not a bug to fix unasked.**                                                                                             | recipe and ingredient forms             |
+| `components/ui/drawer.tsx` is installed and unused                                                                                                                                                                                          | —                                       |
 
 ## Starting a fresh session
 

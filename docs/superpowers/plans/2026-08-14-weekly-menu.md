@@ -1386,7 +1386,7 @@ pnpm verify
 
 Expected: green.
 
-- [ ] **Step 9: Manual browser check**
+- [x] **Step 9: Manual browser check**
 
 At 390px, with `pnpm dev` running. The owner has asked that this stay a written checklist; it can be executed by an agent through the `playwright` MCP server.
 
