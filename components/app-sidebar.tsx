@@ -1,6 +1,6 @@
 "use client"
 
-import { BookOpen, Carrot } from "lucide-react"
+import { BookOpen, CalendarDays, Carrot } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
@@ -19,6 +19,7 @@ import {
 // Adding a module to the app is one entry here. The order is the one the two
 // users think in, not alphabetical.
 const NAV_ITEMS = [
+  { href: "/menu", label: "Menù", icon: CalendarDays },
   { href: "/recipes", label: "Ricettario", icon: BookOpen },
   { href: "/ingredients", label: "Ingredienti", icon: Carrot },
 ] as const
