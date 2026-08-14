@@ -42,3 +42,7 @@ next-env.d.ts
 # agent skill mirrors — the real files live in .agents/skills
 /.claude/skills
 /.windsurf
+
+# snapshots and traces the playwright MCP server drops while driving the app
+# through a manual checklist — output of a verification, never a source
+/.playwright-mcp
