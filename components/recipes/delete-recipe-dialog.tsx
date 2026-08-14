@@ -45,7 +45,7 @@ export function DeleteRecipeDialog({
             disabled={isPending}
             onClick={() => startTransition(() => action(id))}
           >
-            Elimina
+            {isPending ? "Elimino…" : "Elimina"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

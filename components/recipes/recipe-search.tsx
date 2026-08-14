@@ -27,9 +27,10 @@ export function RecipeSearch() {
   return (
     <Input
       type="search"
+      name="q"
       value={value}
       onChange={(event) => setValue(event.target.value)}
-      placeholder="Cerca una ricetta"
+      placeholder="Cerca una ricetta…"
       aria-label="Cerca una ricetta"
       data-pending={isPending ? "" : undefined}
       className="w-full"

@@ -37,7 +37,7 @@ export default async function RecipePage({
   return (
     <main className="flex flex-col gap-6 pt-6">
       <header className="flex flex-col gap-3">
-        <h1 className="text-xl font-semibold">{recipe.title}</h1>
+        <h1 className="text-xl font-semibold break-words">{recipe.title}</h1>
 
         <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           {recipe.servings === null ? null : <span>per {recipe.servings}</span>}
@@ -96,14 +96,16 @@ export default async function RecipePage({
       {recipe.instructions === null ? null : (
         <section className="flex flex-col gap-2">
           <h2 className="text-sm font-semibold">Preparazione</h2>
-          <p className="text-sm whitespace-pre-wrap">{recipe.instructions}</p>
+          <p className="text-sm break-words whitespace-pre-wrap">
+            {recipe.instructions}
+          </p>
         </section>
       )}
 
       {recipe.notes === null ? null : (
         <section className="flex flex-col gap-2">
           <h2 className="text-sm font-semibold">Note</h2>
-          <p className="text-sm whitespace-pre-wrap text-muted-foreground">
+          <p className="text-sm break-words whitespace-pre-wrap text-muted-foreground">
             {recipe.notes}
           </p>
         </section>
