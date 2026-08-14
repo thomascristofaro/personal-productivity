@@ -234,23 +234,22 @@ model Recipe {
   updatedAt     DateTime           @updatedAt
 }
 
-model RecipeIngredient {
-  id         String  @id @default(cuid())
-  recipeId   String
-  recipe     Recipe  @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  raw        String  // "320 g di spaghetti" — always preserved
-  name       String  // "spaghetti" — normalised, used for aggregation
-  quantity   Float?
-  unit       String? // "g", "ml", "pz", "cucchiai"; null = "to taste"
-  position   Int
+// The curated catalogue. Keyed on the name — see docs/conventions/data.md.
+model Ingredient {
+  name        String  @id
+  defaultUnit String?         // pre-fills a recipe row; free text, not a vocabulary
+  aisle       String          // "ortofrutta", "banco frigo", "dispensa", …
 }
 
-// Learned mapping: ingredient name -> supermarket aisle.
-// Populated once per ingredient, reused thereafter. Same pattern the finance
-// module will use for transaction categorisation.
-model IngredientAisle {
-  name  String @id   // normalised ingredient name
-  aisle String       // "ortofrutta", "banco frigo", "dispensa", …
+model RecipeIngredient {
+  id             String     @id @default(cuid())
+  recipeId       String
+  recipe         Recipe     @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  ingredientName String
+  ingredient     Ingredient @relation(fields: [ingredientName], references: [name], onDelete: Restrict, onUpdate: Cascade)
+  quantity       Float?
+  unit           String?     // overrides the ingredient's default; null = "to taste"
+  position       Int
 }
 
 model Menu {
@@ -307,19 +306,25 @@ model ShoppingListItem {
 This is what makes the menu grid fully editable rather than a list of proposals.
 A `freeText` slot never contributes to the shopping list.
 
-**`RecipeIngredient.raw` is always preserved** alongside the parsed fields. If
-parsing is wrong, the original string is still there for the user to correct, and
-nothing is lost.
+**Ingredients are a catalogue, not free text (decided 2026-08-14).** A recipe
+line points at an `Ingredient`, which carries the name, a preferred unit and the
+supermarket aisle. This replaces the original design's free-typed line plus a
+learned `IngredientAisle` lookup, for three reasons: the shopping list then
+aggregates on identity rather than on string similarity; the aisle is set once
+per ingredient instead of per normalised name, so changing the normaliser can no
+longer orphan it; and the two users curate the catalogue themselves, which was
+the assumption the free-text design was hedging against.
 
-**`IngredientAisle` is learned, not configured.** The first time an ingredient
-appears, its aisle is guessed (dictionary first, LLM as fallback) and confirmed
-by the user; from then on it is free and instant.
+Three fields of the original model are gone with it. `RecipeIngredient.raw` no
+longer exists, because nothing is parsed on the way in — the user picks from a
+list. `RecipeIngredient.name` is now the foreign key `ingredientName`. And
+`IngredientAisle` is dropped: the aisle is a column on `Ingredient`.
 
-**The normalised name is a primary key, so the normaliser is a contract.**
-`IngredientAisle.name` and `RecipeIngredient.name` both hold the output of one
-function, which lives in one module. Changing that function silently orphans
-every aisle ever learned, so a change to it requires a migration that remaps the
-existing keys. Treat it as schema, not as a helper.
+**The parser survives, uncalled.** `lib/services/ingredient-parse.ts` and the
+name normaliser have no caller after this change, and that is deliberate: they
+are the engine of the URL import of §6.1, where a string arrives from outside
+and must be matched against the catalogue — the one place an heuristic still
+belongs. Their fixture tables stay as the regression suite for that match.
 
 **`MenuSlot.servings` is an exception, not a field to fill in.** `null` means the
 household default and is the normal case, so the menu grid carries no numeric
@@ -408,10 +413,10 @@ Pure computation, no LLM:
 
 1. Collect every `MenuSlot` with a `recipeId` (free-text and empty slots ignored).
 2. Expand to `RecipeIngredient` rows, scaled by the slot's factor (see §5).
-3. Aggregate by `(name, unit)`, summing quantities. Incompatible units stay as separate lines rather than being coerced.
+3. Aggregate by `(ingredientName, unit)`, summing quantities. Incompatible units stay as separate lines rather than being coerced. The name is a foreign key into the catalogue, not typed text, so two lines sharing it are the same ingredient by construction.
 4. Ingredients with no quantity ("sale", "olio q.b.") collapse to a single unquantified line.
 5. Round: countable units (`pz`, `uova`, `spicchi`) up to the next whole item; weights and volumes stay exact.
-6. Assign an aisle from `IngredientAisle`; unknown names go to an "altro" group and prompt a one-time assignment.
+6. Take the aisle from `Ingredient.aisle`, which travels with the ingredient — the aggregator is passed no lookup table. An ingredient nobody has classified defaults to "altro".
 7. Sort by aisle, in supermarket walking order, with "altro" last.
 8. Preserve `manual` items across regeneration, and the `checked` state of every
    item whose quantity did not rise. An item whose quantity grew comes back
@@ -516,8 +521,8 @@ a month of real billing data, not with estimates.
 | Shared URL unreachable / non-HTML | Confirmation screen opens with an empty draft and an explanatory message; user can enter the recipe manually. Never a dead end.                                      |
 | No JSON-LD found                  | Silent fallback to the LLM path. Not surfaced to the user.                                                                                                           |
 | LLM call fails or times out       | Import: manual entry offered. Menu: grid stays as-is with a retry affordance; a hand-built menu remains fully possible. **No LLM failure may block a core action.**  |
-| Ingredient line unparseable       | Stored with `raw` populated, `quantity`/`unit` null. Appears in the shopping list unquantified and flagged for correction.                                           |
-| Unknown ingredient aisle          | Grouped under "altro"; one-tap assignment persists it to `IngredientAisle`.                                                                                          |
+| Ingredient not in the catalogue   | The picker offers "Crea «…»" inline; the entry is added with no unit and the "altro" aisle, and the recipe carries on. Only the URL import meets unparseable text.   |
+| Unknown ingredient aisle          | Grouped under "altro". Corrected once on the ingredient itself, and right from then on.                                                                              |
 | Concurrent checkbox writes        | Last-write-wins per item. Acceptable at this scale.                                                                                                                  |
 | Database unreachable              | Explicit error state; no silent partial rendering.                                                                                                                   |
 | Database cold (scaled to zero)    | Not an error. The first query after idle waits under a second for the wake-up; no special handling, but no route may set a timeout shorter than a couple of seconds. |

@@ -148,3 +148,30 @@ Names are documented in `.env.example` with empty values, which is committed.
 Real values live in `.env` (git-ignored) and in Vercel Environment Variables.
 Read and validate them in one module at startup, so a missing variable fails
 immediately rather than at the first request that needs it.
+
+## `Ingredient` is keyed on its name
+
+Every other model here carries a cuid, because every other model needs a
+surrogate key — two recipes may share a title. An ingredient may not: the name
+is unique by definition, the two users curate it, and it is what every other
+table wants to talk about.
+
+So `Ingredient.name` is the primary key and `RecipeIngredient.ingredientName` is
+the foreign key. Four things follow, and none of them is an accident:
+
+- Reading `RecipeIngredient` in `pnpm db:studio` or in psql needs no join, and
+  neither does `getRecipe` — the display name is already on the row.
+- Renaming an ingredient is a normal edit. The relation carries
+  `onUpdate: Cascade`, so Postgres rewrites every reference atomically.
+- Deleting an ingredient a recipe still uses fails, by `onDelete: Restrict`.
+  Emptying a recipe silently would be worse than an error.
+- The shopping-list aggregator keys on the name, and `ShoppingListItem.name`
+  already matches it, so persisting a generated list needs no extra column.
+
+This is not the old string matching returning. Names used to be _typed_ and
+compared through a normaliser; now they are chosen from a list and enforced by a
+foreign key, so two rows sharing a name are the same entry by construction.
+
+Revisit only if ingredients acquire references from outside the database — a
+bookmarked URL, an export file — where a rename would break a link Postgres
+cannot see. Nothing does today.
