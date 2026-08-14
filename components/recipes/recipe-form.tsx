@@ -12,10 +12,10 @@ import {
   EMPTY_FORM_STATE,
   type SaveRecipeAction,
 } from "@/components/recipes/recipe-form-state"
+import { TagPicker } from "@/components/recipes/tag-picker"
 import { Button } from "@/components/ui/button"
 import {
   Field,
-  FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
@@ -31,19 +31,18 @@ export type RecipeFormValues = {
   totalMinutes: string
   instructions: string
   notes: string
-  tags: string
+  tags: string[]
   ingredients: IngredientRowValue[]
 }
 
 // DOM order of the flat fields, so the first invalid one can take focus after a
-// failed submit — the field ids double as this list. Ingredients are absent on
-// purpose: the rows have no single element carrying that id.
+// failed submit — the field ids double as this list. Ingredients and tags are
+// absent on purpose: neither has a single element carrying that id.
 const FIELD_ORDER: (keyof RecipeFormValues)[] = [
   "title",
   "servings",
   "totalMinutes",
   "instructions",
-  "tags",
   "sourceUrl",
 ]
 
@@ -52,12 +51,14 @@ export function RecipeForm({
   action,
   options,
   units,
+  tagSuggestions,
   onCreateIngredient,
 }: {
   values: RecipeFormValues
   action: SaveRecipeAction
   options: IngredientOption[]
   units: string[]
+  tagSuggestions: string[]
   onCreateIngredient: (name: string) => Promise<IngredientOption | null>
 }) {
   const [state, formAction, isPending] = useActionState(
@@ -72,9 +73,11 @@ export function RecipeForm({
   // submit runs, unconditionally. Echoing the submitted value back through
   // `state.values` and reading it here first means a failed save re-renders
   // the form with what the user typed, not the original prop.
-  // Flat fields only — `values.ingredients` is an array and never reaches here.
-  const valueOf = (field: Exclude<keyof RecipeFormValues, "ingredients">) =>
-    state.values?.[field] ?? values[field] ?? ""
+  // Flat fields only — ingredients and tags are arrays held in their own
+  // components' state and never reach here.
+  const valueOf = (
+    field: Exclude<keyof RecipeFormValues, "ingredients" | "tags">
+  ) => state.values?.[field] ?? values[field] ?? ""
   const describedBy = (field: keyof RecipeFormValues, hasDescription = false) =>
     [
       hasDescription ? `${field}-description` : null,
@@ -182,21 +185,15 @@ export function RecipeForm({
           </FieldError>
         </Field>
 
-        <Field data-invalid={invalid("tags")}>
-          <FieldLabel htmlFor="tags">Etichette</FieldLabel>
-          <Input
-            id="tags"
-            name="tags"
-            defaultValue={valueOf("tags")}
-            placeholder="pesce, veloce"
-            aria-invalid={errorOf("tags") ? true : undefined}
-            aria-describedby={describedBy("tags", true)}
-          />
-          <FieldDescription id="tags-description">
-            Separate da virgola.
-          </FieldDescription>
-          <FieldError id="tags-error">{errorOf("tags")}</FieldError>
-        </Field>
+        <fieldset className="flex flex-col gap-2">
+          <legend className="mb-2 text-xs font-medium">Etichette</legend>
+          <TagPicker suggestions={tagSuggestions} defaultTags={values.tags} />
+          {errorOf("tags") === undefined ? null : (
+            <p role="alert" className="text-xs text-destructive">
+              {errorOf("tags")}
+            </p>
+          )}
+        </fieldset>
 
         <Field data-invalid={invalid("sourceUrl")}>
           <FieldLabel htmlFor="sourceUrl">Fonte</FieldLabel>

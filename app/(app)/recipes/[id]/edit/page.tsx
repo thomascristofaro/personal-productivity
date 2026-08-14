@@ -4,7 +4,7 @@ import { addIngredient, saveRecipe } from "@/app/(app)/recipes/actions"
 import { PageHeader } from "@/components/page/page-header"
 import { RecipeForm } from "@/components/recipes/recipe-form"
 import { listIngredients, listUsedUnits } from "@/lib/services/ingredients"
-import { getRecipe } from "@/lib/services/recipes"
+import { getRecipe, listTags } from "@/lib/services/recipes"
 
 export const metadata = { title: "Modifica ricetta" }
 
@@ -16,10 +16,11 @@ export default async function EditRecipePage({
   const { id } = await params
   // In parallel: awaiting them in sequence is the waterfall the React
   // guidelines rank CRITICAL.
-  const [recipe, options, units] = await Promise.all([
+  const [recipe, options, units, tagSuggestions] = await Promise.all([
     getRecipe(id),
     listIngredients(),
     listUsedUnits(),
+    listTags(),
   ])
 
   if (recipe === null) notFound()
@@ -35,6 +36,7 @@ export default async function EditRecipePage({
         action={saveRecipe}
         options={options}
         units={units}
+        tagSuggestions={tagSuggestions}
         onCreateIngredient={addIngredient}
         values={{
           id: recipe.id,
@@ -44,7 +46,7 @@ export default async function EditRecipePage({
           totalMinutes: recipe.totalMinutes?.toString() ?? "",
           instructions: recipe.instructions ?? "",
           notes: recipe.notes ?? "",
-          tags: recipe.tags.join(", "),
+          tags: recipe.tags,
           ingredients: recipe.ingredients.map((ingredient) => ({
             key: ingredient.id,
             ingredientName: ingredient.ingredientName,
