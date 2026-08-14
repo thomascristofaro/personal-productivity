@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useActionState, useEffect, useRef } from "react"
+import { useActionState, useEffect } from "react"
 
 import {
   EMPTY_FORM_STATE,
@@ -54,7 +54,6 @@ export function RecipeForm({
     action,
     EMPTY_FORM_STATE
   )
-  const isDirtyRef = useRef(false)
 
   const errorOf = (field: keyof RecipeFormValues) => state.errors[field]?.[0]
   const invalid = (field: keyof RecipeFormValues) =>
@@ -69,27 +68,8 @@ export function RecipeForm({
     }
   }, [state])
 
-  // Losing typed ingredients or instructions to an accidental tab close is
-  // costly to redo by hand, so warn before that happens. In-app navigation
-  // (the "Annulla" link, the back button) is not covered here.
-  useEffect(() => {
-    function handleBeforeUnload(event: BeforeUnloadEvent) {
-      if (!isDirtyRef.current) return
-      event.preventDefault()
-      event.returnValue = ""
-    }
-    window.addEventListener("beforeunload", handleBeforeUnload)
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload)
-  }, [])
-
   return (
-    <form
-      action={formAction}
-      onChange={() => {
-        isDirtyRef.current = true
-      }}
-      className="flex flex-col gap-6"
-    >
+    <form action={formAction} className="flex flex-col gap-6">
       {values.id === undefined ? null : (
         <input type="hidden" name="id" value={values.id} />
       )}
