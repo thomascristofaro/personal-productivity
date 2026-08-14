@@ -1,8 +1,12 @@
-import { AISLE_UNKNOWN, aisleRank } from "@/lib/aisles"
+import { aisleRank } from "@/lib/aisles"
 import { HOUSEHOLD_SERVINGS } from "@/lib/config"
 
+// `name` is a foreign key into the ingredient catalogue, not typed text, so two
+// lines carrying the same name are the same ingredient by construction. `aisle`
+// travels with it: there is no lookup table to consult any more.
 export type AggregatorIngredient = {
   name: string
+  aisle: string
   quantity: number | null
   unit: string | null
 }
@@ -62,7 +66,12 @@ const scaleFactor = (slot: AggregatorSlot) =>
   (slot.servings ?? HOUSEHOLD_SERVINGS) /
   (slot.recipe?.servings ?? HOUSEHOLD_SERVINGS)
 
-type Total = { name: string; unit: string | null; quantity: number | null }
+type Total = {
+  name: string
+  aisle: string
+  unit: string | null
+  quantity: number | null
+}
 
 function totalsFor(slots: AggregatorSlot[]): Total[] {
   const totals = new Map<string, Total>()
@@ -81,13 +90,19 @@ function totalsFor(slots: AggregatorSlot[]): Total[] {
 
       if (ingredient.quantity === null) {
         if (current === undefined) {
-          totals.set(key, { name: ingredient.name, unit: null, quantity: null })
+          totals.set(key, {
+            name: ingredient.name,
+            aisle: ingredient.aisle,
+            unit: null,
+            quantity: null,
+          })
         }
         continue
       }
 
       totals.set(key, {
         name: ingredient.name,
+        aisle: ingredient.aisle,
         unit,
         quantity: (current?.quantity ?? 0) + ingredient.quantity * factor,
       })
@@ -101,25 +116,23 @@ function totalsFor(slots: AggregatorSlot[]): Total[] {
  * Builds the shopping list for a menu, from the recipes its slots point at.
  *
  * Pure and deterministic: it reads no database and holds no state, so a caller
- * loads the slots, the previous list and the learned aisles, and writes back
- * whatever comes out. Slots with no recipe — free text, or empty — contribute
+ * loads the slots and the previous list, and writes back whatever comes out.
+ * Each ingredient carries its own aisle from the catalogue, so there is no
+ * lookup to pass in. Slots with no recipe — free text, or empty — contribute
  * nothing. Items added by hand and the checked state of surviving items outlive
  * a regeneration, which is what makes editing the menu safe.
  *
- * @param input Every slot of the menu including the ones with no recipe, the
- *   current list or an empty array on first generation, and the learned aisles
- *   keyed by normalised ingredient name.
+ * @param input Every slot of the menu including the ones with no recipe, and
+ *   the current list or an empty array on first generation.
  * @param input.slots Every slot of the menu, including the ones with no recipe.
  * @param input.existing The current list, or an empty array on first generation.
- * @param input.aisles The learned aisles, keyed by normalised ingredient name.
  * @returns The new list, sorted by supermarket walking order and then by name.
  */
 export function aggregateShoppingList(input: {
   slots: AggregatorSlot[]
   existing: ShoppingItem[]
-  aisles: Record<string, string>
 }): ShoppingItem[] {
-  const { slots, existing, aisles } = input
+  const { slots, existing } = input
 
   const previous = new Map(
     existing
@@ -146,9 +159,7 @@ export function aggregateShoppingList(input: {
       name: total.name,
       quantity,
       unit: total.unit,
-      aisle: Object.hasOwn(aisles, total.name)
-        ? aisles[total.name]
-        : AISLE_UNKNOWN,
+      aisle: total.aisle,
       checked: quantityRose ? false : (prior?.checked ?? false),
       checkedById: quantityRose ? null : (prior?.checkedById ?? null),
       checkedAt: quantityRose ? null : (prior?.checkedAt ?? null),

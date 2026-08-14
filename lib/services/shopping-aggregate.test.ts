@@ -8,19 +8,33 @@ import {
   aggregateShoppingList,
 } from "@/lib/services/shopping-aggregate"
 
-const AISLES = {
+// What the catalogue says, standing in for Ingredient.aisle. A name missing
+// here is an ingredient nobody has classified, which lands in the catch-all.
+const AISLES: Record<string, string> = {
   spaghetti: "dispensa",
   pomodori: "ortofrutta",
   uova: "banco frigo",
   patate: "ortofrutta",
 }
 
+// The aisle is filled in from AISLES unless a test states one, so the fixtures
+// stay about quantities and units — which is what these tests are checking.
+type IngredientFixture = Omit<AggregatorIngredient, "aisle"> & {
+  aisle?: string
+}
+
 const slot = (
-  ingredients: AggregatorIngredient[],
+  ingredients: IngredientFixture[],
   options: { recipeServings?: number | null; slotServings?: number | null } = {}
 ): AggregatorSlot => ({
   servings: options.slotServings ?? null,
-  recipe: { servings: options.recipeServings ?? 2, ingredients },
+  recipe: {
+    servings: options.recipeServings ?? 2,
+    ingredients: ingredients.map((ingredient) => ({
+      ...ingredient,
+      aisle: ingredient.aisle ?? AISLES[ingredient.name] ?? AISLE_UNKNOWN,
+    })),
+  },
 })
 
 const item = (overrides: Partial<ShoppingItem>): ShoppingItem => ({
@@ -36,9 +50,21 @@ const item = (overrides: Partial<ShoppingItem>): ShoppingItem => ({
 })
 
 const aggregate = (slots: AggregatorSlot[], existing: ShoppingItem[] = []) =>
-  aggregateShoppingList({ slots, existing, aisles: AISLES })
+  aggregateShoppingList({ slots, existing })
 
 describe("aggregateShoppingList", () => {
+  it("carries each ingredient's own aisle onto its line", () => {
+    const result = aggregate([
+      slot([
+        { name: "spaghetti", quantity: 320, unit: "g" },
+        { name: "pomodori", quantity: 400, unit: "g" },
+      ]),
+    ])
+
+    // Sorted by walking order: ortofrutta comes before dispensa.
+    expect(result.map((line) => line.aisle)).toEqual(["ortofrutta", "dispensa"])
+  })
+
   it("sums an ingredient shared by two recipes", () => {
     const result = aggregate([
       slot([{ name: "spaghetti", quantity: 320, unit: "g" }]),
