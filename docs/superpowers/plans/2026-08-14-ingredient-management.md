@@ -95,7 +95,7 @@ Never `--no-verify`.
 
 **Why the aisle is validated as a plain string here.** `lib/schemas/**` may import Zod and nothing else, so it cannot read `AISLE_ORDER` from `lib/aisles.ts`. Membership is checked in the service, which may import leaf modules, and surfaces as a typed error the action turns into Italian. Do not "fix" this by importing `@/lib/aisles` into a schema — ESLint will reject it, and the rule exists so schemas never drag anything into the browser bundle.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `lib/schemas/ingredient.test.ts`:
 
@@ -149,7 +149,7 @@ describe("IngredientInputSchema", () => {
 
 Also add `IngredientNameSchema` to the existing import at the top of the file if it is not already there — it is.
 
-- [ ] **Step 2: Run them and watch them fail**
+- [x] **Step 2: Run them and watch them fail**
 
 ```bash
 pnpm exec vitest run lib/schemas/ingredient.test.ts
@@ -157,7 +157,7 @@ pnpm exec vitest run lib/schemas/ingredient.test.ts
 
 Expected: FAIL — `IngredientInputSchema` is not exported, and the slash test fails because nothing rejects it yet.
 
-- [ ] **Step 3: Extend the schema**
+- [x] **Step 3: Extend the schema**
 
 In `lib/schemas/ingredient.ts`, add the slash rule to `IngredientNameSchema`:
 
@@ -197,7 +197,7 @@ export type IngredientInput = z.infer<typeof IngredientInputSchema>
 
 `unit` is the existing private const in that file — the same nullable, trimmed, empty-to-null transform the recipe rows use. Reuse it; do not write a second one.
 
-- [ ] **Step 4: Run them and watch them pass**
+- [x] **Step 4: Run them and watch them pass**
 
 ```bash
 pnpm exec vitest run lib/schemas/ingredient.test.ts
@@ -205,7 +205,7 @@ pnpm exec vitest run lib/schemas/ingredient.test.ts
 
 Expected: 15 passed.
 
-- [ ] **Step 5: Verify**
+- [x] **Step 5: Verify**
 
 ```bash
 pnpm verify
@@ -213,7 +213,7 @@ pnpm verify
 
 Expected: green, 115 tests. If a recipe test fails on the slash rule, a fixture uses a name containing one — change the fixture, not the rule.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add lib/schemas
@@ -243,7 +243,7 @@ git commit -m "feat: add the ingredient input contract"
 
 The existing `createIngredient(name)` stays: it is the bare inline-creation path the recipe form uses, and it is not the same operation as creating a fully specified entry.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `lib/services/ingredients.test.ts`:
 
@@ -265,7 +265,7 @@ describe("isKnownAisle", () => {
 })
 ```
 
-- [ ] **Step 2: Run it and watch it fail**
+- [x] **Step 2: Run it and watch it fail**
 
 ```bash
 pnpm exec vitest run lib/services/ingredients.test.ts
@@ -273,7 +273,7 @@ pnpm exec vitest run lib/services/ingredients.test.ts
 
 Expected: FAIL — `isKnownAisle` is not exported.
 
-- [ ] **Step 3: Extend the service**
+- [x] **Step 3: Extend the service**
 
 In `lib/services/ingredients.ts`, add the import:
 
@@ -484,7 +484,7 @@ export async function deleteIngredient(name: string): Promise<void> {
 }
 ```
 
-- [ ] **Step 4: Run the tests**
+- [x] **Step 4: Run the tests**
 
 ```bash
 pnpm exec vitest run lib/services/ingredients.test.ts
@@ -492,7 +492,7 @@ pnpm exec vitest run lib/services/ingredients.test.ts
 
 Expected: 7 passed.
 
-- [ ] **Step 5: Verify**
+- [x] **Step 5: Verify**
 
 ```bash
 pnpm verify
@@ -500,7 +500,7 @@ pnpm verify
 
 Expected: green, 118 tests.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add lib/services
@@ -528,7 +528,7 @@ git commit -m "feat: add catalogue reads and writes for ingredient management"
 
 **The reset trap, again.** React 19 calls `requestFormReset` before an action runs, unconditionally, so a validation failure blanks every uncontrolled input. The recipe form solves it by echoing the submitted values back through the action state and reading them first. Do the same here — the `valueOf` helper below is the same pattern. Do not skip it because the form is small.
 
-- [ ] **Step 1: Install the select**
+- [x] **Step 1: Install the select**
 
 ```bash
 pnpm dlx shadcn@latest add select
@@ -541,7 +541,7 @@ git status --short
 pnpm typecheck
 ```
 
-- [ ] **Step 2: Read the installed API before writing against it**
+- [x] **Step 2: Read the installed API before writing against it**
 
 ```bash
 grep -n "^export {" -A 15 components/ui/select.tsx
@@ -549,7 +549,7 @@ grep -n "^export {" -A 15 components/ui/select.tsx
 
 Base UI's Select differs from Radix's, and `.agents/skills/shadcn/rules/base-vs-radix.md` lists it explicitly: it can take an `items` prop instead of mapped children, and `SelectValue` renders the label from it. The snippet in Step 3 maps `SelectItem` children and passes no `items` prop. **If the installed file requires `items`, add it and drop the children** — do not pass both — and say so in the task report.
 
-- [ ] **Step 3: Write the form**
+- [x] **Step 3: Write the form**
 
 Create `components/ingredients/ingredient-form.tsx`:
 
@@ -737,7 +737,7 @@ export function IngredientForm({
 }
 ```
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 ```bash
 pnpm verify
@@ -745,7 +745,7 @@ pnpm verify
 
 Expected: green. Nothing renders this yet, so it only proves it compiles and lints.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add components
@@ -772,7 +772,7 @@ git commit -m "feat: add the ingredient form"
 - Consumes: everything from Tasks 1–3, plus `PageHeader`, `DataList`, `DataListRow`, `EmptyState`, `PageError`, `ListSkeleton`, `DetailSkeleton` from `components/page/`, and `AISLE_ORDER` from `@/lib/aisles`.
 - Produces: the `/ingredients` routes.
 
-- [ ] **Step 1: Write the actions**
+- [x] **Step 1: Write the actions**
 
 Create `app/(app)/ingredients/actions.ts`:
 
@@ -925,7 +925,7 @@ The return type is `Promise<void>` and not a result object on purpose: `<form ac
 
 ````
 
-- [ ] **Step 2: Write the list**
+- [x] **Step 2: Write the list**
 
 Create `app/(app)/ingredients/page.tsx`:
 
@@ -1013,7 +1013,7 @@ export default async function IngredientsPage({
 
 There is deliberately no search box in this task. The page already reads `?q=`, so adding one later is a component, not a rewrite — and with 93 seeded entries the list is scrollable. If it stops being scrollable, lift `components/recipes/recipe-search.tsx` into `components/page/` rather than writing a second one.
 
-- [ ] **Step 3: Write the two state files**
+- [x] **Step 3: Write the two state files**
 
 Create `app/(app)/ingredients/loading.tsx`:
 
@@ -1049,7 +1049,7 @@ export default function Loading() {
 }
 ```
 
-- [ ] **Step 4: Write the create page**
+- [x] **Step 4: Write the create page**
 
 Create `app/(app)/ingredients/new/page.tsx`:
 
@@ -1082,7 +1082,7 @@ export default async function NewIngredientPage() {
 }
 ```
 
-- [ ] **Step 5: Write the edit page**
+- [x] **Step 5: Write the edit page**
 
 Create `app/(app)/ingredients/[name]/edit/page.tsx`:
 
@@ -1157,7 +1157,7 @@ Add `import { Button } from "@/components/ui/button"` to that file.
 
 No confirmation dialog: deletion is only offered when nothing uses the ingredient, so the worst case is re-typing a name. The recipe screens use `DeleteRecipeDialog` because deleting a recipe destroys work; this does not.
 
-- [ ] **Step 6: Add the navigation entry**
+- [x] **Step 6: Add the navigation entry**
 
 In `components/app-sidebar.tsx`, add the import and the entry:
 
@@ -1174,7 +1174,7 @@ const NAV_ITEMS = [
 
 This is the payoff the shell plan promised: adding a module to the navigation is one line.
 
-- [ ] **Step 7: Verify**
+- [x] **Step 7: Verify**
 
 ```bash
 pnpm verify
@@ -1195,7 +1195,7 @@ At 390px, with `pnpm dev` running:
 7. Try to rename an ingredient to a name that already exists — the error appears under the Nome field, and **the other two fields keep what you typed** (the React 19 reset check).
 8. On the edit form, clear the name and save: the error is inline and focus lands on the Nome field.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add -A
@@ -1211,7 +1211,7 @@ git commit -m "feat: manage the ingredient catalogue from the app"
 - Modify: whatever the review finds
 - Modify: `docs/conventions/ui.md`
 
-- [ ] **Step 1: Run the guidelines**
+- [x] **Step 1: Run the guidelines**
 
 Use `.agents/skills/web-design-guidelines/` over:
 
@@ -1223,7 +1223,7 @@ app/(app)/ingredients/[name]/edit/page.tsx
 components/app-sidebar.tsx
 ```
 
-- [ ] **Step 2: Triage**
+- [x] **Step 2: Triage**
 
 Fix focus order, keyboard reachability, labels, live regions, contrast, heading structure, long-content overflow.
 
@@ -1234,7 +1234,7 @@ Check two things explicitly even if the tool does not raise them:
 
 **Dismiss any finding about control or touch-target size**, naming the decision in `docs/conventions/ui.md` under "Touch targets". Do not edit `components/ui/`.
 
-- [ ] **Step 3: Record that the primitives transferred**
+- [x] **Step 3: Record that the primitives transferred**
 
 In `docs/conventions/ui.md`, at the end of the "Page primitives" section, append:
 
@@ -1244,7 +1244,7 @@ on these, and they added no primitive and changed none. That is the bar: if a
 third module needs one bent, bend the primitive rather than forking it.
 ```
 
-- [ ] **Step 4: Verify and commit**
+- [x] **Step 4: Verify and commit**
 
 ```bash
 pnpm verify

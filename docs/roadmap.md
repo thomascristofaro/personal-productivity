@@ -15,13 +15,14 @@ Last updated: 2026-08-14. Work happens on one branch, `feat/app-shell`.
 | [`2026-08-14-recipes`](superpowers/plans/2026-08-14-recipes.md)                                             | `lib/services/recipes.ts` and the four recipe screens: list, detail, create, edit                                                                                                             |
 | [`2026-08-14-app-shell-and-page-primitives`](superpowers/plans/2026-08-14-app-shell-and-page-primitives.md) | the side menu, `components/page/`, the four designed states, back links, `RedirectType.replace`                                                                                               |
 | [`2026-08-14-ingredient-catalogue`](superpowers/plans/2026-08-14-ingredient-catalogue.md)                   | the `Ingredient` table keyed on its name, a 93-entry seed, ingredient rows in the recipe form, tags as chips, the aggregator re-keyed                                                         |
+| [`2026-08-14-ingredient-management`](superpowers/plans/2026-08-14-ingredient-management.md)                 | the `/ingredients` screens, `IngredientInputSchema`, the catalogue reads and writes, and the second module proving `components/page/` transfers                                               |
 
 ## In flight
 
-[`2026-08-14-ingredient-management`](superpowers/plans/2026-08-14-ingredient-management.md)
-— the `/ingredients` screens, so a preferred unit or an aisle can be corrected
-without opening `pnpm db:studio`. Check the plan's checkboxes and `git log`
-for how far it got.
+Nothing. Ingredient management landed in `8b327fe..c15946f`, with one debt: the
+plan's Task 4 Step 8 — the manual browser checklist — has not been run. The code
+is committed and `pnpm verify` is green, but the rename-cascade and the React 19
+reset behaviour have never been exercised in a browser.
 
 ## Not started
 
@@ -75,9 +76,14 @@ or `docs/conventions/` as it was decided.
 - **One working branch.** `feat/app-shell` carries every plan since the data
   model. Do not spawn a branch per plan.
 - **No end-to-end browser tests.** Playwright was proposed twice and declined
-  both times: the owner checks the visual and interaction behaviour by hand.
-  Every plan therefore ends its UI tasks with a written, ordered manual checklist
-  rather than a test file. Keep writing them that way.
+  both times. Every plan therefore ends its UI tasks with a written, ordered
+  manual checklist rather than a test file. Keep writing them that way — the
+  decision stands, and nothing Playwright-shaped belongs in `package.json` or in
+  the test run.
+  Since 2026-08-14 those checklists no longer have to be walked by hand: an
+  agent can drive a browser through the `playwright` MCP server, registered
+  outside the repo at user scope. It is a way of _running_ the checklist, not a
+  reason to stop writing one.
 - **Frontend choices get surfaced, not decided silently.** The owner is a backend
   developer and asked for React and UI patterns to come from the skills in
   `.agents/skills/` rather than from memory, and for any debatable frontend call
