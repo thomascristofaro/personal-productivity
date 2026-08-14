@@ -34,6 +34,52 @@ online is written against Radix, so prop names and composition patterns do not
 always transfer. Read `.agents/skills/shadcn/rules/base-vs-radix.md` rather
 than adapting a blog post by guesswork.
 
+## Page primitives
+
+A page is assembled from `components/page/`, not rebuilt. A new module gets its
+screens right by reusing these, and the states below stop being something each
+module has to remember.
+
+| Primitive                         | Use                                                |
+| --------------------------------- | -------------------------------------------------- |
+| `PageHeader`                      | title, optional back link, optional action slot    |
+| `DataList` + `DataListRow`        | the card-row list, including the count live region |
+| `EmptyState`                      | "there is nothing here", with an optional action   |
+| `PageError`                       | the body of a route's `error.tsx`                  |
+| `ListSkeleton` / `DetailSkeleton` | the body of a route's `loading.tsx`                |
+
+**Every screen that fetches has four designed states, not three.** The design
+document says loading, empty and error; use showed a fourth that is easy to miss.
+
+1. **Empty** — nothing exists yet. Say so and offer the action that creates one.
+2. **Filtered empty** — data exists, the filter matched nothing. Different copy,
+   and no "create" button: the user is looking for something, not authoring.
+3. **Error** — the fetch failed. `PageError`. Never a partial page.
+4. **Loading** — `ListSkeleton` or `DetailSkeleton` in the route's `loading.tsx`.
+
+States 1 and 2 are two call sites passing different strings to `EmptyState`, not
+one component with a boolean. Adding an `isSearching`-style prop to a primitive
+is the thing this directory exists to prevent.
+
+`DataList` takes a `renderItem` callback. That is a render prop and it is the
+right one: the parent supplies the data the child renders, the case
+`vercel-composition-patterns` names as appropriate for them.
+
+## The app shell
+
+`app/(app)/layout.tsx` mounts a stock shadcn `sidebar`: a rail on desktop, a
+sheet behind a hamburger on a phone. The layout stays a server component —
+`SidebarProvider` is a client component, but `children` reaches it as a slot, so
+pages below keep rendering on the server.
+
+Adding a module to the navigation is one entry in `NAV_ITEMS` in
+`components/app-sidebar.tsx`. Only routes that exist are listed; a nav entry
+that 404s is worse than a short menu.
+
+Generated shadcn code that ships English screen-reader text is not edited.
+Override it from the call site instead — `<SidebarTrigger aria-label="Apri il
+menu" />` — so the file stays byte-identical to the registry.
+
 ## Server and client
 
 Server component by default. Add `"use client"` only for state, effects, event

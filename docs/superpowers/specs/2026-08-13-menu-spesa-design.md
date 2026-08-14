@@ -192,6 +192,17 @@ shadcn registry generates and is not adjusted — this section originally asked
 for ~44px targets, and `docs/conventions/ui.md` records why that was not
 adopted and what would justify revisiting it.
 
+**Navigation (decided 2026-08-14).** Every module is reached from a side menu in
+the app shell. Every screen below a list carries an explicit back link naming its
+destination; the browser's Back button is never the only way out. Server actions
+redirect with `RedirectType.replace`, because `redirect` defaults to `push`
+inside a Server Action and would otherwise leave the submitted form in the
+history — Back after creating a recipe would land on an empty create form.
+
+**Notes are hidden (decided 2026-08-14).** `Recipe.notes` stays in the schema and
+survives a round-trip through the edit form as a hidden input, but no screen
+renders or edits it. Restoring it is a UI change, not a migration.
+
 ---
 
 ## 5. Data model
