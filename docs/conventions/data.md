@@ -106,13 +106,8 @@ defines the JSON schema sent to Anthropic.
 
 ## Modelling rules from the design
 
-Two commitments worth restating, because both are easy to "simplify" away and
-both exist for a reason:
-
-**`RecipeIngredient.raw` is always preserved.** The original ingredient string is
-stored alongside the parsed quantity, unit and name. When parsing is wrong the
-user can still see and correct what the source actually said. Nothing is ever
-lost to a parser.
+One commitment worth restating, because it is easy to "simplify" away and it
+exists for a reason:
 
 **`ShoppingListItem.manual` survives regeneration.** Items added by hand
 (`sacchetti`, `detersivo`) and the checked state of existing items must outlive a

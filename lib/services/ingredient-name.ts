@@ -13,10 +13,15 @@ const APOSTROPHE_FOLD = /[‘’ʼ]/g
  * Reduces an ingredient name to the form used as a key.
  *
  * Deliberately shallow: no stemming, no singularisation, no synonyms, so
- * "pomodori pelati" and "pelati" stay two lines until that becomes a nuisance.
- * The result is stored as `IngredientAisle.name` and as `RecipeIngredient.name`,
- * so changing this function orphans learned aisles and needs a migration that
- * remaps them.
+ * "pomodori pelati" and "pelati" stay two different things until that becomes a
+ * nuisance.
+ *
+ * Nothing calls this today, and that is deliberate. Since the ingredient
+ * catalogue landed, a recipe line points at a curated `Ingredient` and no name
+ * is ever normalised on the way in. This function is for the URL import of
+ * design document §6.1, where a string arrives from outside and has to be
+ * matched against the catalogue — the one place an heuristic still belongs. It
+ * no longer produces a stored key, so changing it orphans nothing.
  *
  * @param raw The name as written, from a recipe source or typed by hand.
  * @returns The normalised name, which is stable under a second application.
