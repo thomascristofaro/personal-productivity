@@ -398,9 +398,16 @@ passed to the LLM; it is not a prompt instruction, so it cannot be ignored.
 
 **Editing is unconstrained.** The proposal only pre-fills the grid. The user can:
 
-- assign any recipe to any slot (search via the shadcn `command` palette)
+- assign any recipe to any slot (search via the shadcn `combobox`, which filters
+  as you type — decided 2026-08-14, replacing the `command` palette this section
+  originally named: `combobox` was already installed and already the ingredient
+  picker, and two different search interactions for one gesture is worse than
+  either of them)
 - clear a slot
-- move a recipe between slots
+- ~~move a recipe between slots~~ — dropped 2026-08-14. With fourteen slots and
+  a one-week horizon, moving costs three retyped letters in a picker that
+  filters as you type, so reassigning the destination and clearing the source
+  achieves it with no cross-slot operation and no collision rule to design
 - enter free text in a slot
 - regenerate one slot, a day, or the whole week
 - build a menu entirely by hand without ever invoking the LLM

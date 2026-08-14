@@ -113,6 +113,7 @@ export function SlotDrawer({
                 recipes={recipes}
                 value={picked}
                 onSelect={setPicked}
+                aria-describedby="recipe-description"
               />
               <FieldDescription id="recipe-description">
                 Scrivi per filtrare il ricettario.

@@ -21,11 +21,13 @@ export function RecipePicker({
   recipes,
   value,
   onSelect,
+  "aria-describedby": describedBy,
 }: {
   id: string
   recipes: RecipeOption[]
   value: RecipeOption | null
   onSelect: (recipe: RecipeOption) => void
+  "aria-describedby"?: string
 }) {
   const [query, setQuery] = useState("")
 
@@ -44,7 +46,11 @@ export function RecipePicker({
       inputValue={query}
       onInputValueChange={setQuery}
     >
-      <ComboboxInput id={id} placeholder="Cerca una ricetta" />
+      <ComboboxInput
+        id={id}
+        aria-describedby={describedBy}
+        placeholder="Cerca una ricetta…"
+      />
       <ComboboxContent>
         <ComboboxEmpty>Nessuna ricetta con questo nome.</ComboboxEmpty>
         <ComboboxList>

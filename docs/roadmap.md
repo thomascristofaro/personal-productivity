@@ -16,32 +16,42 @@ Last updated: 2026-08-14. Work happens on one branch, `feat/app-shell`.
 | [`2026-08-14-app-shell-and-page-primitives`](superpowers/plans/2026-08-14-app-shell-and-page-primitives.md) | the side menu, `components/page/`, the four designed states, back links, `RedirectType.replace`                                                                                               |
 | [`2026-08-14-ingredient-catalogue`](superpowers/plans/2026-08-14-ingredient-catalogue.md)                   | the `Ingredient` table keyed on its name, a 93-entry seed, ingredient rows in the recipe form, tags as chips, the aggregator re-keyed                                                         |
 | [`2026-08-14-ingredient-management`](superpowers/plans/2026-08-14-ingredient-management.md)                 | the `/ingredients` screens, `IngredientInputSchema`, the catalogue reads and writes, and the second module proving `components/page/` transfers                                               |
+| [`2026-08-14-weekly-menu`](superpowers/plans/2026-08-14-weekly-menu.md)                                     | `/menu/[weekStart]`, the fourteen-slot grid, the slot drawer and `lib/services/menus.ts` — all by hand, no LLM                                                                                |
 
 ## In flight
 
-Nothing. Ingredient management landed in `8b327fe..c15946f`, with one debt: the
-plan's Task 4 Step 8 — the manual browser checklist — has not been run. The code
-is committed and `pnpm verify` is green, but the rename-cascade and the React 19
-reset behaviour have never been exercised in a browser.
+Nothing. Two plans landed on 2026-08-14 carrying the same debt: **neither
+manual browser checklist has been run.** Ingredient management is
+`8b327fe..c15946f`, the weekly menu `28ba487..603caf1`; `pnpm verify` is green
+for both and the routes were confirmed to render server-side, but nothing
+interactive has been exercised — not the rename cascade, not the React 19 form
+reset, not the recipe picker, not saving or clearing a slot.
+
+The `playwright` MCP server registered on 2026-08-14 can run both checklists in
+one pass. Do that before building on top of these.
 
 ## Not started
 
 In dependency order. Each needs its own plan; none has one yet.
 
-### 1. Weekly menu — spec §6.2
+### 1. Menu generation — spec §6.2, §7
 
-The 7×2 grid, editable by hand, with LLM-assisted generation and a cooldown
-window over recently cooked recipes. Nothing exists. The product loop is unusable
-without it, and the shopping list has nothing to aggregate until it lands.
+The grid exists and is editable by hand. What is missing is the LLM half:
+`lib/services/llm.ts` — **it does not exist yet**, and `CLAUDE.md` binds every
+Anthropic call to go through it — plus `proposeMenu` and regenerating one slot,
+a day or the week.
 
-Needs `lib/services/llm.ts` first — **it does not exist yet**, and `CLAUDE.md`
-binds every Anthropic call to go through it. Spec §7 describes what it owes.
+One design question has no answer yet, and it is not an oversight to patch
+quietly: **nothing in the schema records when a recipe was cooked**, so the
+cooldown of §6.2 has to derive "recently cooked" from the `MenuSlot` rows of
+past weeks. Settle that before writing the plan.
 
 ### 2. Shopping list — spec §6.3
 
 `aggregateShoppingList` is written, pure and covered by 17 tests. What is missing
 is everything around it: the screen, the shared tick state between the two users,
-and persistence into `ShoppingList` / `ShoppingListItem`. Depends on the menu.
+and persistence into `ShoppingList` / `ShoppingListItem`. The menu grid it reads
+from now exists, so this no longer waits on anything.
 
 ### 3. Recipe import from a URL — spec §6.1
 
@@ -94,17 +104,17 @@ or `docs/conventions/` as it was decided.
 Real, small, and none of them blocking. Fold each into whichever plan next
 touches that file rather than making a plan for them.
 
-| Defect                                                                                                                                          | Where                                |
-| ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
-| A focused `type="number"` input silently reverts on implicit Enter submit                                                                       | `components/recipes/recipe-form.tsx` |
-| Dev-only Base UI `useControlled` warnings                                                                                                       | recipe form                          |
-| `sourceUrl`'s `.max()` still carries the English Zod default message                                                                            | `lib/schemas/recipe.ts`              |
-| No `touch-action: manipulation`, so a phone has the double-tap zoom delay                                                                       | `app/globals.css`                    |
-| No `overscroll-behavior: contain` on sheets and drawers                                                                                         | `app/globals.css`                    |
-| No `env(safe-area-inset-*)`, so the sticky header will sit under a notch once installed as a PWA                                                | `app/(app)/layout.tsx`               |
-| No `autoComplete` on the recipe form's flat fields, so password managers offer to fill "Nome"                                                   | `components/recipes/recipe-form.tsx` |
-| No warning when leaving a form with unsaved changes — the back links made this easier to hit. **A product decision, not a bug to fix unasked.** | recipe and ingredient forms          |
-| `components/ui/drawer.tsx` is installed and unused                                                                                              | —                                    |
+| Defect                                                                                                                                                                                                                                      | Where                                |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| A focused `type="number"` input silently reverts on implicit Enter submit                                                                                                                                                                   | `components/recipes/recipe-form.tsx` |
+| Dev-only Base UI `useControlled` warnings                                                                                                                                                                                                   | recipe form                          |
+| `sourceUrl`'s `.max()` still carries the English Zod default message                                                                                                                                                                        | `lib/schemas/recipe.ts`              |
+| No `touch-action: manipulation`, so a phone has the double-tap zoom delay                                                                                                                                                                   | `app/globals.css`                    |
+| `notFound()` renders the right page but answers **200**, because the layout shell has already streamed by the time it throws. Affects `/menu/[weekStart]` and `/ingredients/[name]/edit` alike; a genuinely unrouted path still answers 404 | `app/(app)/**`                       |
+| No `env(safe-area-inset-*)`, so the sticky header will sit under a notch once installed as a PWA                                                                                                                                            | `app/(app)/layout.tsx`               |
+| No `autoComplete` on the recipe form's flat fields, so password managers offer to fill "Nome"                                                                                                                                               | `components/recipes/recipe-form.tsx` |
+| No warning when leaving a form with unsaved changes — the back links made this easier to hit. **A product decision, not a bug to fix unasked.**                                                                                             | recipe and ingredient forms          |
+| `components/ui/drawer.tsx` is installed and unused                                                                                                                                                                                          | —                                    |
 
 ## Starting a fresh session
 
