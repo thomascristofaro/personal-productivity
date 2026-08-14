@@ -1,6 +1,6 @@
 "use client"
 
-import { BookOpen } from "lucide-react"
+import { BookOpen, Carrot } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
@@ -20,6 +20,7 @@ import {
 // users think in, not alphabetical.
 const NAV_ITEMS = [
   { href: "/recipes", label: "Ricettario", icon: BookOpen },
+  { href: "/ingredients", label: "Ingredienti", icon: Carrot },
 ] as const
 
 export function AppSidebar() {
