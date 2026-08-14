@@ -2,6 +2,8 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { cache } from "react"
 
+import { removeRecipe } from "@/app/(app)/recipes/actions"
+import { DeleteRecipeDialog } from "@/components/recipes/delete-recipe-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -72,6 +74,11 @@ export default async function RecipePage({
               Apri la fonte
             </Button>
           )}
+          <DeleteRecipeDialog
+            id={recipe.id}
+            title={recipe.title}
+            action={removeRecipe}
+          />
         </div>
       </header>
 
