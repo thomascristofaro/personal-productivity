@@ -9,8 +9,11 @@ const valid = {
   totalMinutes: 25,
   instructions: "Bollire l'acqua.\nCuocere la pasta.",
   notes: "",
-  tags: "veloce, vegetariano",
-  ingredients: "320 g di spaghetti\n400 g di pomodori pelati",
+  tags: ["veloce", "vegetariano"],
+  ingredients: [
+    { ingredientName: "spaghetti", unit: "g", quantity: 320 },
+    { ingredientName: "pomodori pelati", unit: "g", quantity: 400 },
+  ],
 }
 
 const parse = (overrides: Record<string, unknown>) =>
@@ -52,8 +55,26 @@ describe("RecipeInputSchema", () => {
     expect(parse({ totalMinutes: undefined }).success).toBe(true)
   })
 
-  it("requires at least one ingredient line", () => {
-    expect(parse({ ingredients: "   \n  " }).success).toBe(false)
+  it("rejects a recipe with no ingredients", () => {
+    const result = parse({ ingredients: [] })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues[0].message).toBe(
+        "Serve almeno un ingrediente."
+      )
+    }
+  })
+
+  it("rejects a row that names no ingredient", () => {
+    expect(
+      parse({
+        ingredients: [{ ingredientName: "", unit: "g", quantity: 1 }],
+      }).success
+    ).toBe(false)
+  })
+
+  it("rejects a blank tag", () => {
+    expect(parse({ tags: ["veloce", " "] }).success).toBe(false)
   })
 
   it("accepts an empty source URL, because a dictated recipe has none", () => {

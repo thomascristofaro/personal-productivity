@@ -1,5 +1,7 @@
 import { z } from "zod"
 
+import { RecipeIngredientRowSchema } from "@/lib/schemas/ingredient"
+
 export const RECIPE_TITLE_MAX = 200
 export const RECIPE_NOTES_MAX = 2000
 export const RECIPE_SOURCE_URL_MAX = 2000
@@ -52,21 +54,22 @@ export const RecipeInputSchema = z.object({
       `Le note possono avere al massimo ${RECIPE_NOTES_MAX} caratteri.`
     )
     .default(""),
-  // Free-form and comma-separated; §12.2 keeps normalisation shallow until a
-  // duplicate is a nuisance.
+  // Free-form labels chosen from the ones already used, or typed in. §12.2
+  // keeps normalisation shallow until a duplicate is a nuisance.
   tags: z
-    .string()
-    .max(500, "Le etichette possono avere al massimo 500 caratteri.")
-    .default(""),
-  // One ingredient per line, kept as written. The parser reads them server-side.
+    .array(
+      z
+        .string()
+        .trim()
+        .min(1, "Un’etichetta non può essere vuota.")
+        .max(50, "Un’etichetta può avere al massimo 50 caratteri.")
+    )
+    .max(20, "Al massimo 20 etichette.")
+    .default([]),
   ingredients: z
-    .string()
-    .trim()
+    .array(RecipeIngredientRowSchema)
     .min(1, "Serve almeno un ingrediente.")
-    .max(
-      10000,
-      "L'elenco degli ingredienti è troppo lungo: massimo 10000 caratteri."
-    ),
+    .max(100, "Al massimo 100 ingredienti per ricetta."),
 })
 
 export type RecipeInput = z.infer<typeof RecipeInputSchema>
