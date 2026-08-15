@@ -907,7 +907,7 @@ Fix focus order, keyboard reachability, labels, live regions, contrast, heading 
 
 One finding, and it was not cosmetic: the `?negato` branch had nothing to reach it. Fixed by `errorCallbackURL` on the sign-in call — see Task 4 Step 2. Nothing else came up: the icons carry `aria-hidden`, both buttons have text labels rather than needing `aria-label`, the pending states end in `…`, and the error paragraphs are `role="alert"`.
 
-- [ ] **Step 3: Manual browser check**
+- [x] **Step 3: Manual browser check**
 
 At 390px. Executed, not merely written — it can be driven through the `playwright` MCP server. **The development fallback of §9 hides most of what this checklist tests**, so it runs against a local production build.
 
@@ -915,19 +915,21 @@ At 390px. Executed, not merely written — it can be driven through the `playwri
 
 Points 1 to 6 need the middleware, which stands down in development: run them against `pnpm build && pnpm start`, not `pnpm dev`.
 
-1. **Done 2026-08-15.** Signed out, open `/menu`, `/spesa`, `/recipes`, `/ingredients` and `/` in turn: each lands on `/login`.
-2. Sign in with a seeded address: you reach `/menu` as that user, and the sidebar footer shows the right name.
-3. **Sign in with a Google account that is not seeded: it is refused, and no `User` row is created.** Check the row count before and after. This is the property the whole design rests on — if it fails, stop and report rather than working around it.
-4. Close the browser entirely, reopen it, open `/menu`: still signed in.
-5. "Esci" returns to `/login`, and the browser back button does not show the app again.
-6. With the browser signed out, invoke a server action directly (an unauthenticated `POST` to a page that hosts one) and confirm it is refused rather than mutating.
-7. **Done 2026-08-15.** The login screen at 390px: no horizontal scroll, the button reaches at least 44px of touch target, and the whole flow works one-handed.
+**Outcome, 2026-08-15.** The real Google client exists and the credentials are in `.env`; the two seeded users were renamed in place to the real addresses, ids unchanged. Points 1, 6 and 7 pass. **Points 2 to 5 were not executed**, on the owner's call: they need a human to type a Google password into the browser, and point 3 needs a third Google account that was not to hand. Closed as-is rather than left open.
 
-- [ ] **Step 4: Update the roadmap**
+1. **Passed 2026-08-15.** Signed out, open `/menu`, `/spesa`, `/recipes`, `/ingredients` and `/` in turn: each lands on `/login`.
+2. **Not executed.** Sign in with a seeded address: you reach `/menu` as that user, and the sidebar footer shows the right name. Reached the Google password prompt — the client id, the `Continua su Personal Productivity` consent and the `redirect_uri` are confirmed good, the sign-in itself was not completed.
+3. **Not executed — the open risk.** Sign in with a Google account that is not seeded: it is refused, and no `User` row is created. Rests entirely on `disableSignUp: true`, which is now only argued for, never observed. Run it the first time a third Google account is at hand.
+4. **Not executed.** Close the browser entirely, reopen it, open `/menu`: still signed in.
+5. **Not executed.** "Esci" returns to `/login`, and the browser back button does not show the app again.
+6. **Passed 2026-08-15.** A `POST` carrying a real `Next-Action` id from the production build manifest, with no session cookie, to `/ingredients/new`: **307 to `/login`** for both ingredient action ids. The action never runs, so nothing mutates.
+7. **Passed 2026-08-15.** The login screen at 390px: no horizontal scroll, the button reaches at least 44px of touch target, and the whole flow works one-handed.
+
+- [x] **Step 4: Update the roadmap**
 
 Move authentication from "Not started" to "Shipped", with what it left behind. Record the deployment prerequisite that remains: the production redirect URI must exist in the Google Cloud client before `main` is deployed.
 
-- [ ] **Step 5: Verify**
+- [x] **Step 5: Verify**
 
 ```powershell
 pnpm verify

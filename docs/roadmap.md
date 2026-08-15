@@ -5,7 +5,7 @@ and state** — nothing else does. The design authority stays
 `docs/superpowers/specs/2026-08-13-menu-spesa-design.md`, and the decisions live
 in `docs/conventions/`. Do not restate either here; point at them.
 
-Last updated: 2026-08-15. Work happens on one branch, `feat/app-shell`.
+Last updated: 2026-08-15. Work happens on `feat/auth`, cut from `feat/app-shell`.
 
 ## Shipped
 
@@ -18,12 +18,30 @@ Last updated: 2026-08-15. Work happens on one branch, `feat/app-shell`.
 | [`2026-08-14-ingredient-management`](superpowers/plans/2026-08-14-ingredient-management.md)                 | the `/ingredients` screens, `IngredientInputSchema`, the catalogue reads and writes, and the second module proving `components/page/` transfers                                               |
 | [`2026-08-14-weekly-menu`](superpowers/plans/2026-08-14-weekly-menu.md)                                     | `/menu/[weekStart]`, the fourteen-slot grid, the slot drawer and `lib/services/menus.ts` — all by hand, no LLM                                                                                |
 | [`2026-08-14-shopping-list`](superpowers/plans/2026-08-14-shopping-list.md)                                 | `/spesa/[weekStart]`, the aisle-grouped list, optimistic ticking, manual items, and the freshness signal over `Menu.slotsUpdatedAt`                                                           |
+| [`2026-08-15-authentication`](superpowers/plans/2026-08-15-authentication.md)                               | Google sign-in through `better-auth`, `lib/auth/`, the session gate in `middleware.ts`, `/login` and "Esci", and the four `better-auth` tables                                                |
 
 ## In flight
 
 Nothing. **The product loop is closed**: plan a week, generate the list, shop
-from it, and all three screens have now been driven end to end. What is left is
-the LLM half, authentication and deployment.
+from it, and all three screens have now been driven end to end. **Authentication
+shipped on 2026-08-15**, so what is left is the LLM half and deployment.
+
+### What authentication left unverified
+
+The Google client is real, the credentials are in `.env`, and the two seeded
+users now carry the owners' actual Gmail addresses — renamed in place, ids
+untouched, because `ShoppingListItem.checkedBy` points at them.
+
+Of the Task 6 checklist, points 1, 6 and 7 pass. Point 6 is worth naming: a
+`POST` carrying a real `Next-Action` id from the build manifest, with no session
+cookie, answers **307 to `/login`** — the action never runs.
+
+**Points 2 to 5 were never executed**, on the owner's call: completing a Google
+sign-in needs a human at the keyboard, and point 3 needs a third Google account
+that was not to hand. Point 3 is the one that matters — _an unseeded account is
+refused and creates no `User` row_ — and it rests entirely on `disableSignUp:
+true`, argued for but never observed. Run it the first time a third Google
+account is available, before anyone treats the deployment as private.
 
 **The checklist debt is paid.** On 2026-08-15 all three manual browser
 checklists were executed at 390px through the `playwright` MCP server:
@@ -97,42 +115,21 @@ note in the spec's §5 design notes before deleting them as dead code.
 Also needs `lib/services/llm.ts`, and `app/manifest.ts` for the Android share
 target, which does not exist either.
 
-### 3. Authentication — spec §6.4, and its own design
-
-**This blocks going live.** `lib/auth.ts` throws `UnauthenticatedError` whenever
-`NODE_ENV === "production"`, deliberately, so nothing can serve a real request
-unauthenticated. Locally it resolves the first seeded user, which is why the app
-works in `pnpm dev`.
-
-**Designed and built on 2026-08-15**, in
-[`2026-08-15-authentication-design.md`](superpowers/specs/2026-08-15-authentication-design.md)
-and [`2026-08-15-authentication.md`](superpowers/plans/2026-08-15-authentication.md):
-Google sign-in through `better-auth`, no passwords anywhere. `disableSignUp` on
-the provider is the allowlist — only a seeded user can get in — and that is the
-one property the design rests on.
-
-Tasks 1 to 5 are done on `feat/auth`. What is left is **verification, and it is
-blocked on the owner**: there is no Google Cloud OAuth client yet, so the app was
-built against placeholder credentials. Of the Task 6 checklist only points 1 and
-7 could run; points 2 to 6, including _the_ one — an unseeded Google account is
-refused and creates no user row — are unticked and stay that way until the real
-credentials exist. This is the same debt three plans carried on 2026-08-14, named
-rather than left quiet.
-
-To unblock it: a Google Cloud OAuth client with
-`http://localhost:3000/api/auth/callback/google` and the production equivalent
-as authorised redirect URIs, consent screen in Testing with both addresses as
-test users, then the real addresses in `OWNER_EMAIL` / `PARTNER_EMAIL`. The seed
-still carries `example.invalid`; with those in place nobody can sign in.
-
-**Do not reseed to change them.** The seed upserts on email, so it would add two
-users rather than rename two. Update the existing rows in place — their ids are
-referenced by `ShoppingListItem.checkedBy`.
-
-### 4. PWA and deployment — spec §9, §10
+### 3. PWA and deployment — spec §9, §10
 
 No `app/manifest.ts`, so no home-screen install and no share target. Never
-deployed to Vercel. Gated on §3 above.
+deployed to Vercel. Authentication no longer gates it.
+
+**The Google client only knows about localhost.** Before `main` is deployed, the
+production origin has to be added to the OAuth client as an authorised
+JavaScript origin _and_ as the redirect URI
+`https://<domain>/api/auth/callback/google`, and the six authentication
+variables set in Vercel — `APP_URL` pointing at that same origin, no trailing
+slash. A deployment without this reaches Google and is rejected at the callback.
+
+**Do not reseed on the production database to change the addresses.** The seed
+upserts on email, so it adds users rather than renaming them. Update the rows in
+place — their ids are referenced by `ShoppingListItem.checkedBy`.
 
 ## Standing decisions taken in conversation
 
