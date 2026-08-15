@@ -454,28 +454,31 @@ authenticate and validate for no gain.
 Two fixed users, seeded — no registration flow, no password reset UI (reset is a
 CLI/manual operation).
 
-**The mechanism is not yet chosen.** A hand-rolled signed cookie and an
-off-the-shelf library (`better-auth` is the candidate under evaluation) are both
-open; the decision is deferred to its own investigation and does not block the
-data model. What the rest of the design depends on is fixed regardless:
+**The mechanism was chosen on 2026-08-15: Google sign-in through `better-auth`,
+with no passwords in the system.** See
+[`2026-08-15-authentication-design.md`](2026-08-15-authentication-design.md),
+which governs from here and amends the requirements below. In particular the
+argon2id requirement and the login rate limiting of §9.2 are retired with
+passwords, and `User` gains the three columns the adapter requires.
+
+What the rest of the design depends on is fixed regardless, and still holds:
 
 - The `User` model above carries identity only. Whatever authentication lands
   owns credential and session storage and brings its own tables in its own
-  migration. Nothing else in the schema changes.
+  migration. ~~Nothing else in the schema changes.~~ — `better-auth`'s adapter
+  requires three further columns on `User`; see the authentication design §4.
 - The rest of the application sees one function, `requireSession()` in
   `lib/auth.ts`, and never learns what implements it.
 
 Requirements the chosen mechanism must satisfy:
 
-- Password hashing with argon2id. If hand-rolled, use `@node-rs/argon2`: the
-  conventional `argon2` and `bcrypt` packages are native addons and a recurring
-  source of failure on serverless runtimes, and `@node-rs/argon2` ships prebuilt
-  binaries that work there.
+- ~~Password hashing with argon2id.~~ Retired: there are no passwords.
 - Session cookie: `httpOnly`, `Secure`, `SameSite=Lax`, long expiry — the partner
   must not be asked to log in repeatedly. Re-login friction directly threatens
   success criterion 3.
-- Rate limiting on the login endpoint (see §9.2). Serverless functions share no
-  memory, so a counter must be persisted — in Postgres, or by the library.
+- ~~Rate limiting on the login endpoint (see §9.2).~~ Retired with passwords.
+  `better-auth`'s own endpoint rate limiting is enabled instead, with database
+  storage, because serverless functions share no memory.
 - All routes except `/login` and the auth endpoint require a session.
 - **Every server action authenticates and authorises inside itself.** A server
   action is a public endpoint: it can be invoked directly, so a session check in
@@ -555,11 +558,20 @@ repository, never one hardcoded in source.
 
 ### 9.2 Authentication surface
 
-- Login endpoint rate-limited by IP and by account (e.g. 5 attempts / 15 min).
-- Generic failure messages; no user enumeration.
-- Argon2id hashing with per-user salt.
+Rewritten on 2026-08-15: the three requirements below were properties of a
+password mechanism, and there are no passwords. See
+[`2026-08-15-authentication-design.md`](2026-08-15-authentication-design.md).
+
+- ~~Login endpoint rate-limited by IP and by account.~~ There is no login
+  endpoint of ours to attack; `better-auth`'s endpoint rate limiting is enabled
+  with database storage.
+- ~~Generic failure messages; no user enumeration.~~ No endpoint of ours can
+  confirm whether an address belongs to a user.
+- ~~Argon2id hashing with per-user salt.~~ No credential is stored here.
+- **Only a seeded user may sign in.** `disableSignUp` on the Google provider is
+  the allowlist, and it is the property the whole design rests on.
 - Optional future hardening: Vercel's WAF custom rules (3 available on Hobby) to
-  rate-limit or geo-restrict the login path at the edge. Not in v1.
+  rate-limit or geo-restrict the auth path at the edge. Not in v1.
 
 ### 9.3 SSRF on the import fetcher — **required**
 
@@ -721,10 +733,12 @@ scaling factor and §6.3 step 5 for the rounding rule.
 
 ### Still open, deliberately
 
-**Authentication mechanism** (§6.4). Hand-rolled signed cookie versus
-`better-auth`, pending its own investigation. It does not block the data model:
-`User` carries identity only, and the rest of the application depends on
-`requireSession()` rather than on what implements it.
+~~**Authentication mechanism** (§6.4).~~ **Closed on 2026-08-15**: Google
+sign-in through `better-auth`, no passwords. The deferral cost nothing, exactly
+as predicted — `User` carried identity only, the rest of the application depends
+on `requireSession()` rather than on what implements it, and not one caller
+changes. See
+[`2026-08-15-authentication-design.md`](2026-08-15-authentication-design.md).
 
 ---
 

@@ -3,11 +3,27 @@ import "dotenv/config"
 import { db } from "../lib/db"
 import { INGREDIENTS } from "./ingredients"
 
-// The two fixed users of design document section 6.4. Change these to the real
-// addresses before the first run; the app has no registration flow.
+// `lib/env.ts` is server-only and validates far more than this script needs.
+// prisma/ sits outside the ESLint block that forbids process.env, so the seed
+// reads what it needs directly.
+function requiredEnv(name: string): string {
+  const value = process.env[name]
+  if (value === undefined || value === "") {
+    throw new Error(`${name} is not set. See .env.example.`)
+  }
+  return value
+}
+
+// The two fixed users of design document section 6.4. Addresses come from the
+// environment, never from source: sign-up is disabled, so whatever is seeded
+// here is exactly the set of people who can sign in.
+//
+// The upsert below keys on the email, so running this again with a different
+// address adds a user rather than renaming one. Change the addresses before the
+// first seed; afterwards, update the existing rows instead.
 const USERS = [
-  { email: "owner@example.invalid", name: "Thomas" },
-  { email: "partner@example.invalid", name: "Partner" },
+  { email: requiredEnv("OWNER_EMAIL"), name: "Thomas" },
+  { email: requiredEnv("PARTNER_EMAIL"), name: "Partner" },
 ]
 
 async function main() {
