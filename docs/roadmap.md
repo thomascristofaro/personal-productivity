@@ -97,15 +97,24 @@ note in the spec's §5 design notes before deleting them as dead code.
 Also needs `lib/services/llm.ts`, and `app/manifest.ts` for the Android share
 target, which does not exist either.
 
-### 3. Authentication — spec §6.4
+### 3. Authentication — spec §6.4, and its own design
 
 **This blocks going live.** `lib/auth.ts` throws `UnauthenticatedError` whenever
 `NODE_ENV === "production"`, deliberately, so nothing can serve a real request
 unauthenticated. Locally it resolves the first seeded user, which is why the app
 works in `pnpm dev`.
 
-The owner wanted to evaluate Better Auth before committing to an approach. That
-evaluation has not happened.
+**Designed on 2026-08-15**, in
+[`2026-08-15-authentication-design.md`](superpowers/specs/2026-08-15-authentication-design.md):
+Google sign-in through `better-auth`, no passwords anywhere. `disableSignUp` on
+the provider is the allowlist — only a seeded user can get in — and that is the
+one property the design rests on. In flight on `feat/auth`; the implementation
+plan comes next.
+
+Before it can work, the owner does two things outside the repository: a Google
+Cloud OAuth client with redirect URIs for localhost and production, and real
+addresses in `OWNER_EMAIL` / `PARTNER_EMAIL`. The seed still carries
+`example.invalid` placeholders, and with those in place nobody can sign in.
 
 ### 4. PWA and deployment — spec §9, §10
 
@@ -117,8 +126,11 @@ deployed to Vercel. Gated on §3 above.
 Only the ones that live nowhere else. Everything else was written into the spec
 or `docs/conventions/` as it was decided.
 
-- **One working branch.** `feat/app-shell` carries every plan since the data
-  model. Do not spawn a branch per plan.
+- **One working branch — until 2026-08-15.** `feat/app-shell` carried every plan
+  from the data model to the shopping list, and is now open as PR #3 against
+  `main`. From authentication onward the owner branches per plan instead:
+  `feat/auth` is cut from `feat/app-shell` and targets it, not `main`, for as
+  long as that PR is open.
 - **No end-to-end browser tests.** Playwright was proposed twice and declined
   both times. Every plan therefore ends its UI tasks with a written, ordered
   manual checklist rather than a test file. Keep writing them that way — the
