@@ -130,6 +130,20 @@
   html {
     @apply font-sans;
   }
+  /* Phone first: without this a tap waits ~300ms to find out whether a second
+     one is coming and turns it into a zoom. Every target here is a button, a
+     link or a checkbox, and none of them wants a double tap. Pinch zoom is
+     untouched — only the double-tap shortcut goes. */
+  button,
+  a,
+  label,
+  [role="button"],
+  [role="checkbox"],
+  input,
+  select,
+  textarea {
+    touch-action: manipulation;
+  }
   /* Scrolling to the end of a drawer must not carry on into the page behind
      it. Set here rather than in components/ui/drawer.tsx, which stays
      byte-identical to the registry — see docs/conventions/ui.md. */

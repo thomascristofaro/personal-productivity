@@ -1378,7 +1378,7 @@ const NAV_ITEMS = [
 
 First, because it is the entry point of the weekly loop. The existing `isActive` test already covers `/menu/2026-08-17` through its `startsWith` branch.
 
-- [ ] **Step 8: Verify**
+- [x] **Step 8: Verify**
 
 ```powershell
 pnpm verify
@@ -1401,7 +1401,7 @@ At 390px, with `pnpm dev` running. The owner has asked that this stay a written 
 9. Open a slot, close the drawer without saving, then open a **different** slot: the picker must be empty, not still holding the first slot's recipe.
 10. Set the servings to 3 on one slot and save; reopen it and the 3 is still there.
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```powershell
 git add -A

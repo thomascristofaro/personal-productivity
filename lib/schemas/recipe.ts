@@ -20,7 +20,10 @@ const sourceUrl = z
     z.literal(""),
     z
       .url("L'indirizzo deve essere un URL valido.")
-      .max(RECIPE_SOURCE_URL_MAX)
+      .max(
+        RECIPE_SOURCE_URL_MAX,
+        `L'indirizzo può avere al massimo ${RECIPE_SOURCE_URL_MAX} caratteri.`
+      )
       .refine((value) => /^https?:\/\//i.test(value), {
         message: "L'indirizzo deve iniziare con http:// o https://",
       }),

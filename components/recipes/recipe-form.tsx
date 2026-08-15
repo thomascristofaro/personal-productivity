@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useActionState, useEffect } from "react"
+import { useActionState, useEffect, useState } from "react"
 
 import type { IngredientOption } from "@/components/ingredients/ingredient-picker"
 import {
@@ -23,6 +23,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useAttempt } from "@/hooks/use-attempt"
+import { useUnsavedChanges } from "@/hooks/use-unsaved-changes"
 
 export type RecipeFormValues = {
   id?: string
@@ -67,6 +68,12 @@ export function RecipeForm({
     EMPTY_FORM_STATE
   )
   const attempt = useAttempt(state)
+  // Armed by real input events, so a change made only by clicking — pulling a
+  // row out, say — does not arm it. A guard that fires when nothing was typed
+  // is worse than one that occasionally stays quiet, and this is the longest
+  // form in the app: it is the one where retyping actually costs something.
+  const [dirty, setDirty] = useState(false)
+  useUnsavedChanges(dirty)
 
   const errorOf = (field: keyof RecipeFormValues) => state.errors[field]?.[0]
   const invalid = (field: keyof RecipeFormValues) =>
@@ -98,7 +105,11 @@ export function RecipeForm({
   }, [state])
 
   return (
-    <form action={formAction} className="flex flex-col gap-6">
+    <form
+      action={formAction}
+      onInput={() => setDirty(true)}
+      className="flex flex-col gap-6"
+    >
       {values.id === undefined ? null : (
         <input type="hidden" name="id" value={valueOf("id")} />
       )}
@@ -114,6 +125,10 @@ export function RecipeForm({
             id="title"
             name="title"
             defaultValue={valueOf("title")}
+            // None of these is a field a password manager or an address
+            // autofill has any business completing. Without it "Nome" reads as
+            // a name field and gets offered a saved identity.
+            autoComplete="off"
             aria-invalid={errorOf("title") ? true : undefined}
             aria-describedby={describedBy("title")}
             required
@@ -148,6 +163,7 @@ export function RecipeForm({
               inputMode="numeric"
               min={1}
               defaultValue={valueOf("servings")}
+              autoComplete="off"
               aria-invalid={errorOf("servings") ? true : undefined}
               aria-describedby={describedBy("servings")}
             />
@@ -163,6 +179,7 @@ export function RecipeForm({
               inputMode="numeric"
               min={1}
               defaultValue={valueOf("totalMinutes")}
+              autoComplete="off"
               aria-invalid={errorOf("totalMinutes") ? true : undefined}
               aria-describedby={describedBy("totalMinutes")}
             />
@@ -178,6 +195,7 @@ export function RecipeForm({
             id="instructions"
             name="instructions"
             defaultValue={valueOf("instructions")}
+            autoComplete="off"
             rows={14}
             aria-invalid={errorOf("instructions") ? true : undefined}
             aria-describedby={describedBy("instructions")}
@@ -205,6 +223,7 @@ export function RecipeForm({
             type="url"
             inputMode="url"
             spellCheck={false}
+            autoComplete="off"
             defaultValue={valueOf("sourceUrl")}
             aria-invalid={errorOf("sourceUrl") ? true : undefined}
             aria-describedby={describedBy("sourceUrl")}
@@ -226,7 +245,12 @@ export function RecipeForm({
         <Button
           variant="ghost"
           render={
-            <Link href={values.id ? `/recipes/${values.id}` : "/recipes"} />
+            <Link
+              href={values.id ? `/recipes/${values.id}` : "/recipes"}
+              // Discarding is the whole point of this link, so the unsaved
+              // changes guard steps aside for it.
+              data-discard=""
+            />
           }
           nativeButton={false}
         >

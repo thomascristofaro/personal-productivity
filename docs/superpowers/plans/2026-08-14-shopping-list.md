@@ -1576,7 +1576,7 @@ In `app/(app)/menu/[weekStart]/page.tsx`, add a third control to the `PageHeader
 </Button>
 ```
 
-- [ ] **Step 7: Verify**
+- [x] **Step 7: Verify**
 
 ```powershell
 pnpm verify
@@ -1600,7 +1600,7 @@ At 390px, with `pnpm dev` running. It can be executed by an agent through the `p
 10. Open the same list in a second browser window, tick something in one, and within thirty seconds the other shows it without a manual reload.
 11. `/spesa/2026-08-19` — not a Monday — renders the 404 page.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```powershell
 git add -A

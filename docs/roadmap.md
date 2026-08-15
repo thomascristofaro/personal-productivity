@@ -51,11 +51,25 @@ Two things came out of that worth knowing:
   attempt counter remounts them instead. Any new form using that echo pattern
   wants the same hook.
 
-The seed data the checklists needed was left in place: three recipes
-(`Spaghetti aglio e olio`, `Pollo all'aglio`, `Bruschette all'aglio`), a
-populated menu for the week of 2026-08-10, and its shopping list. The catalogue
-is at 92 entries — `birra` was deleted and `aglio` renamed to `aglio fresco`
-with its aisle moved to `dispensa`, all three as checklist steps.
+A second pass then cleared the **pre-existing** parked defects too, so the list
+below is down to two entries, both of them decisions rather than debt. That pass
+added `env(safe-area-inset-*)` and the `viewportFit: "cover"` without which the
+insets always report zero, `touch-action: manipulation`, the missing
+`autoComplete`s, an Italian message on `sourceUrl`'s `.max()`, and an
+unsaved-changes guard on the recipe form via `hooks/use-unsaved-changes.ts`.
+
+The number field that silently reverted on an implicit Enter turned out to be
+the same root cause as the Base UI warnings — a `defaultValue` mutating on a
+live input — and the `useAttempt` remount had already fixed it. Confirmed by
+A/B: with the key removed the field empties again, with it the value survives.
+
+The seed data the checklists needed was left in place, on the owner's call:
+three recipes (`Spaghetti aglio e olio`, `Pollo all'aglio`,
+`Bruschette all'aglio`), a populated menu for the week of 2026-08-10, and its
+shopping list. The catalogue is at 92 entries — `birra` was deleted and `aglio`
+renamed to `aglio fresco` with its aisle moved to `dispensa`, all three as
+checklist steps. **Re-running the seed would leave `aglio` sitting next to
+`aglio fresco`**, so reset the database rather than reseeding over it.
 
 ## Not started
 
@@ -124,15 +138,14 @@ or `docs/conventions/` as it was decided.
 Real, small, and none of them blocking. Fold each into whichever plan next
 touches that file rather than making a plan for them.
 
-| Defect                                                                                                                                                                                                                                      | Where                                |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
-| A focused `type="number"` input silently reverts on implicit Enter submit                                                                                                                                                                   | `components/recipes/recipe-form.tsx` |
-| `sourceUrl`'s `.max()` still carries the English Zod default message                                                                                                                                                                        | `lib/schemas/recipe.ts`              |
-| No `touch-action: manipulation`, so a phone has the double-tap zoom delay                                                                                                                                                                   | `app/globals.css`                    |
-| `notFound()` renders the right page but answers **200**, because the layout shell has already streamed by the time it throws. Affects `/menu/[weekStart]` and `/ingredients/[name]/edit` alike; a genuinely unrouted path still answers 404 | `app/(app)/**`                       |
-| No `env(safe-area-inset-*)`, so the sticky header will sit under a notch once installed as a PWA                                                                                                                                            | `app/(app)/layout.tsx`               |
-| No `autoComplete` on the recipe form's flat fields, so password managers offer to fill "Nome"                                                                                                                                               | `components/recipes/recipe-form.tsx` |
-| No warning when leaving a form with unsaved changes — the back links made this easier to hit. **A product decision, not a bug to fix unasked.**                                                                                             | recipe and ingredient forms          |
+The list was cleared on 2026-08-15, before starting authentication. What is left
+is here because it was **decided**, not because nobody got to it — do not
+"fix" either without saying so first.
+
+| Defect                                                                                                                                                                                                                                                                                                                                                           | Where                        |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| `notFound()` renders the right page but answers **200**, because the layout shell has already streamed by the time it throws. Affects `/menu/[weekStart]` and `/ingredients/[name]/edit` alike; a genuinely unrouted path still answers 404. **Accepted**: the app is private and nothing crawls it, and the alternative is giving up the streamed loading state | `app/(app)/**`               |
+| No unsaved-changes warning on the **ingredient** form or the slot drawer. **Deliberate**: three short fields and a drawer, and a drawer that argues when dismissed is worse than the loss. The recipe form has one                                                                                                                                               | ingredient form, slot drawer |
 
 ## Starting a fresh session
 
