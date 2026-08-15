@@ -207,7 +207,7 @@ git commit -m "feat: require the authentication environment"
 
 - Produces: Prisma models `Session`, `Account`, `Verification`, `RateLimit`; `User.emailVerified`, `User.image`, `User.updatedAt`, `User.sessions`, `User.accounts`.
 
-- [ ] **Step 1: Add the adapter's columns to `User`**
+- [x] **Step 1: Add the adapter's columns to `User`**
 
 In `prisma/schema.prisma`, replace the `User` model:
 
@@ -234,7 +234,7 @@ model User {
 }
 ```
 
-- [ ] **Step 2: Add better-auth's own models**
+- [x] **Step 2: Add better-auth's own models**
 
 Append to `prisma/schema.prisma`:
 
@@ -293,7 +293,9 @@ model RateLimit {
 
 These models are written from better-auth's documented core schema rather than generated, because the generator needs a config file that does not exist until Task 3. Task 3 Step 6 cross-checks them against it, and the generator wins any disagreement. Applying the migration locally first is safe; do not deploy it before that check has run.
 
-- [ ] **Step 3: Create and apply the migration**
+- [x] **Step 3: Create and apply the migration**
+
+Applied as `20260815085712_authentication`, without a reset prompt — the `@default(now())` on `updatedAt` is what made that possible on a table that already held two rows.
 
 ```powershell
 pnpm db:migrate
@@ -303,7 +305,7 @@ Name it `authentication` when prompted.
 
 Expected: it applies without prompting to reset. If Prisma asks to drop data, stop — something in Step 1 is wrong, most likely a `NOT NULL` column with no default on a table that already holds two rows.
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 ```powershell
 pnpm verify
@@ -311,7 +313,7 @@ pnpm verify
 
 Expected: green. `pnpm db:migrate` regenerates the client, so `db.session` and `db.account` typecheck.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add -A
