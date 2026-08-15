@@ -15,6 +15,16 @@ export const EnvSchema = z.object({
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),
+  // 32 random bytes are 43 characters in base64url; anything shorter than the
+  // bytes themselves is not a key.
+  AUTH_SECRET: z.string().min(32, "must be at least 32 characters"),
+  GOOGLE_CLIENT_ID: z.string().min(1),
+  GOOGLE_CLIENT_SECRET: z.string().min(1),
+  // The two seeded users of design document section 6.4, read from the
+  // environment so real addresses never enter the repository. Sign-up is
+  // disabled, so this pair is exactly the set of people who can sign in.
+  OWNER_EMAIL: z.email(),
+  PARTNER_EMAIL: z.email(),
 })
 
 const parsed = EnvSchema.safeParse(process.env)

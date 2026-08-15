@@ -5,6 +5,17 @@ import { EnvSchema } from "@/lib/env"
 const valid = {
   DATABASE_URL: "postgresql://user:pw@ep-x.eu-central-1.aws.neon.tech/db",
   DIRECT_URL: "postgresql://user:pw@ep-x.eu-central-1.aws.neon.tech/db",
+  AUTH_SECRET: "3PMGhXcCBOD-0mn3Xh6h2rGV0lQnbnRLtQ4hVLLQ5Ks",
+  GOOGLE_CLIENT_ID: "1234.apps.googleusercontent.com",
+  GOOGLE_CLIENT_SECRET: "GOCSPX-not-a-real-secret",
+  OWNER_EMAIL: "owner@gmail.com",
+  PARTNER_EMAIL: "partner@gmail.com",
+}
+
+const without = (key: keyof typeof valid) => {
+  const rest: Record<string, string> = { ...valid }
+  delete rest[key]
+  return rest
 }
 
 describe("EnvSchema", () => {
@@ -30,5 +41,17 @@ describe("EnvSchema", () => {
     expect(() =>
       EnvSchema.parse({ ...valid, DATABASE_URL: "mysql://user:pw@host/db" })
     ).toThrow()
+  })
+
+  it("rejects a missing Google client id rather than starting without one", () => {
+    expect(() => EnvSchema.parse(without("GOOGLE_CLIENT_ID"))).toThrow()
+  })
+
+  it("rejects a seeded address that is not an email", () => {
+    expect(() => EnvSchema.parse({ ...valid, OWNER_EMAIL: "owner" })).toThrow()
+  })
+
+  it("rejects an auth secret too short to sign anything safely", () => {
+    expect(() => EnvSchema.parse({ ...valid, AUTH_SECRET: "short" })).toThrow()
   })
 })

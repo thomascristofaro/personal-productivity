@@ -24,7 +24,23 @@
 
 ## Before starting
 
-The owner must have completed spec §7 — the Google Cloud OAuth client, the redirect URIs, and real addresses for `OWNER_EMAIL` / `PARTNER_EMAIL`. **Task 1 makes those variables required, so the app will not start without them.** That is deliberate. If they are not available yet, stop and say so rather than making them optional.
+Spec §7 — the Google Cloud OAuth client, the redirect URIs, and real addresses for `OWNER_EMAIL` / `PARTNER_EMAIL` — is the owner's, and on 2026-08-15 it was not done yet.
+
+**It does not block Tasks 1 to 5.** The variables have to _exist_ from Task 1, because `lib/env.ts` validates at import and `lib/db.ts` imports it, but the schema only asks for a non-empty string and a well-formed address. Build with placeholders:
+
+```
+AUTH_SECRET=<generate a real one, it costs nothing>
+GOOGLE_CLIENT_ID=placeholder.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=placeholder
+OWNER_EMAIL=owner@example.invalid
+PARTNER_EMAIL=partner@example.invalid
+```
+
+Those two addresses are the ones already in the database, chosen so that an accidental seed updates the existing rows instead of adding more.
+
+What the placeholders cost: the Google flow cannot be exercised, so Task 4 can be built but not tried, and points 2 to 6 of the Task 6 checklist wait for the real credentials. Nothing else is affected.
+
+**Do not run `pnpm db:seed` while the addresses are placeholders.** The seed upserts on email, so seeding twice with two different sets leaves four users. When the real addresses arrive, update the two existing rows in place rather than reseeding — their ids are referenced by `ShoppingListItem.checkedBy`.
 
 ---
 
@@ -37,18 +53,19 @@ The owner must have completed spec §7 — the Google Cloud OAuth client, the re
 - Modify: `lib/env.test.ts`
 - Modify: `.env.example`
 - Modify: `prisma/seed.ts`
+- Modify: `vitest.config.ts` — **missed when this plan was written.** `lib/env.ts` validates at import, and the test runner injects the environment there rather than reading `.env`; without the new names every test file that reaches `lib/env` fails to import. Found while executing Step 5.
 
 **Interfaces:**
 
 - Produces: `env.AUTH_SECRET`, `env.GOOGLE_CLIENT_ID`, `env.GOOGLE_CLIENT_SECRET`, `env.OWNER_EMAIL`, `env.PARTNER_EMAIL`, all `string`, all required.
 
-- [ ] **Step 1: Install better-auth**
+- [x] **Step 1: Install better-auth**
 
 ```powershell
 pnpm add better-auth
 ```
 
-- [ ] **Step 2: Write the failing test for the new environment variables**
+- [x] **Step 2: Write the failing test for the new environment variables**
 
 Add to `lib/env.test.ts`, replacing the existing `valid` constant so every test carries the new variables:
 
@@ -81,7 +98,7 @@ it("rejects an auth secret too short to sign anything safely", () => {
 })
 ```
 
-- [ ] **Step 3: Run the tests and watch them fail**
+- [x] **Step 3: Run the tests and watch them fail**
 
 ```powershell
 pnpm vitest run lib/env.test.ts
@@ -89,7 +106,7 @@ pnpm vitest run lib/env.test.ts
 
 Expected: the three new cases fail, because `EnvSchema` ignores unknown keys and throws for none of them.
 
-- [ ] **Step 4: Extend the schema**
+- [x] **Step 4: Extend the schema**
 
 In `lib/env.ts`, add to `EnvSchema`:
 
@@ -104,7 +121,7 @@ In `lib/env.ts`, add to `EnvSchema`:
   PARTNER_EMAIL: z.email(),
 ```
 
-- [ ] **Step 5: Run the tests and watch them pass**
+- [x] **Step 5: Run the tests and watch them pass**
 
 ```powershell
 pnpm vitest run lib/env.test.ts
@@ -112,7 +129,7 @@ pnpm vitest run lib/env.test.ts
 
 Expected: PASS.
 
-- [ ] **Step 6: Document the names in `.env.example`**
+- [x] **Step 6: Document the names in `.env.example`**
 
 Replace the `AUTH_SECRET` block with:
 
@@ -134,7 +151,7 @@ OWNER_EMAIL=
 PARTNER_EMAIL=
 ```
 
-- [ ] **Step 7: Read the seeded addresses from the environment**
+- [x] **Step 7: Read the seeded addresses from the environment**
 
 In `prisma/seed.ts`, replace the `USERS` constant:
 
@@ -162,7 +179,7 @@ function requiredEnv(name: string): string {
 
 `prisma/` is outside the ESLint block that forbids `process.env`, and the seed runs before `lib/env.ts` would be worth loading.
 
-- [ ] **Step 8: Verify**
+- [x] **Step 8: Verify**
 
 ```powershell
 pnpm verify
@@ -170,7 +187,7 @@ pnpm verify
 
 Expected: green.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```powershell
 git add -A
@@ -874,6 +891,8 @@ Fix focus order, keyboard reachability, labels, live regions, contrast, heading 
 - [ ] **Step 3: Manual browser check**
 
 At 390px. Executed, not merely written — it can be driven through the `playwright` MCP server. **The development fallback of §9 hides most of what this checklist tests**, so it runs against a local production build.
+
+**Points 2 to 6 need real Google credentials.** If the build was done against the placeholders of "Before starting", run point 1 and point 7 now, leave the rest unticked, and record in the roadmap that the checklist is part-run and why — the same debt three plans carried on 2026-08-14, so name it rather than let it go quiet.
 
 Points 1 to 6 need the middleware, which stands down in development: run them against `pnpm build && pnpm start`, not `pnpm dev`.
 
