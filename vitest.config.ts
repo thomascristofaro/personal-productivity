@@ -20,6 +20,7 @@ export default defineConfig({
     env: {
       DATABASE_URL: "postgresql://test:test@localhost:5432/test",
       DIRECT_URL: "postgresql://test:test@localhost:5432/test",
+      APP_URL: "http://localhost:3000",
       AUTH_SECRET: "test-secret-long-enough-to-satisfy-the-schema",
       GOOGLE_CLIENT_ID: "test.apps.googleusercontent.com",
       GOOGLE_CLIENT_SECRET: "test",

@@ -5,6 +5,7 @@ import { EnvSchema } from "@/lib/env"
 const valid = {
   DATABASE_URL: "postgresql://user:pw@ep-x.eu-central-1.aws.neon.tech/db",
   DIRECT_URL: "postgresql://user:pw@ep-x.eu-central-1.aws.neon.tech/db",
+  APP_URL: "https://menu.example.com",
   AUTH_SECRET: "3PMGhXcCBOD-0mn3Xh6h2rGV0lQnbnRLtQ4hVLLQ5Ks",
   GOOGLE_CLIENT_ID: "1234.apps.googleusercontent.com",
   GOOGLE_CLIENT_SECRET: "GOCSPX-not-a-real-secret",
@@ -53,5 +54,13 @@ describe("EnvSchema", () => {
 
   it("rejects an auth secret too short to sign anything safely", () => {
     expect(() => EnvSchema.parse({ ...valid, AUTH_SECRET: "short" })).toThrow()
+  })
+
+  // A trailing slash produces callback URLs with a double slash, which Google
+  // then refuses as not matching the registered redirect URI.
+  it("rejects an app URL with a trailing slash", () => {
+    expect(() =>
+      EnvSchema.parse({ ...valid, APP_URL: "https://menu.example.com/" })
+    ).toThrow()
   })
 })

@@ -311,7 +311,9 @@ Expected: it applies without prompting to reset. If Prisma asks to drop data, st
 pnpm verify
 ```
 
-Expected: green. `pnpm db:migrate` regenerates the client, so `db.session` and `db.account` typecheck.
+Expected: green.
+
+**`pnpm db:migrate` did not regenerate the client**, contrary to what this step originally claimed. `tsc` passed anyway — nothing referenced the new models yet — and the gap only surfaced in Task 3, as `BetterAuthError: Model rateLimit does not exist in the database`. Run `pnpm db:generate` after the migration, and restart any dev server: the process holds the old client in memory, which is the same trap the roadmap records for `/spesa` on 2026-08-14.
 
 - [x] **Step 5: Commit**
 
@@ -331,6 +333,7 @@ git commit -m "feat: add the authentication tables"
 - Create: `lib/auth/index.ts`
 - Create: `app/api/auth/[...all]/route.ts`
 - Modify: `eslint.config.mjs:181`
+- Modify: `lib/env.ts`, `lib/env.test.ts`, `vitest.config.ts`, `.env.example` — for `APP_URL`, added here rather than in Task 1 because the CLI run in Step 6 is what surfaced the need for it
 
 **Interfaces:**
 
@@ -339,7 +342,9 @@ git commit -m "feat: add the authentication tables"
 
 **The two getters are not interchangeable.** `getVerifiedSession()` reports only a session better-auth actually issued. `getSession()` reports who the app should treat as the current user, which in development includes the seeded fallback. The login screen must use the verified one: asking `getSession()` there would see the fallback, redirect to the app, and bounce back off the middleware forever.
 
-- [ ] **Step 1: Create the instance**
+- [x] **Step 1: Create the instance**
+
+`baseURL: env.APP_URL` is in the real file and not in the snippet below: the CLI's warning in Step 6 is what put it there. Without it better-auth derives the origin from the incoming request, and the redirect URI it sends to Google would depend on proxy headers.
 
 `lib/auth/better-auth.ts`:
 
@@ -404,7 +409,7 @@ export const auth = betterAuth({
 })
 ```
 
-- [ ] **Step 2: Create the app-facing interface**
+- [x] **Step 2: Create the app-facing interface**
 
 `lib/auth/index.ts`:
 
@@ -480,7 +485,7 @@ export async function requireSession(): Promise<Session> {
 }
 ```
 
-- [ ] **Step 3: Delete the old file**
+- [x] **Step 3: Delete the old file**
 
 ```powershell
 git rm lib/auth.ts
@@ -488,7 +493,9 @@ git rm lib/auth.ts
 
 The four server actions import `@/lib/auth`, which now resolves to `lib/auth/index.ts`. None of them changes.
 
-- [ ] **Step 4: Mount the auth endpoints**
+- [x] **Step 4: Mount the auth endpoints**
+
+Verified live: `GET /api/auth/get-session` answers `200 null`, and `POST /api/auth/sign-in/social` with `{"provider":"google"}` returns a Google authorization URL carrying `redirect_uri=http://localhost:3000/api/auth/callback/google` — which is the URI to register in the Google Cloud client.
 
 `app/api/auth/[...all]/route.ts`:
 
@@ -500,7 +507,7 @@ import { auth } from "@/lib/auth/better-auth"
 export const { GET, POST } = toNextJsHandler(auth)
 ```
 
-- [ ] **Step 5: Keep the ESLint layering honest**
+- [x] **Step 5: Keep the ESLint layering honest**
 
 In `eslint.config.mjs`, the `lib/*.ts` block ignores `lib/auth.ts`, which no longer exists. The glob matches only direct children of `lib/`, so `lib/auth/**` is outside it either way — but leave the intent written down rather than a dead entry. Replace:
 
@@ -514,17 +521,21 @@ In `eslint.config.mjs`, the `lib/*.ts` block ignores `lib/auth.ts`, which no lon
     ignores: ["lib/db.ts", "lib/env.ts", "lib/env.test.ts"],
 ```
 
-- [ ] **Step 6: Cross-check the generated schema**
+- [x] **Step 6: Cross-check the generated schema**
 
 Now that the config file exists, run the check deferred from Task 2:
 
 ```powershell
-pnpm dlx @better-auth/cli@latest generate --config lib/auth/better-auth.ts
+pnpm dlx @better-auth/cli@latest generate --config lib/auth/better-auth.ts --output .better-auth-generated.prisma --yes
 ```
 
-Compare its output with `prisma/schema.prisma`. If it disagrees about any field, amend the schema, run `pnpm db:migrate` again, and say so in the commit message. If it agrees, discard whatever file it wrote.
+**The CLI refuses a config it cannot resolve, and `import "server-only"` stops it — in `lib/auth/better-auth.ts`, and also in `lib/db.ts` and `lib/env.ts`, which it reaches through the import graph.** Remove the three lines, run it, put them back, and check `git diff` afterwards to be sure all three returned.
 
-- [ ] **Step 7: Verify**
+Result on 2026-08-15: the generator agreed field for field. The only difference is `@@map` to lowercase table names, which is what a fresh install would produce — irrelevant here, because the adapter goes through the Prisma client rather than SQL, and adopting it would rename the existing `User` table. Schema left as written; delete the generated file.
+
+The run also warned that `baseURL` was unset, which is why `APP_URL` exists — see Step 1.
+
+- [x] **Step 7: Verify**
 
 ```powershell
 pnpm verify
@@ -532,7 +543,7 @@ pnpm verify
 
 Expected: green.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```powershell
 git add -A
