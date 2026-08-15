@@ -4,9 +4,11 @@ import { BookOpen, CalendarDays, Carrot, ShoppingCart } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
+import { SignOut } from "@/components/auth/sign-out"
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarHeader,
@@ -25,7 +27,9 @@ const NAV_ITEMS = [
   { href: "/ingredients", label: "Ingredienti", icon: Carrot },
 ] as const
 
-export function AppSidebar() {
+// The name arrives as a prop: this is a client component, so it cannot read the
+// session itself. The layout above it does.
+export function AppSidebar({ userName }: { userName: string }) {
   const pathname = usePathname()
   const { setOpenMobile } = useSidebar()
 
@@ -64,6 +68,19 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <span className="block truncate px-2 text-xs text-muted-foreground">
+              {userName}
+            </span>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SignOut />
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
     </Sidebar>
   )
 }

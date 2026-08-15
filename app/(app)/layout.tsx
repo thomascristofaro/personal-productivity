@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation"
+
 import { AppSidebar } from "@/components/app-sidebar"
 import {
   SidebarInset,
@@ -5,14 +7,31 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { Toaster } from "@/components/ui/sonner"
+import { getSession } from "@/lib/auth"
+import { db } from "@/lib/db"
 
 // This layout stays a server component: SidebarProvider is a client component,
 // but `children` is passed to it as a slot, so the pages below keep rendering
 // on the server.
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+//
+// The redirect here is the server-side gate. The middleware only looks for a
+// cookie and cannot authorise; this can, and does.
+export default async function AppLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  const session = await getSession()
+  if (session === null) redirect("/login")
+
+  const user = await db.user.findUnique({
+    where: { id: session.userId },
+    select: { name: true },
+  })
+
   return (
     <SidebarProvider>
-      <AppSidebar />
+      <AppSidebar userName={user?.name ?? ""} />
       <SidebarInset>
         {/* The inset padding is what keeps the sticky bar clear of a notch once
             this is installed to the home screen. In a browser tab the insets

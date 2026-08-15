@@ -556,7 +556,7 @@ git commit -m "feat: add the better-auth instance behind requireSession"
 
 **Files:**
 
-- Create: `lib/auth-client.ts`
+- Create: ~~`lib/auth-client.ts`~~ → **`components/auth/client.ts`**. ESLint refuses `better-auth/react` under `lib/`: the restricted-import patterns use gitignore semantics, so `react` matches any path segment. The rule is right on the merits — that module exports React hooks and the domain layer must not know about React — so the file moved rather than the rule bending. better-auth's docs say `lib/auth-client.ts`; the project's layering binds over the library's convention.
 - Create: `app/login/page.tsx`
 - Create: `components/auth/google-sign-in.tsx`
 - Create: `components/auth/sign-out.tsx`
@@ -570,7 +570,7 @@ git commit -m "feat: add the better-auth instance behind requireSession"
 
 `components/**` may not import `@/lib/auth` — ESLint's `noServerCode` list forbids it. The browser talks to `@/lib/auth-client`, which is why it is a separate module rather than another export of `lib/auth/`.
 
-- [ ] **Step 1: Create the browser client**
+- [x] **Step 1: Create the browser client**
 
 `lib/auth-client.ts`:
 
@@ -581,7 +581,9 @@ import { createAuthClient } from "better-auth/react"
 export const authClient = createAuthClient()
 ```
 
-- [ ] **Step 2: Create the sign-in button**
+- [x] **Step 2: Create the sign-in button**
+
+The real file also passes `errorCallbackURL: "/login?negato=1"`. The design review caught that without it the `?negato` branch of the login page is unreachable, so a refused account — the case this whole design turns on — would meet a raw error page instead of an Italian sentence.
 
 `components/auth/google-sign-in.tsx`:
 
@@ -629,7 +631,7 @@ export function GoogleSignIn() {
 }
 ```
 
-- [ ] **Step 3: Create the login page**
+- [x] **Step 3: Create the login page**
 
 `app/login/page.tsx`. It sits outside `(app)` on purpose: no sidebar, no shell, nothing to navigate to.
 
@@ -673,7 +675,7 @@ export default async function LoginPage({
 }
 ```
 
-- [ ] **Step 4: Create the sign-out button**
+- [x] **Step 4: Create the sign-out button**
 
 `components/auth/sign-out.tsx`:
 
@@ -710,7 +712,7 @@ export function SignOut() {
 }
 ```
 
-- [ ] **Step 5: Put the user and the way out in the sidebar**
+- [x] **Step 5: Put the user and the way out in the sidebar**
 
 In `components/app-sidebar.tsx`, add the imports:
 
@@ -744,7 +746,7 @@ and add, immediately before the closing `</Sidebar>`:
 </SidebarFooter>
 ```
 
-- [ ] **Step 6: Feed the name from the layout**
+- [x] **Step 6: Feed the name from the layout**
 
 In `app/(app)/layout.tsx`, make it async and read the user. The redirect itself lands in Task 5; here the layout only needs the name:
 
@@ -784,7 +786,7 @@ export default async function AppLayout({
 
 Leave the rest of the file as it is.
 
-- [ ] **Step 7: Verify**
+- [x] **Step 7: Verify**
 
 ```powershell
 pnpm verify
@@ -792,7 +794,7 @@ pnpm verify
 
 Expected: green.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```powershell
 git add -A
@@ -811,7 +813,7 @@ git commit -m "feat: sign in with Google and sign out again"
 
 - Consumes: nothing of ours. `getSessionCookie` comes from `better-auth/cookies`.
 
-- [ ] **Step 1: Write the middleware**
+- [x] **Step 1: Write the middleware**
 
 `middleware.ts`, at the repository root:
 
@@ -846,7 +848,9 @@ export const config = {
 }
 ```
 
-- [ ] **Step 2: Check the matcher against a production build**
+- [x] **Step 2: Check the matcher against a production build**
+
+Done on 2026-08-15. `/`, `/menu`, `/spesa`, `/recipes`, `/ingredients` and `/menu/2026-08-10` all ended at `/login`; `/login` itself rendered without looping; two stylesheets loaded, so the matcher does not swallow `_next/static`.
 
 The middleware stands down in development, so `pnpm dev` cannot show this. Build and run locally in production mode:
 
@@ -861,7 +865,7 @@ Stop `pnpm start` afterwards.
 
 Signing in locally still works during ordinary `pnpm dev`: navigate to `/login` directly. The middleware will not send you there, but the screen works, and `getVerifiedSession()` means it does not bounce you back.
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 ```powershell
 pnpm verify
@@ -869,7 +873,7 @@ pnpm verify
 
 Expected: green.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```powershell
 git add -A
@@ -885,7 +889,7 @@ git commit -m "feat: send a visitor without a session to the login screen"
 - Modify: whatever the review finds
 - Modify: `docs/roadmap.md`
 
-- [ ] **Step 1: Run the guidelines**
+- [x] **Step 1: Run the guidelines**
 
 Use `.agents/skills/web-design-guidelines/` over:
 
@@ -897,9 +901,11 @@ components/app-sidebar.tsx
 app/(app)/layout.tsx
 ```
 
-- [ ] **Step 2: Triage**
+- [x] **Step 2: Triage**
 
 Fix focus order, keyboard reachability, labels, live regions, contrast, heading structure. Park anything cosmetic in the roadmap rather than fixing it here.
+
+One finding, and it was not cosmetic: the `?negato` branch had nothing to reach it. Fixed by `errorCallbackURL` on the sign-in call — see Task 4 Step 2. Nothing else came up: the icons carry `aria-hidden`, both buttons have text labels rather than needing `aria-label`, the pending states end in `…`, and the error paragraphs are `role="alert"`.
 
 - [ ] **Step 3: Manual browser check**
 
@@ -909,13 +915,13 @@ At 390px. Executed, not merely written — it can be driven through the `playwri
 
 Points 1 to 6 need the middleware, which stands down in development: run them against `pnpm build && pnpm start`, not `pnpm dev`.
 
-1. Signed out, open `/menu`, `/spesa`, `/recipes`, `/ingredients` and `/` in turn: each lands on `/login`.
+1. **Done 2026-08-15.** Signed out, open `/menu`, `/spesa`, `/recipes`, `/ingredients` and `/` in turn: each lands on `/login`.
 2. Sign in with a seeded address: you reach `/menu` as that user, and the sidebar footer shows the right name.
 3. **Sign in with a Google account that is not seeded: it is refused, and no `User` row is created.** Check the row count before and after. This is the property the whole design rests on — if it fails, stop and report rather than working around it.
 4. Close the browser entirely, reopen it, open `/menu`: still signed in.
 5. "Esci" returns to `/login`, and the browser back button does not show the app again.
 6. With the browser signed out, invoke a server action directly (an unauthenticated `POST` to a page that hosts one) and confirm it is refused rather than mutating.
-7. The login screen at 390px: no horizontal scroll, the button reaches at least 44px of touch target, and the whole flow works one-handed.
+7. **Done 2026-08-15.** The login screen at 390px: no horizontal scroll, the button reaches at least 44px of touch target, and the whole flow works one-handed.
 
 - [ ] **Step 4: Update the roadmap**
 

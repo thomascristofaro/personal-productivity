@@ -104,17 +104,30 @@ target, which does not exist either.
 unauthenticated. Locally it resolves the first seeded user, which is why the app
 works in `pnpm dev`.
 
-**Designed on 2026-08-15**, in
-[`2026-08-15-authentication-design.md`](superpowers/specs/2026-08-15-authentication-design.md):
+**Designed and built on 2026-08-15**, in
+[`2026-08-15-authentication-design.md`](superpowers/specs/2026-08-15-authentication-design.md)
+and [`2026-08-15-authentication.md`](superpowers/plans/2026-08-15-authentication.md):
 Google sign-in through `better-auth`, no passwords anywhere. `disableSignUp` on
 the provider is the allowlist — only a seeded user can get in — and that is the
-one property the design rests on. In flight on `feat/auth`; the implementation
-plan comes next.
+one property the design rests on.
 
-Before it can work, the owner does two things outside the repository: a Google
-Cloud OAuth client with redirect URIs for localhost and production, and real
-addresses in `OWNER_EMAIL` / `PARTNER_EMAIL`. The seed still carries
-`example.invalid` placeholders, and with those in place nobody can sign in.
+Tasks 1 to 5 are done on `feat/auth`. What is left is **verification, and it is
+blocked on the owner**: there is no Google Cloud OAuth client yet, so the app was
+built against placeholder credentials. Of the Task 6 checklist only points 1 and
+7 could run; points 2 to 6, including _the_ one — an unseeded Google account is
+refused and creates no user row — are unticked and stay that way until the real
+credentials exist. This is the same debt three plans carried on 2026-08-14, named
+rather than left quiet.
+
+To unblock it: a Google Cloud OAuth client with
+`http://localhost:3000/api/auth/callback/google` and the production equivalent
+as authorised redirect URIs, consent screen in Testing with both addresses as
+test users, then the real addresses in `OWNER_EMAIL` / `PARTNER_EMAIL`. The seed
+still carries `example.invalid`; with those in place nobody can sign in.
+
+**Do not reseed to change them.** The seed upserts on email, so it would add two
+users rather than rename two. Update the existing rows in place — their ids are
+referenced by `ShoppingListItem.checkedBy`.
 
 ### 4. PWA and deployment — spec §9, §10
 
