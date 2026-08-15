@@ -10,7 +10,8 @@ to outlive this app. Prefer the decision that generalises.
 
 Design documents are in `docs/superpowers/specs/`; the current one is
 `2026-08-13-menu-spesa-design.md`. Read it before implementing a feature — it
-settles decisions that must not be relitigated.
+settles decisions that must not be relitigated. `docs/roadmap.md` says which
+parts of it are built and what is next.
 
 ## Two kinds of knowledge
 
@@ -196,6 +197,10 @@ No section-divider comments, no commented-out code.
 
 ## Where things are
 
+**Start here in a new session: [`docs/roadmap.md`](docs/roadmap.md)** — what has
+shipped, what is in flight, what comes next and in which order, and what is
+parked. It is the only place that records state; keep it current.
+
 Project-specific detail, in `docs/conventions/`:
 
 - [`architecture.md`](docs/conventions/architecture.md) — layers, folder layout, what may import what
@@ -208,7 +213,7 @@ Vendor documentation on disk, current where training data is not:
 - `node_modules/next/dist/docs/` — Next.js breaking changes
 - `.agents/skills/prisma-*/` — Prisma 7 generates into `lib/generated/prisma`, needs
   an explicit driver adapter, keeps URLs in `prisma.config.ts`
-- `.agents/skills/shadcn/` — including `references/base-vs-radix.md`; this project
+- `.agents/skills/shadcn/` — including `rules/base-vs-radix.md`; this project
   is on Base UI, so most shadcn examples online do not transfer verbatim
 - `.agents/skills/vercel-*`, `.agents/skills/web-design-guidelines/`
 

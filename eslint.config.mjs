@@ -60,6 +60,7 @@ const noServerCode = {
     "@/lib/services/**",
     "@/lib/db",
     "@/lib/env",
+    "@/lib/auth",
     "@prisma/client",
     "pg",
   ],
@@ -103,6 +104,13 @@ const eslintConfig = defineConfig([
         noServerCode,
       ),
     },
+  },
+
+  {
+    // Generated verbatim by `shadcn add sidebar`. Kept byte-identical to the
+    // registry so it stays upgradeable — see docs/conventions/ui.md.
+    files: ["hooks/use-mobile.ts"],
+    rules: { "react-hooks/set-state-in-effect": "off" },
   },
 
   {
@@ -163,6 +171,22 @@ const eslintConfig = defineConfig([
       "jsdoc/no-types": "error",
       "jsdoc/check-alignment": "error",
       "jsdoc/check-param-names": "error",
+    },
+  },
+
+  {
+    // Leaf modules, per the table in docs/conventions/architecture.md: reachable
+    // from components/**, so they obey the same restrictions as lib/services/**.
+    files: ["lib/*.ts"],
+    ignores: ["lib/db.ts", "lib/env.ts", "lib/env.test.ts", "lib/auth.ts"],
+    rules: {
+      "no-restricted-imports": restrictImports(
+        noDatabaseInternals,
+        noAnthropicSdk,
+        noFramework,
+        noUpperLayers,
+        noServerCode,
+      ),
     },
   },
 

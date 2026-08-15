@@ -21,13 +21,68 @@ Binding (design document §4.3).
   component.
 
 Expected set for the first module: `button`, `input`, `textarea`, `card`,
-`dialog`, `drawer`, `sheet`, `checkbox`, `select`, `command`, `form`, `label`,
+`dialog`, `drawer`, `sheet`, `checkbox`, `select`, `command`, `field`,
 `tabs`, `badge`, `separator`, `skeleton`, `sonner`, `alert-dialog`.
+
+Forms are built from `field` — `FieldGroup`, `Field`, `FieldLabel`,
+`FieldDescription` — not from a `form` component and not from a `div` with
+`space-y-*`. An earlier revision of this list named `form` and `label`; that
+predates this installation's style, which has no `form` component.
 
 **This installation is built on Base UI, not Radix.** Almost every shadcn example
 online is written against Radix, so prop names and composition patterns do not
-always transfer. Read `.agents/skills/shadcn/references/base-vs-radix.md` rather
+always transfer. Read `.agents/skills/shadcn/rules/base-vs-radix.md` rather
 than adapting a blog post by guesswork.
+
+## Page primitives
+
+A page is assembled from `components/page/`, not rebuilt. A new module gets its
+screens right by reusing these, and the states below stop being something each
+module has to remember.
+
+| Primitive                         | Use                                                |
+| --------------------------------- | -------------------------------------------------- |
+| `PageHeader`                      | title, optional back link, optional action slot    |
+| `DataList` + `DataListRow`        | the card-row list, including the count live region |
+| `EmptyState`                      | "there is nothing here", with an optional action   |
+| `PageError`                       | the body of a route's `error.tsx`                  |
+| `ListSkeleton` / `DetailSkeleton` | the body of a route's `loading.tsx`                |
+
+**Every screen that fetches has four designed states, not three.** The design
+document says loading, empty and error; use showed a fourth that is easy to miss.
+
+1. **Empty** — nothing exists yet. Say so and offer the action that creates one.
+2. **Filtered empty** — data exists, the filter matched nothing. Different copy,
+   and no "create" button: the user is looking for something, not authoring.
+3. **Error** — the fetch failed. `PageError`. Never a partial page.
+4. **Loading** — `ListSkeleton` or `DetailSkeleton` in the route's `loading.tsx`.
+
+States 1 and 2 are two call sites passing different strings to `EmptyState`, not
+one component with a boolean. Adding an `isSearching`-style prop to a primitive
+is the thing this directory exists to prevent.
+
+`DataList` takes a `renderItem` callback. That is a render prop and it is the
+right one: the parent supplies the data the child renders, the case
+`vercel-composition-patterns` names as appropriate for them.
+
+The catalogue screens under `app/(app)/ingredients/` are the second module built
+on these, and they added no primitive and changed none. That is the bar: if a
+third module needs one bent, bend the primitive rather than forking it.
+
+## The app shell
+
+`app/(app)/layout.tsx` mounts a stock shadcn `sidebar`: a rail on desktop, a
+sheet behind a hamburger on a phone. The layout stays a server component —
+`SidebarProvider` is a client component, but `children` reaches it as a slot, so
+pages below keep rendering on the server.
+
+Adding a module to the navigation is one entry in `NAV_ITEMS` in
+`components/app-sidebar.tsx`. Only routes that exist are listed; a nav entry
+that 404s is worse than a short menu.
+
+Generated shadcn code that ships English screen-reader text is not edited.
+Override it from the call site instead — `<SidebarTrigger aria-label="Apri il
+menu" />` — so the file stays byte-identical to the registry.
 
 ## Server and client
 
@@ -47,11 +102,17 @@ interactive state.
 - **Phone first, desktop tolerable.** Design at 390px wide and let it grow. On
   small viewports prefer `drawer` (bottom sheet) over `dialog`: thumbs reach the
   bottom of the screen, not a centred modal's corner.
-- **Touch targets at least 44px**, including shopping-list checkboxes, which are
-  tapped one-handed while holding a basket (design document §4.3).
-- **Every screen that fetches has three designed states**: loading, empty, error.
-  The menu and the shopping list start empty every week, so empty is a normal
-  state, not an edge case.
+- **Touch targets: the shadcn scale, unmodified.** The design document asked for
+  44px, reasoning about shopping-list checkboxes tapped one-handed while holding
+  a basket (§4.3). The `base-mira` style generates a 28px scale instead, and we
+  take it as it comes: staying stock keeps every component upgradeable and keeps
+  the diff against the registry empty. This is a deliberate trade-off, made
+  before real use rather than after it. Revisit it the first time someone
+  mis-taps something on a phone — the fix is then to edit the size variants in
+  `components/ui/` in place, which is what owning the source is for.
+- **Every screen that fetches has four designed states**, enumerated under "Page
+  primitives" above. The menu and the shopping list start empty every week, so
+  empty is a normal state, not an edge case.
 - **User-visible text is Italian**, written the way the two users speak. "Fuori a
   cena", not "Pasto consumato fuori sede". Error messages say what happened and
   what to do next.

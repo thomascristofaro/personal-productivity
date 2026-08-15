@@ -68,6 +68,18 @@ query, in well under a second. Two consequences:
 - Wrap multi-write operations in a transaction. Regenerating a shopping list
   deletes and recreates rows; a half-applied regeneration is a lying list.
 
+### Running services from a script
+
+`lib/db.ts` imports `server-only`, whose default entry point throws. A script
+that imports the domain layer must therefore run with the `react-server`
+condition, which resolves that guard to an empty module:
+
+    node --conditions=react-server --import tsx <script>.ts
+
+`prisma db seed` is configured this way in `prisma.config.ts`. Vitest solves the
+same problem differently, aliasing `server-only` to `test/stubs/server-only.ts`.
+Neither weakens the guard: it still fires in a browser bundle, which is its job.
+
 ### Migrations
 
 - Every schema change goes through `pnpm db:migrate`. Migration files are
@@ -94,13 +106,8 @@ defines the JSON schema sent to Anthropic.
 
 ## Modelling rules from the design
 
-Two commitments worth restating, because both are easy to "simplify" away and
-both exist for a reason:
-
-**`RecipeIngredient.raw` is always preserved.** The original ingredient string is
-stored alongside the parsed quantity, unit and name. When parsing is wrong the
-user can still see and correct what the source actually said. Nothing is ever
-lost to a parser.
+One commitment worth restating, because it is easy to "simplify" away and it
+exists for a reason:
 
 **`ShoppingListItem.manual` survives regeneration.** Items added by hand
 (`sacchetti`, `detersivo`) and the checked state of existing items must outlive a
@@ -111,11 +118,16 @@ someone typed is worse than no regeneration.
 
 - Store `DateTime` in UTC; Prisma and Postgres handle that. Format for display at
   the edge, in the component.
-- The week starts on **Monday**. `Menu.weekStart` is Monday at 00:00 local time.
-  Do not scatter alternative week-boundary logic through the codebase — one
-  helper, used everywhere.
+- The week starts on **Monday**. `Menu.weekStart` is a Postgres `date`
+  (`DateTime @db.Date`), not a timestamp: it identifies a week, it does not mark
+  an instant. Stored as a timestamp it would mean a different moment depending on
+  the server's timezone, and `@unique` would then admit two rows for one week.
+- **Which** week a moment falls in does depend on a timezone, and that one is
+  `APP_TIMEZONE` in `lib/config.ts`, never the server's. Vercel runs in UTC; at
+  01:00 on a Roman Monday it is still Sunday there.
 - `MenuSlot.day` is `0 = Monday … 6 = Sunday`, which is not JavaScript's
   `getDay()`. Convert in one place.
+- All of the above lives in `lib/week.ts` and nowhere else.
 
 ## Environment variables
 
@@ -131,3 +143,30 @@ Names are documented in `.env.example` with empty values, which is committed.
 Real values live in `.env` (git-ignored) and in Vercel Environment Variables.
 Read and validate them in one module at startup, so a missing variable fails
 immediately rather than at the first request that needs it.
+
+## `Ingredient` is keyed on its name
+
+Every other model here carries a cuid, because every other model needs a
+surrogate key — two recipes may share a title. An ingredient may not: the name
+is unique by definition, the two users curate it, and it is what every other
+table wants to talk about.
+
+So `Ingredient.name` is the primary key and `RecipeIngredient.ingredientName` is
+the foreign key. Four things follow, and none of them is an accident:
+
+- Reading `RecipeIngredient` in `pnpm db:studio` or in psql needs no join, and
+  neither does `getRecipe` — the display name is already on the row.
+- Renaming an ingredient is a normal edit. The relation carries
+  `onUpdate: Cascade`, so Postgres rewrites every reference atomically.
+- Deleting an ingredient a recipe still uses fails, by `onDelete: Restrict`.
+  Emptying a recipe silently would be worse than an error.
+- The shopping-list aggregator keys on the name, and `ShoppingListItem.name`
+  already matches it, so persisting a generated list needs no extra column.
+
+This is not the old string matching returning. Names used to be _typed_ and
+compared through a normaliser; now they are chosen from a list and enforced by a
+foreign key, so two rows sharing a name are the same entry by construction.
+
+Revisit only if ingredients acquire references from outside the database — a
+bookmarked URL, an export file — where a rename would break a link Postgres
+cannot see. Nothing does today.

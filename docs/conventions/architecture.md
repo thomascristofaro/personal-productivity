@@ -22,6 +22,9 @@ lib/
   env.ts                  validated environment variables
   auth.ts                 session handling
   utils.ts                cn() and similar leaf helpers
+  config.ts               tunable constants — timezone, household servings, cooldown window
+  week.ts                 week boundary and day-index conversions
+  aisles.ts               aisle order and ranking for the shopping list
 prisma/
   schema.prisma
 test/stubs/               module stubs used by Vitest
@@ -35,12 +38,23 @@ docs/
 Dependencies point inward. `lib/services/` is the innermost layer and knows
 nothing about the layers above it.
 
-| From              | May import                                                          | May **not** import                                        |
-| ----------------- | ------------------------------------------------------------------- | --------------------------------------------------------- |
-| `app/**`          | anything                                                            | —                                                         |
-| `components/**`   | `components/**`, `hooks/**`, `lib/schemas`, `lib/utils`             | `lib/services/**`, `lib/db`, `lib/env`                    |
-| `lib/services/**` | `lib/services/**`, `lib/schemas/**`, `lib/db`, node built-ins, SDKs | `app/**`, `components/**`, `hooks/**`, `react`, `next/**` |
-| `lib/schemas/**`  | `zod` only                                                          | everything else                                           |
+| From              | May import                                                                        | May **not** import                                        |
+| ----------------- | --------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| `app/**`          | anything                                                                          | —                                                         |
+| `components/**`   | `components/**`, `hooks/**`, `lib/schemas`, leaf modules                          | `lib/services/**`, `lib/db`, `lib/env`, `lib/auth`        |
+| `lib/services/**` | `lib/services/**`, `lib/schemas/**`, `lib/db`, leaf modules, node built-ins, SDKs | `app/**`, `components/**`, `hooks/**`, `react`, `next/**` |
+| `lib/schemas/**`  | `zod` only                                                                        | everything else                                           |
+
+A **leaf module** is a file directly under `lib/` that carries constants and
+pure computation: it reaches neither the database nor the network nor the
+framework, imports no upper layer and no service, and may depend on a small
+pure library — `utils.ts`, `config.ts`, `week.ts`, `aisles.ts`. `db.ts`,
+`env.ts` and `auth.ts` sit directly under `lib/` too, but the first reaches the
+database, the second reads `process.env`, and the third reaches the database
+itself and will read the session cookie once the authentication plan lands, so
+none of them is a leaf module, and the table above does not let components
+import any of them. Anything that grows a dependency outside that set stops
+being a leaf and moves into `lib/services/`.
 
 `lib/schemas/` importing nothing but Zod is deliberate: schemas are shared between
 client and server, so anything they drag in gets bundled for the browser.

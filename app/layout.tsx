@@ -1,4 +1,4 @@
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { Geist_Mono, Inter } from "next/font/google"
 
 import "./globals.css"
@@ -15,6 +15,13 @@ const fontMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Menù e spesa",
   description: "Menù settimanale e lista della spesa",
+}
+
+// `viewportFit: "cover"` is what makes env(safe-area-inset-*) report anything
+// other than zero, so the insets the app layout applies depend on it. No
+// maximum-scale and no user-scalable: pinch zoom stays available.
+export const viewport: Viewport = {
+  viewportFit: "cover",
 }
 
 export default function RootLayout({

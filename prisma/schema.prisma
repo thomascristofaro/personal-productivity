@@ -1,6 +1,5 @@
 // Prisma schema. Connection URLs live in ../prisma.config.ts (Prisma 7).
-// The data model is defined by docs/superpowers/specs/2026-08-13-menu-spesa-design.md
-// and is added by the implementation plan.
+// The data model is defined by docs/superpowers/specs/2026-08-13-menu-spesa-design.md.
 
 generator client {
   provider = "prisma-client"
@@ -9,4 +8,121 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+// Identity only. Credential storage belongs to whatever authentication lands,
+// and arrives in its own migration. See design document section 6.4.
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  createdAt DateTime @default(now())
+
+  checkedItems ShoppingListItem[]
+}
+
+model Recipe {
+  id           String             @id @default(cuid())
+  title        String
+  sourceUrl    String?
+  servings     Int?
+  totalMinutes Int?
+  instructions String?
+  notes        String?
+  tags         String[]
+  ingredients  RecipeIngredient[]
+  slots        MenuSlot[]
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+}
+
+// The curated catalogue. Keyed on the name, which is unique by definition and
+// is what every other table wants to talk about — see docs/conventions/data.md
+// for why this one model carries no surrogate key. `defaultUnit` is free text
+// on purpose: a hint that pre-fills a recipe row, not a controlled vocabulary.
+// `aisle` lives here rather than in a learned lookup, so it is set once per
+// ingredient and the shopping list groups correctly from then on.
+model Ingredient {
+  name        String             @id
+  defaultUnit String?
+  aisle       String             @default("altro")
+  usedIn      RecipeIngredient[]
+}
+
+model RecipeIngredient {
+  id             String     @id @default(cuid())
+  recipeId       String
+  recipe         Recipe     @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  ingredientName String
+  // Restrict on delete: removing an ingredient a recipe still uses must fail
+  // loudly rather than quietly empty the recipe. Cascade on update: renaming an
+  // ingredient is a legitimate edit, and Postgres rewrites the references
+  // atomically, which is what makes a natural key safe here.
+  ingredient     Ingredient @relation(fields: [ingredientName], references: [name], onDelete: Restrict, onUpdate: Cascade)
+  quantity       Float?
+  unit           String?
+  position       Int
+
+  // The aggregation loads every ingredient of every selected recipe at once.
+  @@index([recipeId])
+  @@index([ingredientName])
+}
+
+model Menu {
+  id        String        @id @default(cuid())
+  weekStart DateTime      @unique @db.Date
+  slots     MenuSlot[]
+  list      ShoppingList?
+  createdAt DateTime      @default(now())
+  // Written deliberately by setSlot and clearSlot. Not `@updatedAt`: writing a
+  // MenuSlot does not update its Menu, so `@updatedAt` would never fire for the
+  // change that actually matters — the one the shopping list needs to see.
+  slotsUpdatedAt DateTime @default(now())
+}
+
+model MenuSlot {
+  id       String   @id @default(cuid())
+  menuId   String
+  menu     Menu     @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  day      Int
+  meal     MealType
+  recipeId String?
+  recipe   Recipe?  @relation(fields: [recipeId], references: [id], onDelete: SetNull)
+  freeText String?
+  servings Int?
+
+  @@unique([menuId, day, meal])
+}
+
+enum MealType {
+  LUNCH
+  DINNER
+}
+
+model ShoppingList {
+  id        String             @id @default(cuid())
+  menuId    String             @unique
+  menu      Menu               @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  items     ShoppingListItem[]
+  createdAt DateTime           @default(now())
+  // Set on every regeneration. Replacing the child items does not touch this
+  // row, so `@updatedAt` would stand still across exactly the event it names.
+  generatedAt DateTime         @default(now())
+}
+
+model ShoppingListItem {
+  id          String       @id @default(cuid())
+  listId      String
+  list        ShoppingList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  name        String
+  quantity    Float?
+  unit        String?
+  aisle       String
+  checked     Boolean      @default(false)
+  checkedById String?
+  checkedBy   User?        @relation(fields: [checkedById], references: [id], onDelete: SetNull)
+  checkedAt   DateTime?
+  manual      Boolean      @default(false)
+
+  @@index([listId])
 }

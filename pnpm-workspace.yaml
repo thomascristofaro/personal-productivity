@@ -11,6 +11,7 @@ allowBuilds:
   "@prisma/engines": true
   prisma: true
   simple-git-hooks: true
+  esbuild: true
 
 minimumReleaseAgeExclude:
   - '@rolldown/binding-linux-s390x-gnu@1.2.4'
