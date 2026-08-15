@@ -33,10 +33,23 @@ ingredient management (8 points), the weekly menu (10) and the shopping list
 the route has rendered correctly ever since, so `Menu.slotsUpdatedAt` and
 `ShoppingList.generatedAt` are confirmed working against a real browser.
 
-Nine defects surfaced along the way. None blocks anything and none was fixed
-inline; they are in **Parked defects** below. The two worth knowing about before
-touching the menu drawer are the stale `picked` after "Svuota" and the recipe
-field that reopens empty — both are in `components/menu/`.
+Eight defects surfaced along the way and **all eight were then fixed**, on the
+owner's call, in the commit after the checklists: the stale `picked` left behind
+by "Svuota", the recipe field that reopened empty, the note lost on a refused
+slot save, the add-item form that never reset, the English 404, the missing
+`aria-current`, the units that were never pluralised, and the Base UI
+`useControlled` warnings. Each was re-checked in the browser afterwards.
+
+Two things came out of that worth knowing:
+
+- `lib/units.ts` is new — the regular Italian plural applied to a free-text
+  unit. It is the only reason "5 spicchi" reads correctly, and it is pure and
+  tested, so extend it there rather than at a call site.
+- `hooks/use-attempt.ts` is new. The forms feed `state.values` into
+  `defaultValue` to survive React 19's reset; that changes a `defaultValue`
+  after mount, which is what Base UI was warning about. Keying the fields on an
+  attempt counter remounts them instead. Any new form using that echo pattern
+  wants the same hook.
 
 The seed data the checklists needed was left in place: three recipes
 (`Spaghetti aglio e olio`, `Pollo all'aglio`, `Bruschette all'aglio`), a
@@ -111,24 +124,15 @@ or `docs/conventions/` as it was decided.
 Real, small, and none of them blocking. Fold each into whichever plan next
 touches that file rather than making a plan for them.
 
-| Defect                                                                                                                                                                                                                                      | Where                                   |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
-| A focused `type="number"` input silently reverts on implicit Enter submit                                                                                                                                                                   | `components/recipes/recipe-form.tsx`    |
-| Dev-only Base UI `useControlled` warnings                                                                                                                                                                                                   | recipe **and ingredient** forms         |
-| "Svuota" empties the slot but leaves the drawer open holding the old `picked`, so a note typed straight afterwards is refused with "una ricetta oppure una nota". Closing and reopening the drawer clears it                                | `components/menu/slot-drawer.tsx`       |
-| Reopening a slot that holds a recipe shows the Ricetta field **empty**: `inputValue` is driven by a `query` state that starts at `""`, so the label of the held value never renders. The recipe is still attached and still saves           | `components/menu/recipe-picker.tsx`     |
-| A refused slot save loses the note the user typed — the drawer does not echo submitted values back the way `ingredient-form.tsx` does                                                                                                       | `components/menu/slot-drawer.tsx`       |
-| The add-item form does not reset after a successful add: the name stays in the combobox and the aisle keeps the previous pick, so the next item's text concatenates onto the old one                                                        | `components/shopping/add-item-form.tsx` |
-| Only `recipes/[id]` has a `not-found.tsx`. `/menu/[weekStart]`, `/spesa/[weekStart]` and `/ingredients/[name]/edit` fall through to Next's built-in 404 — **in English**, against the Italian-for-users rule                                | `app/(app)/**`                          |
-| The active sidebar entry carries only `data-active`, never `aria-current`, so the highlight is visual only                                                                                                                                  | `components/app-sidebar.tsx`            |
-| Units are never pluralised: "3 spicchio aglio fresco" on a recipe, "5 spicchio" on the list                                                                                                                                                 | recipe detail, shopping list            |
-| `sourceUrl`'s `.max()` still carries the English Zod default message                                                                                                                                                                        | `lib/schemas/recipe.ts`                 |
-| No `touch-action: manipulation`, so a phone has the double-tap zoom delay                                                                                                                                                                   | `app/globals.css`                       |
-| `notFound()` renders the right page but answers **200**, because the layout shell has already streamed by the time it throws. Affects `/menu/[weekStart]` and `/ingredients/[name]/edit` alike; a genuinely unrouted path still answers 404 | `app/(app)/**`                          |
-| No `env(safe-area-inset-*)`, so the sticky header will sit under a notch once installed as a PWA                                                                                                                                            | `app/(app)/layout.tsx`                  |
-| No `autoComplete` on the recipe form's flat fields, so password managers offer to fill "Nome"                                                                                                                                               | `components/recipes/recipe-form.tsx`    |
-| No warning when leaving a form with unsaved changes — the back links made this easier to hit. **A product decision, not a bug to fix unasked.**                                                                                             | recipe and ingredient forms             |
-| `components/ui/drawer.tsx` is installed and unused                                                                                                                                                                                          | —                                       |
+| Defect                                                                                                                                                                                                                                      | Where                                |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| A focused `type="number"` input silently reverts on implicit Enter submit                                                                                                                                                                   | `components/recipes/recipe-form.tsx` |
+| `sourceUrl`'s `.max()` still carries the English Zod default message                                                                                                                                                                        | `lib/schemas/recipe.ts`              |
+| No `touch-action: manipulation`, so a phone has the double-tap zoom delay                                                                                                                                                                   | `app/globals.css`                    |
+| `notFound()` renders the right page but answers **200**, because the layout shell has already streamed by the time it throws. Affects `/menu/[weekStart]` and `/ingredients/[name]/edit` alike; a genuinely unrouted path still answers 404 | `app/(app)/**`                       |
+| No `env(safe-area-inset-*)`, so the sticky header will sit under a notch once installed as a PWA                                                                                                                                            | `app/(app)/layout.tsx`               |
+| No `autoComplete` on the recipe form's flat fields, so password managers offer to fill "Nome"                                                                                                                                               | `components/recipes/recipe-form.tsx` |
+| No warning when leaving a form with unsaved changes — the back links made this easier to hit. **A product decision, not a bug to fix unasked.**                                                                                             | recipe and ingredient forms          |
 
 ## Starting a fresh session
 

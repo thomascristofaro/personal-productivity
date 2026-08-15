@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 export default function NotFound() {
   return (
     <main className="flex flex-col items-center gap-4 pt-24 text-center">
-      <p className="text-sm">Questa ricetta non esiste più.</p>
+      <h1 className="text-sm">Questa ricetta non esiste più.</h1>
       <Button
         variant="outline"
         render={<Link href="/recipes" />}

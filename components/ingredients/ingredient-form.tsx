@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { useAttempt } from "@/hooks/use-attempt"
 
 export type IngredientFormValues = {
   // Absent when creating. Carried as a hidden field so a rename knows which
@@ -68,6 +69,7 @@ export function IngredientForm({
     action,
     EMPTY_INGREDIENT_FORM_STATE
   )
+  const attempt = useAttempt(state)
 
   const errorOf = (field: keyof IngredientFormValues) =>
     state.errors[field]?.[0]
@@ -107,7 +109,7 @@ export function IngredientForm({
         />
       )}
 
-      <FieldGroup>
+      <FieldGroup key={attempt}>
         <Field data-invalid={invalid("name")}>
           <FieldLabel htmlFor="name">Nome</FieldLabel>
           <Input

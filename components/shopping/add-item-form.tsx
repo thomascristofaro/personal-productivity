@@ -35,6 +35,21 @@ export function AddItemForm({
   const [name, setName] = useState("")
   const [aisle, setAisle] = useState(AISLE_UNKNOWN)
   const [unit, setUnit] = useState("")
+  // Bumped after every add. The picker keeps the typed query in its own state,
+  // which no prop can reach, so the only way to empty it is to remount it.
+  const [pickerKey, setPickerKey] = useState(0)
+
+  // React 19 clears the uncontrolled fields — here, the quantity — on its own
+  // once the action resolves. Everything this form holds in state has to be put
+  // back by hand, or the next item inherits the last one's aisle and its text
+  // lands on top of the old name.
+  const addThenReset = async (formData: FormData) => {
+    await action(formData)
+    setName("")
+    setAisle(AISLE_UNKNOWN)
+    setUnit("")
+    setPickerKey((key) => key + 1)
+  }
 
   // Picking a catalogue entry fills in what the catalogue already knows, so
   // "mele" lands in ortofrutta without anyone choosing it. Both stay editable:
@@ -48,7 +63,7 @@ export function AddItemForm({
   }
 
   return (
-    <form action={action} className="flex flex-col gap-3 border-t pt-4">
+    <form action={addThenReset} className="flex flex-col gap-3 border-t pt-4">
       <input type="hidden" name="weekStart" value={weekStart} />
       <input type="hidden" name="name" value={name} />
 
@@ -57,8 +72,10 @@ export function AddItemForm({
             purpose: the combobox names itself, so a label reading something
             else would leave sighted and screen-reader users with two different
             names for one control. */}
-        <FieldLabel>Che cosa serve</FieldLabel>
+        <FieldLabel htmlFor="item-name">Che cosa serve</FieldLabel>
         <IngredientPicker
+          key={pickerKey}
+          id="item-name"
           names={catalogue.map((entry) => entry.name)}
           value={name === "" ? null : name}
           onSelect={choose}

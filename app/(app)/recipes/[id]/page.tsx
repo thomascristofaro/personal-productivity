@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { getRecipe } from "@/lib/services/recipes"
+import { amountOf } from "@/lib/units"
 
 // generateMetadata and the page both need the recipe; React.cache collapses
 // them into one query per request. The service cannot do this itself — the
@@ -97,7 +98,10 @@ export default async function RecipePage({
             <li key={ingredient.id}>
               {/* An ingredient with no quantity renders as just its name,
                   which is the "q.b." case reading correctly. */}
-              {[ingredient.quantity, ingredient.unit, ingredient.ingredientName]
+              {[
+                amountOf(ingredient.quantity, ingredient.unit),
+                ingredient.ingredientName,
+              ]
                 .filter((part) => part !== null && part !== "")
                 .join(" ")}
             </li>

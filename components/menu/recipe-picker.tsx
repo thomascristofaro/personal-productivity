@@ -1,7 +1,5 @@
 "use client"
 
-import { useState } from "react"
-
 import {
   Combobox,
   ComboboxContent,
@@ -29,8 +27,6 @@ export function RecipePicker({
   onSelect: (recipe: RecipeOption) => void
   "aria-describedby"?: string
 }) {
-  const [query, setQuery] = useState("")
-
   return (
     <Combobox
       // Off: a recipe is not a field a password manager has any business
@@ -43,8 +39,9 @@ export function RecipePicker({
       onValueChange={(recipe: RecipeOption | null) => {
         if (recipe !== null) onSelect(recipe)
       }}
-      inputValue={query}
-      onInputValueChange={setQuery}
+      // The input is left uncontrolled on purpose. Driving it from a query
+      // state that starts empty is what made a slot holding a recipe reopen
+      // with a blank field: Base UI derives the text from `value` itself.
     >
       <ComboboxInput
         id={id}

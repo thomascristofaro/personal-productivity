@@ -38,23 +38,28 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {NAV_ITEMS.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton
-                    isActive={
-                      pathname === item.href ||
-                      pathname.startsWith(`${item.href}/`)
-                    }
-                    render={<Link href={item.href} />}
-                    // On a phone the sidebar is a sheet over the page; without
-                    // this it stays open on top of the page just navigated to.
-                    onClick={() => setOpenMobile(false)}
-                  >
-                    <item.icon aria-hidden="true" />
-                    <span>{item.label}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {NAV_ITEMS.map((item) => {
+                const isActive =
+                  pathname === item.href || pathname.startsWith(`${item.href}/`)
+
+                return (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      isActive={isActive}
+                      // isActive only styles. Without this the highlight exists
+                      // for the eye and for nothing else.
+                      aria-current={isActive ? "page" : undefined}
+                      render={<Link href={item.href} />}
+                      // On a phone the sidebar is a sheet over the page; without
+                      // this it stays open on top of the page just navigated to.
+                      onClick={() => setOpenMobile(false)}
+                    >
+                      <item.icon aria-hidden="true" />
+                      <span>{item.label}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { useAttempt } from "@/hooks/use-attempt"
 
 export type RecipeFormValues = {
   id?: string
@@ -65,6 +66,7 @@ export function RecipeForm({
     action,
     EMPTY_FORM_STATE
   )
+  const attempt = useAttempt(state)
 
   const errorOf = (field: keyof RecipeFormValues) => state.errors[field]?.[0]
   const invalid = (field: keyof RecipeFormValues) =>
@@ -105,7 +107,7 @@ export function RecipeForm({
           value survive: without this the next save would blank them. */}
       <input type="hidden" name="notes" value={valueOf("notes")} />
 
-      <FieldGroup>
+      <FieldGroup key={attempt}>
         <Field data-invalid={invalid("title")}>
           <FieldLabel htmlFor="title">Nome</FieldLabel>
           <Input

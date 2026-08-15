@@ -20,19 +20,27 @@ export type IngredientOption = {
 // catalogue's primary key, so there is nothing else to carry, and Base UI then
 // needs neither itemToStringLabel nor isItemEqualToValue.
 export function IngredientPicker({
+  id,
   names,
   value,
   onSelect,
   onCreate,
   "aria-label": ariaLabel,
 }: {
+  // Optional: the rows inside a recipe name each picker with aria-label alone,
+  // because there is no visible label to point at. A standalone field has one,
+  // and that label needs something to be clickable against.
+  id?: string
   names: string[]
   value: string | null
   onSelect: (name: string) => void
   onCreate: (name: string) => void
   "aria-label": string
 }) {
-  const [query, setQuery] = useState("")
+  // Seeded from the value, not empty: this input is controlled, so starting it
+  // blank would hide the name of an ingredient the row already holds. The
+  // query has to exist all the same — "Crea «…»" is decided from it.
+  const [query, setQuery] = useState(value ?? "")
   const trimmed = query.trim()
   const isNew =
     trimmed.length > 0 &&
@@ -51,7 +59,11 @@ export function IngredientPicker({
       inputValue={query}
       onInputValueChange={setQuery}
     >
-      <ComboboxInput aria-label={ariaLabel} placeholder="Ingrediente" />
+      <ComboboxInput
+        id={id}
+        aria-label={ariaLabel}
+        placeholder="Cerca un ingrediente…"
+      />
       <ComboboxContent>
         <ComboboxEmpty>
           {isNew ? (

@@ -23,7 +23,12 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 
-export type SlotFormState = { message: string | null; ok: boolean }
+export type SlotFormState = {
+  message: string | null
+  ok: boolean
+  // What the refused submit carried, so the drawer can put it back.
+  values?: { freeText: string; servings: string }
+}
 
 export type SaveSlotAction = (
   state: SlotFormState,
@@ -80,6 +85,10 @@ export function SlotDrawer({
   }, [state, onClose])
 
   const mealLabel = slot.meal === "LUNCH" ? "Pranzo" : "Cena"
+  // The echoed value wins over the slot's own: after a refusal it is what the
+  // user typed, and on a fresh open there is none.
+  const freeText = state.values?.freeText ?? slot.freeText ?? ""
+  const servings = state.values?.servings ?? slot.servings ?? ""
 
   return (
     <Drawer
@@ -125,7 +134,7 @@ export function SlotDrawer({
               <Input
                 id="freeText"
                 name="freeText"
-                defaultValue={slot.freeText ?? ""}
+                defaultValue={freeText}
                 autoComplete="off"
                 placeholder="fuori a cena…"
                 aria-describedby="freeText-description"
@@ -144,7 +153,7 @@ export function SlotDrawer({
                 inputMode="numeric"
                 min={1}
                 max={20}
-                defaultValue={slot.servings ?? ""}
+                defaultValue={servings}
                 autoComplete="off"
                 aria-describedby="servings-description"
               />
@@ -169,7 +178,17 @@ export function SlotDrawer({
 
         {/* A second form, a sibling and not a child: a form inside a form is
             invalid HTML and the browser drops the inner one. */}
-        <form action={clearAction} className="px-4 pb-4">
+        <form
+          // Closing is not decoration. The drawer keeps the chosen recipe in
+          // `picked`, which emptying the slot does not touch, so a drawer left
+          // open would still submit it — and a note typed straight afterwards
+          // came back refused as "una ricetta oppure una nota".
+          action={async (formData: FormData) => {
+            await clearAction(formData)
+            onClose()
+          }}
+          className="px-4 pb-4"
+        >
           <input type="hidden" name="weekStart" value={weekStart} />
           <input type="hidden" name="day" value={slot.day} />
           <input type="hidden" name="meal" value={slot.meal} />

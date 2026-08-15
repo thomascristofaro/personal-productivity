@@ -47,16 +47,24 @@ export async function saveSlot(
     servings: optionalNumber(formData.get("servings")),
   })
 
+  // Echoed back on every refusal. React 19 resets the drawer to its
+  // defaultValues before the action runs, so a note the user typed is gone by
+  // the time the message about it renders unless it comes back with the state.
+  const values = {
+    freeText: String(formData.get("freeText") ?? ""),
+    servings: String(formData.get("servings") ?? ""),
+  }
+
   if (
     !address.weekStart.success ||
     !address.day.success ||
     !address.meal.success
   ) {
-    return { message: "Questo slot non esiste.", ok: false }
+    return { message: "Questo slot non esiste.", ok: false, values }
   }
 
   if (!input.success) {
-    return { message: input.error.issues[0].message, ok: false }
+    return { message: input.error.issues[0].message, ok: false, values }
   }
 
   await requireSession()
@@ -70,7 +78,7 @@ export async function saveSlot(
     )
   } catch (error) {
     if (error instanceof UnknownRecipeError) {
-      return { message: "Questa ricetta non esiste più.", ok: false }
+      return { message: "Questa ricetta non esiste più.", ok: false, values }
     }
     throw error
   }

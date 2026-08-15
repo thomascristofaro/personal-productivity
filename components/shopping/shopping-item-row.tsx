@@ -5,6 +5,7 @@ import { useOptimistic, useTransition } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import { amountOf } from "@/lib/units"
 
 export type ShoppingRow = {
   id: string
@@ -13,14 +14,6 @@ export type ShoppingRow = {
   unit: string | null
   checked: boolean
   manual: boolean
-}
-
-// "2 pz", "300 g", or nothing at all for an unquantified line like "olio q.b.".
-function amountOf(item: ShoppingRow) {
-  if (item.quantity === null) return null
-  return item.unit === null
-    ? `${item.quantity}`
-    : `${item.quantity} ${item.unit}`
 }
 
 export function ShoppingItemRow({
@@ -36,7 +29,7 @@ export function ShoppingItemRow({
   // waits for the server before moving reads as broken.
   const [checked, setChecked] = useOptimistic(item.checked)
   const [, startTransition] = useTransition()
-  const amount = amountOf(item)
+  const amount = amountOf(item.quantity, item.unit)
 
   return (
     <li className="flex items-center gap-3 py-1">
