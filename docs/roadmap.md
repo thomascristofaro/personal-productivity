@@ -136,6 +136,15 @@ origin, without a trailing slash.
 upserts on email, so it adds users rather than renaming them. Update the rows in
 place — their ids are referenced by `ShoppingListItem.checkedBy`.
 
+**A seeded user needs `emailVerified = true` or it can never sign in.** Found on
+2026-08-16, on the first real Google sign-in: better-auth refuses to link a first
+OAuth account to a local user whose email is unverified
+(`accountLinking.requireLocalEmailVerified`, default true), and the refusal
+reaches `/login?negato=1`, where the page reads "Questo account Google non è
+abilitato." The message points at `disableSignUp`, which is not what happened —
+the account _is_ allowed, the link is what was refused. The seed now sets the
+flag; rows created before it need a one-off `UPDATE`.
+
 ## Standing decisions taken in conversation
 
 Only the ones that live nowhere else. Everything else was written into the spec
