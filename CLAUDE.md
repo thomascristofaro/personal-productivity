@@ -182,6 +182,32 @@ No section-divider comments, no commented-out code.
 - Errors are explicit states. Never render a partial page over a failed fetch.
 - `main` deploys to production. Feature work happens on a branch.
 
+### Reporting back
+
+The owner reads a report to find out what is required of them. Anything that does
+not serve that is noise. Close a piece of work with three short sections, in this
+order and under these headings:
+
+1. **Cosa devi fare tu** — concrete actions, or `Niente.` in one line. Never bury
+   an action further down.
+2. **Cosa ho fatto** — one or two lines.
+3. **Cosa faccio ora** — what comes next. Ask a question only when genuinely
+   blocked, and then name what the block is.
+
+Three rules that come from getting it wrong:
+
+- **Never mix local, test and production in one section.** Split by environment,
+  or say which one applies. A redirect URI for localhost and one for production
+  are two different instructions and reading them together helps nobody.
+- **Do not stop between the tasks of a plan to ask whether to continue.** Keep
+  going and report at the end. Stopping without a stated blocker reads as waiting
+  for something.
+- **A finding that changed nothing belongs in the commit message or the plan
+  file, not in the report.** "Things the plan did not foresee" is not an action;
+  if it needs no decision from the owner, it is not worth their attention.
+
+Be direct and short. The owner has asked for this twice.
+
 ## Commands
 
 | Command                                        | Purpose                             |

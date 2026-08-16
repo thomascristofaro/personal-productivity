@@ -10,15 +10,26 @@ datasource db {
   provider = "postgresql"
 }
 
-// Identity only. Credential storage belongs to whatever authentication lands,
-// and arrives in its own migration. See design document section 6.4.
+// Identity, plus the three columns better-auth's adapter requires. Credential
+// and session storage belong to better-auth and live in the models at the end
+// of this file. See docs/superpowers/specs/2026-08-15-authentication-design.md
+// section 4 for why "nothing else in the schema changes" could not hold.
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String
-  createdAt DateTime @default(now())
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String
+  // Required by the adapter. Google asserts it, so it is true in practice.
+  emailVerified Boolean  @default(false)
+  // Required by the adapter, unused by this app.
+  image         String?
+  createdAt     DateTime @default(now())
+  // @default(now()) as well as @updatedAt: the table already holds rows, and a
+  // bare NOT NULL column cannot be added to them.
+  updatedAt     DateTime @default(now()) @updatedAt
 
   checkedItems ShoppingListItem[]
+  sessions     Session[]
+  accounts     Account[]
 }
 
 model Recipe {
@@ -125,4 +136,62 @@ model ShoppingListItem {
   manual      Boolean      @default(false)
 
   @@index([listId])
+}
+
+// The models below are better-auth's core schema. Their field names are fixed
+// by the adapter — renaming one needs a matching `fields` mapping in
+// lib/auth/better-auth.ts, so do not rename them casually.
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([userId])
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  idToken               String?
+  // Unused: this app has no password sign-in.
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @default(now()) @updatedAt
+
+  @@index([userId])
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+
+  @@index([identifier])
+}
+
+// Rate limiting counters. Serverless functions share no memory, so the counter
+// is persisted rather than held in the process — design section 10.
+model RateLimit {
+  id          String @id @default(cuid())
+  key         String @unique
+  count       Int
+  lastRequest BigInt
 }
