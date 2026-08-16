@@ -21,16 +21,23 @@ function requiredEnv(name: string): string {
 // The upsert below keys on the email, so running this again with a different
 // address adds a user rather than renaming one. Change the addresses before the
 // first seed; afterwards, update the existing rows instead.
+//
+// `emailVerified` is not decoration. better-auth refuses to link a first OAuth
+// account to a local user whose email is unverified — `requireLocalEmailVerified`
+// defaults to true — so a seeded user left at the default false can never sign
+// in, and the refusal surfaces as "account not linked". The takeover that flag
+// guards against needs an attacker able to create an unverified row; sign-up is
+// disabled and these two addresses come from the environment, so there is none.
 const USERS = [
-  { email: requiredEnv("OWNER_EMAIL"), name: "Thomas" },
-  { email: requiredEnv("PARTNER_EMAIL"), name: "Partner" },
+  { email: requiredEnv("OWNER_EMAIL"), name: "Thomas", emailVerified: true },
+  { email: requiredEnv("PARTNER_EMAIL"), name: "Partner", emailVerified: true },
 ]
 
 async function main() {
   for (const user of USERS) {
     await db.user.upsert({
       where: { email: user.email },
-      update: { name: user.name },
+      update: { name: user.name, emailVerified: true },
       create: user,
     })
   }
