@@ -5,7 +5,8 @@ and state** — nothing else does. The design authority stays
 `docs/superpowers/specs/2026-08-13-menu-spesa-design.md`, and the decisions live
 in `docs/conventions/`. Do not restate either here; point at them.
 
-Last updated: 2026-08-15. Work happens on `feat/auth`, cut from `feat/app-shell`.
+Last updated: 2026-08-16. `main` is deployed; work happens on a branch per plan,
+cut from `main`.
 
 ## Shipped
 
@@ -117,15 +118,19 @@ target, which does not exist either.
 
 ### 3. PWA and deployment — spec §9, §10
 
-No `app/manifest.ts`, so no home-screen install and no share target. Never
-deployed to Vercel. Authentication no longer gates it.
+No `app/manifest.ts`, so no home-screen install and no share target.
 
-**The Google client only knows about localhost.** Before `main` is deployed, the
-production origin has to be added to the OAuth client as an authorised
-JavaScript origin _and_ as the redirect URI
-`https://<domain>/api/auth/callback/google`, and the six authentication
-variables set in Vercel — `APP_URL` pointing at that same origin, no trailing
-slash. A deployment without this reaches Google and is rejected at the callback.
+**`main` is deployed.** It went to Vercel on 2026-08-16, authentication included,
+with the six auth variables set at Production scope. Preview deployments are
+switched off — Build and Deployment → "Only build production" — because a
+preview URL is generated per deployment and Google only accepts redirect URIs
+registered by hand, so sign-in could never work there.
+
+**The Google client may still only know about localhost.** Until the production
+origin is added to the OAuth client as an authorised JavaScript origin _and_ as
+the redirect URI `https://<domain>/api/auth/callback/google`, the site builds and
+serves but the sign-in is rejected at the callback. `APP_URL` must be that same
+origin, without a trailing slash.
 
 **Do not reseed on the production database to change the addresses.** The seed
 upserts on email, so it adds users rather than renaming them. Update the rows in
@@ -137,10 +142,14 @@ Only the ones that live nowhere else. Everything else was written into the spec
 or `docs/conventions/` as it was decided.
 
 - **One working branch — until 2026-08-15.** `feat/app-shell` carried every plan
-  from the data model to the shopping list, and is now open as PR #3 against
-  `main`. From authentication onward the owner branches per plan instead:
-  `feat/auth` is cut from `feat/app-shell` and targets it, not `main`, for as
-  long as that PR is open.
+  from the data model to the shopping list. From authentication onward it is one
+  branch per plan, cut from `main` and merged back into it.
+- **Squash merges, so branches are single-use.** Every PR lands on `main` as one
+  commit, which means `main` holds a branch's content but none of its commits.
+  Reusing a branch after its PR is merged asks git to reconcile the same work
+  against a squash that already contains it, and every file touched since comes
+  back as a conflict — this cost a morning on 2026-08-16. **Delete the branch
+  when the PR merges and cut the next one from `main`.**
 - **No end-to-end browser tests.** Playwright was proposed twice and declined
   both times. Every plan therefore ends its UI tasks with a written, ordered
   manual checklist rather than a test file. Keep writing them that way — the
