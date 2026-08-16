@@ -8,9 +8,15 @@ at the bottom, which are more complete and stay maintained.
 
 Binding (design document §4.3).
 
-- The project is already initialised: `components.json`, style `base-mira`, base
-  colour `mist`, `rsc: true`. **Do not re-run `init`** and do not change the theme
-  configuration.
+- The project is already initialised: `components.json`, style `base-maia`, base
+  colour `olive`, theme `lime`, `rsc: true`. **Do not re-run `init`.** The theme
+  is changed only by applying a preset the owner has chosen on
+  `ui.shadcn.com/create`, never by editing the CSS variables by hand — the
+  variables are the preset's output, and a hand edit is lost at the next one.
+- Applying a preset rewrites every component in `components/ui/`. That is safe
+  only while they stay stock; the rule below is what keeps it safe. On
+  2026-08-16, `apply b3RYqbJZY` replaced `base-mira`/`mist`/`teal` and cost
+  nothing, because `add --diff` reported no local change in any of the 19.
 - Add components one at a time: `pnpm dlx shadcn@latest add <component>`. They land
   in `components/ui/` and become project source.
 - Need a behaviour change? Edit the file in `components/ui/` directly. Do not wrap
@@ -71,18 +77,27 @@ third module needs one bent, bend the primitive rather than forking it.
 
 ## The app shell
 
-`app/(app)/layout.tsx` mounts a stock shadcn `sidebar`: a rail on desktop, a
-sheet behind a hamburger on a phone. The layout stays a server component —
-`SidebarProvider` is a client component, but `children` reaches it as a slot, so
+`app/(app)/layout.tsx` mounts `components/app-nav.tsx`: a sticky bar carrying
+the hamburger, the word "Menu" and the theme toggle, and behind it a `sheet`
+that opens to the full screen. The layout stays a server component — `AppNav` is
+a client component, but it sits beside `children` rather than around it, so
 pages below keep rendering on the server.
 
+**One navigation, every width.** The desktop rail was removed on 2026-08-16: the
+owner's use is phone and tablet, and two behaviours to maintain bought nothing.
+`components/ui/sidebar.tsx` and `hooks/use-mobile.ts` went with it.
+
 Adding a module to the navigation is one entry in `NAV_ITEMS` in
-`components/app-sidebar.tsx`. Only routes that exist are listed; a nav entry
-that 404s is worse than a short menu.
+`components/app-nav.tsx`. Only routes that exist are listed; a nav entry that
+404s is worse than a short menu.
 
 Generated shadcn code that ships English screen-reader text is not edited.
-Override it from the call site instead — `<SidebarTrigger aria-label="Apri il
-menu" />` — so the file stays byte-identical to the registry.
+Override it from the call site instead — `aria-label="Apri il menu"` on the
+trigger — so the file stays byte-identical to the registry.
+
+The theme is switched from the bar and nowhere else. A keyboard shortcut existed
+until 2026-08-16 and was removed with the toggle's arrival: one way in is enough,
+and a bare letter key is a trap on a page with fields.
 
 ## Server and client
 
@@ -104,7 +119,7 @@ interactive state.
   bottom of the screen, not a centred modal's corner.
 - **Touch targets: the shadcn scale, unmodified.** The design document asked for
   44px, reasoning about shopping-list checkboxes tapped one-handed while holding
-  a basket (§4.3). The `base-mira` style generates a 28px scale instead, and we
+  a basket (§4.3). The style generates a 28px scale instead, and we
   take it as it comes: staying stock keeps every component upgradeable and keeps
   the diff against the registry empty. This is a deliberate trade-off, made
   before real use rather than after it. Revisit it the first time someone
@@ -137,6 +152,15 @@ Android share sheet (design document §6.1). Two consequences for the UI:
 - The import confirmation screen is the first thing a user sees after sharing a
   link, sometimes with a failed fetch behind it. It must work as a plain manual
   entry form, with no dead end.
+
+`app/manifest.ts` is the manifest; `app/icons/[icon]/route.tsx` draws the icons
+with `ImageResponse` at build time, so no binary lives in the repository. Icons
+are the one place a colour is written as hex: a PNG cannot read a CSS variable,
+so the two values there must be updated by hand when the theme changes.
+
+`share_target` is **not** declared yet. It points at `/import`, which does not
+exist; declaring it would put the app in the share sheet only to land on a 404.
+It goes in with the import module.
 
 ## What is deliberately not in this file
 

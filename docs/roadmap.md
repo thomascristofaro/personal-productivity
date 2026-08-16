@@ -90,6 +90,19 @@ renamed to `aglio fresco` with its aisle moved to `dispensa`, all three as
 checklist steps. **Re-running the seed would leave `aglio` sitting next to
 `aglio fresco`**, so reset the database rather than reseeding over it.
 
+### The shell changed on 2026-08-16
+
+Three things, on the owner's call, none of them planned in a document:
+
+- **Theme**: preset `b3RYqbJZY` — style `maia`, base colour `olive`, theme
+  `lime` — applied over `mira`/`mist`/`teal`. It rewrote all 19 components in
+  `components/ui/`, which cost nothing because they were stock.
+- **Navigation**: one full-screen menu at every width, `components/app-nav.tsx`.
+  The desktop rail, `components/ui/sidebar.tsx` and `hooks/use-mobile.ts` are
+  gone. The bar carries the hamburger, the word "Menu" and a theme toggle; the
+  keyboard shortcut that used to switch theme went with it.
+- **PWA**: manifest and icons, above.
+
 ## Not started
 
 In dependency order. Each needs its own plan; none has one yet.
@@ -118,7 +131,15 @@ target, which does not exist either.
 
 ### 3. PWA and deployment — spec §9, §10
 
-No `app/manifest.ts`, so no home-screen install and no share target.
+**The manifest shipped on 2026-08-16**, with `app/manifest.ts` and icons drawn by
+`ImageResponse` in `app/icons/[icon]/route.tsx`. What is left here is the
+`share_target`, held back deliberately: it points at `/import`, so it goes in
+with the import module rather than putting the app in Android's share sheet to
+land on a 404.
+
+**Not verified on a real phone yet.** Install from the home screen, check the
+icon and the splash, and check that the safe-area insets still hold once the
+browser chrome is gone.
 
 **`main` is deployed.** It went to Vercel on 2026-08-16, authentication included,
 with the six auth variables set at Production scope. Preview deployments are
