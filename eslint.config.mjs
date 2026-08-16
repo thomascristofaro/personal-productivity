@@ -107,13 +107,6 @@ const eslintConfig = defineConfig([
   },
 
   {
-    // Generated verbatim by `shadcn add sidebar`. Kept byte-identical to the
-    // registry so it stays upgradeable — see docs/conventions/ui.md.
-    files: ["hooks/use-mobile.ts"],
-    rules: { "react-hooks/set-state-in-effect": "off" },
-  },
-
-  {
     files: ["lib/services/**/*.ts"],
     plugins: { jsdoc },
     rules: {

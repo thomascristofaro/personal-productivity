@@ -83,9 +83,13 @@ export function IngredientRows({
         ))}
       </datalist>
 
+      {/* The picker takes a whole line of its own until there is room for all
+          four controls side by side. Sharing 390px between them left every
+          placeholder clipped — "Unit:", "Cerca un in" — once the style moved to
+          taller inputs with more padding. */}
       {rows.map((row, index) => (
-        <div key={row.key} className="flex items-start gap-2">
-          <div className="min-w-0 flex-1">
+        <div key={row.key} className="flex flex-wrap items-start gap-2">
+          <div className="min-w-0 basis-full sm:flex-1 sm:basis-auto">
             <IngredientPicker
               names={names}
               value={row.ingredientName === "" ? null : row.ingredientName}
@@ -100,7 +104,7 @@ export function IngredientRows({
             />
           </div>
 
-          <div className="w-20 shrink-0">
+          <div className="w-24 shrink-0">
             <UnitInput
               name="unit"
               value={row.unit}
@@ -110,7 +114,7 @@ export function IngredientRows({
             />
           </div>
 
-          <div className="w-20 shrink-0">
+          <div className="w-24 shrink-0">
             <Input
               name="quantity"
               type="number"

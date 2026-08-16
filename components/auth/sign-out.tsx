@@ -5,14 +5,16 @@ import { useRouter } from "next/navigation"
 import { useState } from "react"
 
 import { authClient } from "@/components/auth/client"
-import { SidebarMenuButton } from "@/components/ui/sidebar"
+import { Button } from "@/components/ui/button"
 
 export function SignOut() {
   const router = useRouter()
   const [pending, setPending] = useState(false)
 
   return (
-    <SidebarMenuButton
+    <Button
+      variant="ghost"
+      className="-ml-3 justify-start"
       disabled={pending}
       onClick={async () => {
         setPending(true)
@@ -25,6 +27,6 @@ export function SignOut() {
     >
       <LogOut aria-hidden="true" />
       <span>{pending ? "Esco…" : "Esci"}</span>
-    </SidebarMenuButton>
+    </Button>
   )
 }
