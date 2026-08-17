@@ -5,7 +5,7 @@ and state** — nothing else does. The design authority stays
 `docs/superpowers/specs/2026-08-13-menu-spesa-design.md`, and the decisions live
 in `docs/conventions/`. Do not restate either here; point at them.
 
-Last updated: 2026-08-16. `main` is deployed; work happens on a branch per plan,
+Last updated: 2026-08-17. `main` is deployed; work happens on a branch per plan,
 cut from `main`.
 
 ## Shipped
@@ -166,6 +166,37 @@ abilitato." The message points at `disableSignUp`, which is not what happened �
 the account _is_ allowed, the link is what was refused. The seed now sets the
 flag; rows created before it need a one-off `UPDATE`.
 
+### 4. Continuous integration on pull requests
+
+Outside the dependency chain above — it blocks nothing and nothing blocks it.
+
+**The workflow is written**: `.github/workflows/verify.yml`, on 2026-08-17. It
+runs `pnpm verify` on Ubuntu with pnpm 11 and Node 24 — the dev machine is on
+Node 26, so a version-specific failure would show up here first.
+
+**It is not armed.** Its only trigger is `workflow_dispatch`: it never starts by
+itself, and can only be launched by hand from the Actions tab. Arming it means
+uncommenting the `pull_request` trigger in that file and nothing else — the
+placeholder `DIRECT_URL` it needs is in the job, not in a secret, because
+`prisma generate` resolves the variable but opens no connection.
+
+Until it is armed, this is what nothing covers, and it is why the file exists at
+all — the git hooks went on 2026-08-17 (see the standing decision below):
+
+| Check    | Who runs it now                                                                |
+| -------- | ------------------------------------------------------------------------------ |
+| `tsc`    | Vercel — `next build` type-checks by default, so a type error fails the deploy |
+| `eslint` | **nobody** — Next 16 removed linting from `next build`                         |
+| `vitest` | **nobody**                                                                     |
+
+ESLint is the gap that matters: it is the only thing enforcing the layering ban,
+the `actorId` rule, the confinement of the Anthropic SDK and the TSDoc
+requirement. Those are decisions from `CLAUDE.md`, and nothing else checks them.
+
+**Arming it is the owner's call, and they have not made it** — one developer, a
+private app, and `pnpm verify` run by hand covers it for now. Do not arm it while
+tidying something else.
+
 ## Standing decisions taken in conversation
 
 Only the ones that live nowhere else. Everything else was written into the spec
@@ -189,6 +220,12 @@ or `docs/conventions/` as it was decided.
   agent can drive a browser through the `playwright` MCP server, registered
   outside the repo at user scope. It is a way of _running_ the checklist, not a
   reason to stop writing one.
+- **No git hooks — 2026-08-17.** `simple-git-hooks` and `lint-staged` are gone,
+  along with the `pre-commit` (`lint-staged`) and `pre-push` (`pnpm verify`)
+  hooks. The owner does not want checks firing on their own at commit time: they
+  are run by hand during development, and by CI on pull requests once item 4
+  above exists. Do not reintroduce a hook to close that gap — it is the same
+  automatic-at-commit behaviour that was rejected.
 - **Frontend choices get surfaced, not decided silently.** The owner is a backend
   developer and asked for React and UI patterns to come from the skills in
   `.agents/skills/` rather than from memory, and for any debatable frontend call
