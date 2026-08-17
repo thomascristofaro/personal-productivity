@@ -1,0 +1,37 @@
+name: verify
+
+# Manual only, deliberately: the owner does not want checks firing on their own.
+# See "No git hooks" in docs/roadmap.md. To switch this on, uncomment the
+# `pull_request` trigger below — nothing else has to change.
+on:
+  workflow_dispatch:
+  # pull_request:
+  #   branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      # `postinstall` runs `prisma generate`, and prisma.config.ts resolves
+      # DIRECT_URL while loading — it fails outright without it. Generating opens
+      # no connection, so a placeholder is enough and no secret is needed here.
+      DIRECT_URL: postgresql://ci:ci@localhost:5432/ci
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      # Also generates the Prisma client, which is git-ignored, via postinstall.
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm verify

@@ -170,11 +170,18 @@ flag; rows created before it need a one-off `UPDATE`.
 
 Outside the dependency chain above — it blocks nothing and nothing blocks it.
 
-A GitHub Actions workflow running `pnpm verify` on every pull request into
-`main`. `.github/` does not exist yet.
+**The workflow is written**: `.github/workflows/verify.yml`, on 2026-08-17. It
+runs `pnpm verify` on Ubuntu with pnpm 11 and Node 24 — the dev machine is on
+Node 26, so a version-specific failure would show up here first.
 
-This became the only remaining gap when the git hooks were removed on 2026-08-17
-(see the standing decision below). What is left uncovered until it exists:
+**It is not armed.** Its only trigger is `workflow_dispatch`: it never starts by
+itself, and can only be launched by hand from the Actions tab. Arming it means
+uncommenting the `pull_request` trigger in that file and nothing else — the
+placeholder `DIRECT_URL` it needs is in the job, not in a secret, because
+`prisma generate` resolves the variable but opens no connection.
+
+Until it is armed, this is what nothing covers, and it is why the file exists at
+all — the git hooks went on 2026-08-17 (see the standing decision below):
 
 | Check    | Who runs it now                                                                |
 | -------- | ------------------------------------------------------------------------------ |
@@ -186,8 +193,9 @@ ESLint is the gap that matters: it is the only thing enforcing the layering ban,
 the `actorId` rule, the confinement of the Anthropic SDK and the TSDoc
 requirement. Those are decisions from `CLAUDE.md`, and nothing else checks them.
 
-**Deliberately not switched on yet**, on the owner's call — one developer, a
-private app, and `pnpm verify` run by hand covers it for now.
+**Arming it is the owner's call, and they have not made it** — one developer, a
+private app, and `pnpm verify` run by hand covers it for now. Do not arm it while
+tidying something else.
 
 ## Standing decisions taken in conversation
 
