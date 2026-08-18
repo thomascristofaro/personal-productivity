@@ -1,7 +1,10 @@
 // The starter catalogue. It is data, not code: add to it freely, and expect the
 // two users to keep adding from inside the app. `defaultUnit` is the unit that
-// pre-fills a recipe row; null means the ingredient is normally counted.
-// Aisles must be values from AISLE_ORDER in lib/aisles.ts.
+// pre-fills a recipe row; null means the entry is normally counted. Aisles must
+// be values from AISLE_ORDER in lib/aisles.ts.
+//
+// Every entry here is an ingredient and none sets `kind`, which therefore takes
+// the column's INGREDIENT default. Seeding a product means adding the field.
 export const INGREDIENTS: {
   name: string
   defaultUnit: string | null

@@ -1,7 +1,7 @@
 import "dotenv/config"
 
 import { db } from "../lib/db"
-import { INGREDIENTS } from "./ingredients"
+import { INGREDIENTS } from "./catalog"
 
 // `lib/env.ts` is server-only and validates far more than this script needs.
 // prisma/ sits outside the ESLint block that forbids process.env, so the seed
@@ -45,7 +45,7 @@ async function main() {
   // Upsert on the name, so re-seeding never duplicates and never clobbers an
   // aisle the user has since corrected in the app.
   for (const ingredient of INGREDIENTS) {
-    await db.ingredient.upsert({
+    await db.catalogItem.upsert({
       where: { name: ingredient.name },
       update: {},
       create: ingredient,

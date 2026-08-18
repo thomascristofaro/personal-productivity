@@ -1,6 +1,7 @@
-import { AISLE_ORDER, AISLE_UNKNOWN, aisleRank } from "@/lib/aisles"
+import { AISLE_UNKNOWN } from "@/lib/aisles"
 import { db } from "@/lib/db"
-import type { ManualItem } from "@/lib/schemas/shopping"
+import type { AddShoppingItem } from "@/lib/schemas/shopping"
+import { isKnownAisle } from "@/lib/services/catalog"
 import { isListStale } from "@/lib/services/menus"
 import {
   aggregateShoppingList,
@@ -26,8 +27,6 @@ export class NoListError extends Error {
 
 export type StoredItem = ShoppingItem & { id: string }
 
-export type AisleGroup = { aisle: string; items: StoredItem[] }
-
 export type ShoppingListView = {
   items: StoredItem[]
   generatedAt: Date
@@ -44,42 +43,8 @@ const itemFields = {
   checkedById: true,
   checkedAt: true,
   manual: true,
+  days: true,
 } as const
-
-/**
- * Gathers the list into the aisles of the supermarket walking order.
- *
- * Exported for its own test. Sorts as well as groups, because the rows arrive
- * from Postgres in whatever order it liked and no SQL `ORDER BY` can express a
- * walking order that is not alphabetical.
- *
- * @param items Every line of the list.
- * @returns One group per aisle that has items, in walking order, each group's
- *   items by name.
- */
-export function groupByAisle(items: StoredItem[]): AisleGroup[] {
-  const sorted = [...items].sort(
-    (a, b) =>
-      aisleRank(a.aisle) - aisleRank(b.aisle) ||
-      a.name.localeCompare(b.name, "it")
-  )
-
-  const groups: AisleGroup[] = []
-
-  for (const item of sorted) {
-    const last = groups[groups.length - 1]
-    // Adjacency is enough because the sort already put one aisle's items
-    // together, and it keeps an unrecognised aisle folded in with the catch-all
-    // exactly the way aisleRank ranks it.
-    if (last !== undefined && aisleRank(last.aisle) === aisleRank(item.aisle)) {
-      last.items.push(item)
-      continue
-    }
-    groups.push({ aisle: item.aisle, items: [item] })
-  }
-
-  return groups
-}
 
 /**
  * Reads a week's list, and whether the menu has moved on since it was built.
@@ -128,6 +93,7 @@ export async function regenerateShoppingList(weekStart: Date): Promise<void> {
       id: true,
       slots: {
         select: {
+          day: true,
           servings: true,
           recipe: {
             select: {
@@ -143,13 +109,26 @@ export async function regenerateShoppingList(weekStart: Date): Promise<void> {
           },
         },
       },
-      list: { select: { id: true, items: { select: itemFields } } },
+      list: {
+        select: {
+          id: true,
+          items: { select: itemFields },
+          // In the same round trip: the aggregator needs them, and a second
+          // query would open a window where a shop closes between the two.
+          purchases: {
+            select: {
+              items: { select: { name: true, unit: true, quantity: true } },
+            },
+          },
+        },
+      },
     },
   })
 
   if (menu === null) throw new NoMenuError()
 
   const slots: AggregatorSlot[] = menu.slots.map((slot) => ({
+    day: slot.day,
     servings: slot.servings,
     recipe:
       slot.recipe === null
@@ -168,6 +147,9 @@ export async function regenerateShoppingList(weekStart: Date): Promise<void> {
   const next = aggregateShoppingList({
     slots,
     existing: menu.list?.items ?? [],
+    purchased: (menu.list?.purchases ?? []).flatMap(
+      (purchase) => purchase.items
+    ),
   })
 
   const generatedAt = new Date()
@@ -197,24 +179,26 @@ export async function regenerateShoppingList(weekStart: Date): Promise<void> {
 }
 
 /**
- * Ticks or unticks one line, recording who did it.
+ * Ticks or unticks every row behind one line, recording who did it.
  *
- * Last-write-wins per item, which §8 of the design accepts at this scale: two
- * people and a checkbox.
+ * A line the screen shows is several rows when the menu and a hand-added entry
+ * both asked for the same thing, and half a line ticked is not a state the
+ * shopper can express. Last-write-wins per row, which §8 of the original design
+ * accepts at this scale: two people and a checkbox.
  *
- * @param id The line's id.
+ * @param ids Every row behind the line.
  * @param actorId The session's user id — never a value from the request body.
  * @param checked The new state.
  * @returns Nothing.
- * @throws NoListError When the line is already gone.
+ * @throws NoListError When none of the rows is there any more.
  */
 export async function setItemChecked(
-  id: string,
+  ids: string[],
   actorId: string,
   checked: boolean
 ): Promise<void> {
   const updated = await db.shoppingListItem.updateMany({
-    where: { id },
+    where: { id: { in: ids } },
     data: {
       checked,
       checkedById: checked ? actorId : null,
@@ -226,16 +210,21 @@ export async function setItemChecked(
 }
 
 /**
- * Adds a line by hand, which survives every later regeneration.
+ * Adds a line by hand, and remembers it in the catalogue unless told not to.
+ *
+ * The line survives every later regeneration, because the aggregator holds
+ * hand-added rows apart from generated ones. Both writes are one transaction: a
+ * line pointing at a catalogue entry that failed to be created is the kind of
+ * half-write that is found a week later.
  *
  * @param weekStart The Monday naming the week, at UTC midnight.
- * @param input The validated line.
+ * @param input The validated line, with what to do about the catalogue.
  * @returns Nothing.
  * @throws NoListError When the week has no list to add to.
  */
 export async function addManualItem(
   weekStart: Date,
-  input: ManualItem
+  input: AddShoppingItem
 ): Promise<void> {
   const menu = await db.menu.findUnique({
     where: { weekStart },
@@ -244,31 +233,57 @@ export async function addManualItem(
 
   if (menu?.list == null) throw new NoListError()
 
-  await db.shoppingListItem.create({
-    data: {
-      listId: menu.list.id,
-      name: input.name,
-      quantity: input.quantity,
-      unit: input.unit,
-      // An aisle nobody recognises would sort with the catch-all anyway; making
-      // it the catch-all keeps the stored row honest about where it will show.
-      aisle: (AISLE_ORDER as readonly string[]).includes(input.aisle)
-        ? input.aisle
-        : AISLE_UNKNOWN,
-      manual: true,
-    },
+  const listId = menu.list.id
+  // An aisle nobody recognises would sort with the catch-all anyway; making it
+  // the catch-all keeps the stored row honest about where it will show.
+  const aisle = isKnownAisle(input.aisle) ? input.aisle : AISLE_UNKNOWN
+
+  await db.$transaction(async (tx) => {
+    if (input.remember) {
+      // Upsert and not create: both phones can add the same new thing at once,
+      // and the second must still get its line rather than losing the write.
+      // `update: {}` because an entry that already exists was curated by
+      // somebody, and a shopping line is not the place to overwrite it.
+      await tx.catalogItem.upsert({
+        where: { name: input.name },
+        update: {},
+        create: {
+          name: input.name,
+          kind: input.kind,
+          defaultUnit: input.unit,
+          aisle,
+        },
+      })
+    }
+
+    await tx.shoppingListItem.create({
+      data: {
+        listId,
+        name: input.name,
+        quantity: input.quantity,
+        unit: input.unit,
+        aisle,
+        manual: true,
+        // No menu asked for this one.
+        days: [],
+      },
+    })
   })
 }
 
 /**
- * Removes a line added by hand.
+ * Removes the rows of a line that were added by hand.
  *
- * Generated lines are not removable: the next regeneration would bring them
- * back, so the `where` refuses them rather than offering a button that lies.
+ * Generated rows are not removable: the next regeneration would bring them
+ * back, so the `where` refuses them rather than offering a button that lies. A
+ * line that is part generated and part hand-added therefore survives with only
+ * what the menu asks for, which is the point.
  *
- * @param id The line's id.
+ * @param ids The rows to remove.
  * @returns Nothing.
  */
-export async function removeManualItem(id: string): Promise<void> {
-  await db.shoppingListItem.deleteMany({ where: { id, manual: true } })
+export async function removeManualItems(ids: string[]): Promise<void> {
+  await db.shoppingListItem.deleteMany({
+    where: { id: { in: ids }, manual: true },
+  })
 }

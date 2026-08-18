@@ -5,8 +5,9 @@ and state** — nothing else does. The design authority stays
 `docs/superpowers/specs/2026-08-13-menu-spesa-design.md`, and the decisions live
 in `docs/conventions/`. Do not restate either here; point at them.
 
-Last updated: 2026-08-17. `main` is deployed; work happens on a branch per plan,
-cut from `main`.
+Last updated: 2026-08-18. `main` is deployed. Work normally happens on a branch
+per plan; the branch `docs/catalog-and-purchases-design` is the standing
+exception — see "In flight".
 
 ## Shipped
 
@@ -20,12 +21,62 @@ cut from `main`.
 | [`2026-08-14-weekly-menu`](superpowers/plans/2026-08-14-weekly-menu.md)                                     | `/menu/[weekStart]`, the fourteen-slot grid, the slot drawer and `lib/services/menus.ts` — all by hand, no LLM                                                                                |
 | [`2026-08-14-shopping-list`](superpowers/plans/2026-08-14-shopping-list.md)                                 | `/spesa/[weekStart]`, the aisle-grouped list, optimistic ticking, manual items, and the freshness signal over `Menu.slotsUpdatedAt`                                                           |
 | [`2026-08-15-authentication`](superpowers/plans/2026-08-15-authentication.md)                               | Google sign-in through `better-auth`, `lib/auth/`, the session gate in `middleware.ts`, `/login` and "Esci", and the four `better-auth` tables                                                |
+| [`2026-08-18-catalogue`](superpowers/plans/2026-08-18-catalogue.md)                                         | `Ingredient` renamed `CatalogItem` with a `kind`, `/catalogo` and its three chips, and names lowercased in `lib/schemas/catalog.ts`                                                           |
+| [`2026-08-18-shopping-list-again`](superpowers/plans/2026-08-18-shopping-list-again.md)                     | `days` on a line, `lib/services/shopping-view.ts` and its merge, the `+` drawer, and free items landing in the catalogue                                                                      |
+| [`2026-08-18-shopping-done`](superpowers/plans/2026-08-18-shopping-done.md)                                 | `Purchase` and `PurchaseItem`, the bar at the till, `/spesa/storico`, `lib/money.ts`, and the aggregator subtracting what has already been bought                                             |
 
 ## In flight
 
-Nothing. **The product loop is closed**: plan a week, generate the list, shop
-from it, and all three screens have now been driven end to end. **Authentication
-shipped on 2026-08-15**, so what is left is the LLM half and deployment.
+**The catalogue, the shopping list and the purchase history**, on the branch
+`docs/catalog-and-purchases-design`. One design document,
+[`2026-08-18-catalogue-and-purchases-design`](superpowers/specs/2026-08-18-catalogue-and-purchases-design.md),
+and three plans, **all three shipped**: A the catalogue, B the shopping list
+again, C shopping done and the purchase history. The branch is ready to merge.
+
+**All three land on one branch, against the usual rule.** The owner's call on
+2026-08-18: merging a branch that holds only a design document and three plans
+buys nothing, so the pull request waits until there are changes worth reviewing.
+Each plan still leaves the app working and `pnpm verify` green, so the branch is
+mergeable at every task boundary.
+
+Plan B's browser checklist settled the one open question from the original
+report. **The quantity that "did not appear" was typed into the Unità field**:
+both rows the owners added by hand carry `unit: "2"` and `quantity: null`. The
+line then renders no amount, because `amountOf` needs a quantity, and it will
+not merge with the same thing bought properly, because the units differ. Not a
+code defect — but the form made it easy, so `UnitSchema` now refuses a unit that
+is only a number and says where the quantity goes. **Their two existing rows are
+still wrong in the database**; they are the owners' data and were left alone.
+
+Plan B also found that Base UI's combobox leaves its popup open after the custom
+«Crea «…»» button is clicked — Base UI closes on its own items, and that button
+is ours. It covered the two fields below it, so the first tap on Quantità went
+to the overlay. `IngredientPicker` now controls its open state. The recipe form
+uses the same picker and gets the fix with it.
+
+Plan C's checklist found one more, now fixed: **the nav marked two entries as
+the current page.** `/spesa/storico` sits under `/spesa`, and the prefix test lit
+both, so `aria-current="page"` stopped meaning "this page". It now picks the
+longest matching href.
+
+Two things plan A found that its own plan had not foreseen, both now fixed:
+
+- **The lowercasing needed a backfill.** The design asserted the catalogue was
+  already all lowercase. Two entries added from the app since — `Cocomero` and
+  `Olive verdi` — were not, which is exactly the defect being fixed. Migration
+  `20260818112000_normalise_catalog_names` corrects `CatalogItem.name`, which
+  cascades into `RecipeIngredient`, and `ShoppingListItem.name`, which is a
+  copied string and cascades from nothing.
+- **Base UI's `Select.Value` renders the raw value.** The Tipo field read
+  `INGREDIENT` on screen until the root was given an `items` map. The aisle
+  select never showed this because there the value and the label are the same
+  string — so any future select whose values differ from its labels needs
+  `items`.
+
+Before this branch: **the product loop was closed** — plan a week, generate the
+list, shop from it, and all three screens driven end to end. **Authentication
+shipped on 2026-08-15**, so what is left after this branch is the LLM half and
+deployment.
 
 ### What authentication left unverified
 
@@ -264,6 +315,22 @@ or `docs/conventions/` as it was decided.
   developer and asked for React and UI patterns to come from the skills in
   `.agents/skills/` rather than from memory, and for any debatable frontend call
   to be raised explicitly.
+- **Duplicate shopping rows are merged in the read path, not in the database —
+  2026-08-18.** `mergeLines` in `lib/services/shopping-view.ts` unites rows with
+  the same name and unit when the list is rendered. The rows stay apart in
+  Postgres on purpose: a regeneration deletes the generated rows and rebuilds
+  them, and a hand-added quantity has to survive that. This is the owner's own
+  proposal and it is better than the extra column the design first reached for.
+  **Do not "fix" it by summing on the way in.**
+- **What has been bought is subtracted, not forgotten — 2026-08-18.**
+  `aggregateShoppingList` takes a **required** `purchased` input. Making it
+  optional would let a caller silently regenerate as if nothing had ever been
+  bought, which is the exact defect the rule exists to prevent.
+- **A Base UI `Select` whose values differ from its labels needs `items` —
+  2026-08-18.** `Select.Value` renders the raw value otherwise, and the Tipo
+  field read `INGREDIENT` on screen until the map was passed. The aisle select
+  never showed this because there the value and the label are the same string,
+  so the next one will be caught the same way: only in the browser.
 
 ## Parked defects
 
@@ -278,6 +345,8 @@ is here because it was **decided**, not because nobody got to it — do not
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
 | `notFound()` renders the right page but answers **200**, because the layout shell has already streamed by the time it throws. Affects `/menu/[weekStart]` and `/ingredients/[name]/edit` alike; a genuinely unrouted path still answers 404. **Accepted**: the app is private and nothing crawls it, and the alternative is giving up the streamed loading state | `app/(app)/**`               |
 | No unsaved-changes warning on the **ingredient** form or the slot drawer. **Deliberate**: three short fields and a drawer, and a drawer that argues when dismissed is worse than the loss. The recipe form has one                                                                                                                                               | ingredient form, slot drawer |
+| A purchase cannot be deleted or undone. Closing a shop by mistake is recoverable only through the database. **Deliberate**: not requested, and an undo has to decide what to do when the list has been regenerated since. Add it the first time it actually happens                                                                                              | `lib/services/purchases.ts`  |
+| Two shopping rows carry the quantity in the **unit** field — `pesche` and `cocomero`, both `unit: "1"` or `"2"` with `quantity: null`. They render no amount and will not merge. `UnitSchema` now refuses this on the way in, but these two predate it and are **the owners' data**, so they were left alone. Fix them from the app when convenient              | `ShoppingListItem`           |
 
 ## Starting a fresh session
 

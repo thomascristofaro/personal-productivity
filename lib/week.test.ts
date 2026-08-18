@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { dateForDay, dayIndexFor, weekStartFor } from "@/lib/week"
+import { dateForDay, dayIndexFor, dayLabels, weekStartFor } from "@/lib/week"
 
 const iso = (date: Date) => date.toISOString().slice(0, 10)
 
@@ -59,5 +59,28 @@ describe("dateForDay", () => {
     const weekStart = new Date("2026-08-10T00:00:00Z")
     dateForDay(weekStart, 3)
     expect(iso(weekStart)).toBe("2026-08-10")
+  })
+})
+
+describe("dayLabels", () => {
+  const monday = new Date("2026-08-10T00:00:00.000Z")
+
+  it("returns one label per day of the week", () => {
+    expect(dayLabels(monday)).toHaveLength(7)
+  })
+
+  it("starts on Monday and ends on Sunday", () => {
+    const labels = dayLabels(monday)
+    expect(labels[0].toLowerCase()).toContain("lun")
+    expect(labels[6].toLowerCase()).toContain("dom")
+  })
+
+  // The one that matters: the menu grid and the shopping list both render these,
+  // and two screens disagreeing about what Monday is called is the whole reason
+  // this is one function.
+  it("is the same seven labels whichever week is asked for", () => {
+    expect(dayLabels(new Date("2026-01-05T00:00:00.000Z"))).toEqual(
+      dayLabels(monday)
+    )
   })
 })

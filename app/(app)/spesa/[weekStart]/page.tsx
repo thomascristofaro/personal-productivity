@@ -3,21 +3,24 @@ import { notFound } from "next/navigation"
 
 import {
   addItem,
+  complete,
   regenerate,
   removeItem,
   toggle,
 } from "@/app/(app)/spesa/[weekStart]/actions"
 import { EmptyState } from "@/components/page/empty-state"
 import { PageHeader } from "@/components/page/page-header"
-import { AddItemForm } from "@/components/shopping/add-item-form"
+import { AddItemDrawer } from "@/components/shopping/add-item-drawer"
+import { CompletePurchaseBar } from "@/components/shopping/complete-purchase-bar"
 import { ShoppingList } from "@/components/shopping/shopping-list"
 import { Button } from "@/components/ui/button"
 import { AISLE_ORDER } from "@/lib/aisles"
 import { APP_TIMEZONE, DAYS_IN_WEEK } from "@/lib/config"
 import { WeekStartSchema } from "@/lib/schemas/menu"
-import { listIngredientsWithAisle } from "@/lib/services/ingredients"
-import { getShoppingList, groupByAisle } from "@/lib/services/shopping-lists"
-import { dateForDay } from "@/lib/week"
+import { listCatalogOptions } from "@/lib/services/catalog"
+import { getShoppingList } from "@/lib/services/shopping-lists"
+import { groupByAisle, mergeLines } from "@/lib/services/shopping-view"
+import { dateForDay, dayLabels } from "@/lib/week"
 
 export const metadata = { title: "Spesa" }
 
@@ -42,19 +45,34 @@ export default async function ShoppingWeekPage({
   if (!parsed.success) notFound()
 
   const weekStart = parsed.data
-  const [list, catalogue] = await Promise.all([
+  const [list, catalog] = await Promise.all([
     getShoppingList(weekStart),
-    listIngredientsWithAisle(),
+    listCatalogOptions(),
   ])
 
+  // Over the stored rows and not the merged lines: what moves into the history
+  // is rows, and a part-ticked line contributes only its ticked half.
+  const checkedCount = (list?.items ?? []).filter((item) => item.checked).length
   const week = iso(weekStart)
   const range = `${rangeFormat.format(weekStart)} – ${rangeFormat.format(
     dateForDay(weekStart, DAYS_IN_WEEK - 1)
   )}`
 
+  // pb-24 unconditionally: the completion bar is fixed over the foot of the
+  // page, and an empty strip nobody scrolls to is cheaper than a conditional
+  // that has to know whether the bar is showing.
   return (
-    <main className="flex flex-col gap-4 pt-6">
+    <main className="flex flex-col gap-4 pt-6 pb-24">
       <PageHeader title="Spesa" back={{ href: `/menu/${week}`, label: "Menù" }}>
+        {/* Shown even on a week with no list: the history crosses the weeks, so
+            it is never irrelevant. "Rigenera" is, and is not. */}
+        <Button
+          variant="outline"
+          render={<Link href="/spesa/storico" />}
+          nativeButton={false}
+        >
+          Storico
+        </Button>
         {list === null ? null : (
           <form action={regenerate}>
             <input type="hidden" name="weekStart" value={week} />
@@ -104,18 +122,26 @@ export default async function ShoppingWeekPage({
             </EmptyState>
           ) : (
             <ShoppingList
-              groups={groupByAisle(list.items)}
+              groups={groupByAisle(mergeLines(list.items))}
+              dayLabels={dayLabels(weekStart)}
               weekStart={week}
               toggleAction={toggle}
               removeAction={removeItem}
             />
           )}
 
-          <AddItemForm
+          <AddItemDrawer
             weekStart={week}
-            catalogue={catalogue}
+            catalog={catalog}
             aisles={AISLE_ORDER}
             action={addItem}
+            aboveBar={checkedCount > 0}
+          />
+
+          <CompletePurchaseBar
+            weekStart={week}
+            checkedCount={checkedCount}
+            action={complete}
           />
         </>
       )}

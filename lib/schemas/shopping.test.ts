@@ -1,6 +1,70 @@
 import { describe, expect, it } from "vitest"
 
-import { ManualItemSchema, ShoppingItemIdSchema } from "@/lib/schemas/shopping"
+import {
+  AddShoppingItemSchema,
+  EuroCentsSchema,
+  ManualItemSchema,
+  ShoppingItemIdSchema,
+  ShoppingItemIdsSchema,
+} from "@/lib/schemas/shopping"
+
+describe("EuroCentsSchema", () => {
+  it("takes the comma an Italian keyboard produces", () => {
+    expect(EuroCentsSchema.parse("12,34")).toBe(1234)
+  })
+
+  it("takes a dot too, because a numeric keypad may give one", () => {
+    expect(EuroCentsSchema.parse("12.34")).toBe(1234)
+  })
+
+  it("takes a whole number of euro", () => {
+    expect(EuroCentsSchema.parse("12")).toBe(1200)
+  })
+
+  it("takes a single decimal", () => {
+    expect(EuroCentsSchema.parse("12,5")).toBe(1250)
+  })
+
+  it("does not lose a cent to floating point", () => {
+    expect(EuroCentsSchema.parse("0,07")).toBe(7)
+    expect(EuroCentsSchema.parse("1,15")).toBe(115)
+  })
+
+  it("accepts nothing spent", () => {
+    expect(EuroCentsSchema.parse("0")).toBe(0)
+  })
+
+  it("reads an empty field as an amount to fill in later", () => {
+    expect(EuroCentsSchema.parse("")).toBeNull()
+    expect(EuroCentsSchema.parse("   ")).toBeNull()
+  })
+
+  it("refuses a negative amount, which no shop produces", () => {
+    expect(EuroCentsSchema.safeParse("-1").success).toBe(false)
+  })
+
+  it("refuses three decimals, because that is a typo rather than a price", () => {
+    expect(EuroCentsSchema.safeParse("12,345").success).toBe(false)
+  })
+
+  it("refuses words", () => {
+    expect(EuroCentsSchema.safeParse("dodici").success).toBe(false)
+  })
+
+  it("refuses a thousands separator, and says so in Italian", () => {
+    const result = EuroCentsSchema.safeParse("1.234,56")
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues[0].message).toBe(
+        "Scrivi l’importo come 12,34, senza separatore delle migliaia."
+      )
+    }
+  })
+
+  it("refuses an amount no weekly shop reaches, so a slipped key is caught", () => {
+    expect(EuroCentsSchema.safeParse("100000").success).toBe(false)
+  })
+})
 
 describe("ShoppingItemIdSchema", () => {
   it("accepts a cuid", () => {
@@ -11,6 +75,29 @@ describe("ShoppingItemIdSchema", () => {
 
   it("rejects anything else", () => {
     expect(ShoppingItemIdSchema.safeParse("42").success).toBe(false)
+  })
+})
+
+describe("ShoppingItemIdsSchema", () => {
+  const id = "cm3xk1p2h0000abcdefghijkl"
+
+  it("takes the several ids one merged line stands for", () => {
+    expect(ShoppingItemIdsSchema.parse([id, id])).toEqual([id, id])
+  })
+
+  it("refuses an empty list, which would tick nothing and report success", () => {
+    expect(ShoppingItemIdsSchema.safeParse([]).success).toBe(false)
+  })
+
+  it("refuses anything that is not an id", () => {
+    expect(ShoppingItemIdsSchema.safeParse(["1 OR 1=1"]).success).toBe(false)
+  })
+
+  it("caps the count, so a forged post cannot tick the whole list at once", () => {
+    expect(
+      ShoppingItemIdsSchema.safeParse(Array.from({ length: 21 }, () => id))
+        .success
+    ).toBe(false)
   })
 })
 
@@ -38,6 +125,17 @@ describe("ManualItemSchema", () => {
     ).toBe("sacchetti")
   })
 
+  it("lowercases the name, so it merges with a generated line", () => {
+    expect(
+      ManualItemSchema.parse({
+        ...valid,
+        name: "Pomodori",
+        quantity: 200,
+        unit: "g",
+      }).name
+    ).toBe("pomodori")
+  })
+
   it("rejects an empty name", () => {
     const result = ManualItemSchema.safeParse({ ...valid, name: "   " })
     expect(result.success).toBe(false)
@@ -48,6 +146,15 @@ describe("ManualItemSchema", () => {
 
   it("rejects an empty aisle, because the list is sorted by it", () => {
     expect(ManualItemSchema.safeParse({ ...valid, aisle: "" }).success).toBe(
+      false
+    )
+  })
+
+  // The mistake the owners actually made, twice, on 2026-08-17: the quantity
+  // went into the unit field, the line rendered no amount, and it would not
+  // merge with the same thing bought properly.
+  it("refuses a unit that is only a number", () => {
+    expect(ManualItemSchema.safeParse({ ...valid, unit: "2" }).success).toBe(
       false
     )
   })
@@ -66,5 +173,47 @@ describe("ManualItemSchema", () => {
     expect(ManualItemSchema.safeParse({ ...valid, quantity: -1 }).success).toBe(
       false
     )
+  })
+})
+
+describe("AddShoppingItemSchema", () => {
+  const base = {
+    name: "shampoo",
+    aisle: "casa e pulizia",
+    quantity: null,
+    unit: null,
+  }
+
+  it("takes both flags", () => {
+    expect(
+      AddShoppingItemSchema.parse({ ...base, remember: true, kind: "PRODUCT" })
+    ).toEqual({ ...base, remember: true, kind: "PRODUCT" })
+  })
+
+  it("has no default for remember: what a missing checkbox means is the action's call", () => {
+    expect(
+      AddShoppingItemSchema.safeParse({ ...base, kind: "PRODUCT" }).success
+    ).toBe(false)
+  })
+
+  it("still lowercases the name", () => {
+    expect(
+      AddShoppingItemSchema.parse({
+        ...base,
+        name: "Shampoo",
+        remember: false,
+        kind: "PRODUCT",
+      }).name
+    ).toBe("shampoo")
+  })
+
+  it("rejects a kind nobody defined", () => {
+    expect(
+      AddShoppingItemSchema.safeParse({
+        ...base,
+        remember: true,
+        kind: "HOUSEHOLD",
+      }).success
+    ).toBe(false)
   })
 })

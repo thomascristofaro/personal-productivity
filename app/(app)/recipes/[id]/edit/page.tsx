@@ -3,7 +3,7 @@ import { notFound } from "next/navigation"
 import { addIngredient, saveRecipe } from "@/app/(app)/recipes/actions"
 import { PageHeader } from "@/components/page/page-header"
 import { RecipeForm } from "@/components/recipes/recipe-form"
-import { listIngredients, listUsedUnits } from "@/lib/services/ingredients"
+import { listIngredientOptions, listUsedUnits } from "@/lib/services/catalog"
 import { getRecipe, listTags } from "@/lib/services/recipes"
 
 export const metadata = { title: "Modifica ricetta" }
@@ -18,7 +18,7 @@ export default async function EditRecipePage({
   // guidelines rank CRITICAL.
   const [recipe, options, units, tagSuggestions] = await Promise.all([
     getRecipe(id),
-    listIngredients(),
+    listIngredientOptions(),
     listUsedUnits(),
     listTags(),
   ])

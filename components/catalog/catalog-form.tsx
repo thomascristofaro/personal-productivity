@@ -21,66 +21,77 @@ import {
 } from "@/components/ui/select"
 import { useAttempt } from "@/hooks/use-attempt"
 
-export type IngredientFormValues = {
+export type CatalogFormValues = {
   // Absent when creating. Carried as a hidden field so a rename knows which
   // row to update: the name is the primary key, so the new value cannot
   // identify the old row.
   originalName?: string
   name: string
+  kind: string
   defaultUnit: string
   aisle: string
 }
 
-export type IngredientFormState = {
+export type CatalogFormState = {
   errors: Record<string, string[]>
   message: string | null
   values?: Record<string, string>
 }
 
-export type SaveIngredientAction = (
-  state: IngredientFormState,
+export type SaveCatalogItemAction = (
+  state: CatalogFormState,
   formData: FormData
-) => Promise<IngredientFormState>
+) => Promise<CatalogFormState>
 
-export const EMPTY_INGREDIENT_FORM_STATE: IngredientFormState = {
+export const EMPTY_CATALOG_FORM_STATE: CatalogFormState = {
   errors: {},
   message: null,
   values: undefined,
 }
 
-const FIELD_ORDER: (keyof IngredientFormValues)[] = [
+const FIELD_ORDER: (keyof CatalogFormValues)[] = [
   "name",
+  "kind",
   "defaultUnit",
   "aisle",
 ]
 
-export function IngredientForm({
+// The stored values are English because they are database values that happen to
+// be enum members; the labels are Italian because they are what the user reads.
+// Base UI's Select.Value renders the raw value unless the root is given this
+// map — without it the trigger read "INGREDIENT". The aisle select needs none,
+// because there the value and the label are the same string.
+const KIND_LABELS: Record<string, string> = {
+  INGREDIENT: "Ingrediente",
+  PRODUCT: "Prodotto",
+}
+
+export function CatalogForm({
   values,
   action,
   aisles,
   units,
 }: {
-  values: IngredientFormValues
-  action: SaveIngredientAction
+  values: CatalogFormValues
+  action: SaveCatalogItemAction
   aisles: readonly string[]
   units: string[]
 }) {
   const [state, formAction, isPending] = useActionState(
     action,
-    EMPTY_INGREDIENT_FORM_STATE
+    EMPTY_CATALOG_FORM_STATE
   )
   const attempt = useAttempt(state)
 
-  const errorOf = (field: keyof IngredientFormValues) =>
-    state.errors[field]?.[0]
-  const invalid = (field: keyof IngredientFormValues) =>
+  const errorOf = (field: keyof CatalogFormValues) => state.errors[field]?.[0]
+  const invalid = (field: keyof CatalogFormValues) =>
     errorOf(field) ? "true" : undefined
   // React 19 resets the form to its defaultValues before an action-driven
   // submit runs. Reading the echoed value first keeps what the user typed.
-  const valueOf = (field: keyof IngredientFormValues) =>
+  const valueOf = (field: keyof CatalogFormValues) =>
     state.values?.[field] ?? values[field] ?? ""
   const describedBy = (
-    field: keyof IngredientFormValues,
+    field: keyof CatalogFormValues,
     hasDescription = false
   ) =>
     [
@@ -122,6 +133,34 @@ export function IngredientForm({
             required
           />
           <FieldError id="name-error">{errorOf("name")}</FieldError>
+        </Field>
+
+        <Field data-invalid={invalid("kind")}>
+          <FieldLabel htmlFor="kind">Tipo</FieldLabel>
+          <Select
+            name="kind"
+            defaultValue={valueOf("kind")}
+            items={KIND_LABELS}
+          >
+            <SelectTrigger
+              id="kind"
+              aria-invalid={errorOf("kind") ? true : undefined}
+              aria-describedby={describedBy("kind", true)}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(KIND_LABELS).map(([value, label]) => (
+                <SelectItem key={value} value={value}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <FieldDescription id="kind-description">
+            Solo un ingrediente si può scegliere dentro una ricetta.
+          </FieldDescription>
+          <FieldError id="kind-error">{errorOf("kind")}</FieldError>
         </Field>
 
         <Field data-invalid={invalid("defaultUnit")}>
@@ -186,7 +225,7 @@ export function IngredientForm({
         </Button>
         <Button
           variant="ghost"
-          render={<Link href="/ingredients" />}
+          render={<Link href="/catalogo" />}
           nativeButton={false}
         >
           Annulla

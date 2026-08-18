@@ -43,3 +43,25 @@ export function dateForDay(weekStart: Date, day: number): Date {
   date.setUTCDate(date.getUTCDate() + day)
   return date
 }
+
+const dayFormat = new Intl.DateTimeFormat("it-IT", {
+  timeZone: APP_TIMEZONE,
+  weekday: "short",
+})
+
+/**
+ * The seven short day names of a week, Monday first.
+ *
+ * Takes a week rather than nothing because the formatter is timezone-aware and
+ * a `Date` is what it wants; every week produces the same seven strings. Both
+ * the menu grid and the shopping list render these, and two screens disagreeing
+ * about what Monday is called is the reason this is one function.
+ *
+ * @param weekStart The Monday naming the week, at UTC midnight.
+ * @returns Seven labels, index 0 Monday through index 6 Sunday.
+ */
+export function dayLabels(weekStart: Date): string[] {
+  return Array.from({ length: DAYS_IN_WEEK }, (_, day) =>
+    dayFormat.format(dateForDay(weekStart, day))
+  )
+}

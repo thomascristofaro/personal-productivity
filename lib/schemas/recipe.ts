@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-import { RecipeIngredientRowSchema } from "@/lib/schemas/ingredient"
+import { RecipeIngredientRowSchema } from "@/lib/schemas/catalog"
 
 export const RECIPE_TITLE_MAX = 200
 export const RECIPE_NOTES_MAX = 2000
