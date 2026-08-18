@@ -109,7 +109,19 @@ export async function regenerateShoppingList(weekStart: Date): Promise<void> {
           },
         },
       },
-      list: { select: { id: true, items: { select: itemFields } } },
+      list: {
+        select: {
+          id: true,
+          items: { select: itemFields },
+          // In the same round trip: the aggregator needs them, and a second
+          // query would open a window where a shop closes between the two.
+          purchases: {
+            select: {
+              items: { select: { name: true, unit: true, quantity: true } },
+            },
+          },
+        },
+      },
     },
   })
 
@@ -135,6 +147,9 @@ export async function regenerateShoppingList(weekStart: Date): Promise<void> {
   const next = aggregateShoppingList({
     slots,
     existing: menu.list?.items ?? [],
+    purchased: (menu.list?.purchases ?? []).flatMap(
+      (purchase) => purchase.items
+    ),
   })
 
   const generatedAt = new Date()

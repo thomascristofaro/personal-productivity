@@ -34,6 +34,13 @@ export type ShoppingItem = {
   days: number[]
 }
 
+/** One line of one past trip, as it needs to be seen from here. */
+export type PurchasedTotal = {
+  name: string
+  unit: string | null
+  quantity: number | null
+}
+
 // A null unit alongside a quantity means a count of whole things — "2 uova".
 const COUNTABLE_UNITS = new Set([
   "pz",
@@ -65,6 +72,27 @@ const round = (quantity: number, unit: string | null) =>
   isCountable(unit)
     ? Math.ceil(Math.round(quantity * 1e6) / 1e6)
     : Math.round(quantity * 100) / 100
+
+type Bought = { quantity: number; satisfied: boolean }
+
+// A purchase naming no quantity says "I bought this", not "I bought none of
+// it". It therefore satisfies the line whatever the menu now asks for, and no
+// arithmetic can express that — hence the flag beside the sum.
+function boughtByKey(purchased: PurchasedTotal[]): Map<string, Bought> {
+  const bought = new Map<string, Bought>()
+
+  for (const row of purchased) {
+    const key = itemKey(row.name, row.unit)
+    const current = bought.get(key) ?? { quantity: 0, satisfied: false }
+
+    bought.set(key, {
+      quantity: current.quantity + (row.quantity ?? 0),
+      satisfied: current.satisfied || row.quantity === null,
+    })
+  }
+
+  return bought
+}
 
 const scaleFactor = (slot: AggregatorSlot) =>
   (slot.servings ?? HOUSEHOLD_SERVINGS) /
@@ -146,17 +174,25 @@ function totalsFor(slots: AggregatorSlot[]): Total[] {
  * nothing. Items added by hand and the checked state of surviving items outlive
  * a regeneration, which is what makes editing the menu safe.
  *
- * @param input Every slot of the menu including the ones with no recipe, and
- *   the current list or an empty array on first generation.
+ * What has already been bought on this list is subtracted from what the menu
+ * asks for, so pressing "Rigenera" after a shop shows what is missing rather
+ * than what was needed — design document of 2026-08-18, section 10.
+ *
+ * @param input Every slot of the menu including the ones with no recipe, the
+ *   current list, and every line of every trip already made against it.
  * @param input.slots Every slot of the menu, including the ones with no recipe.
  * @param input.existing The current list, or an empty array on first generation.
+ * @param input.purchased Every line of every purchase already recorded against
+ *   this list. Required, not optional: an input that silently defaults to
+ *   "nothing bought" is the exact defect this rule exists to prevent.
  * @returns The new list, sorted by supermarket walking order and then by name.
  */
 export function aggregateShoppingList(input: {
   slots: AggregatorSlot[]
   existing: ShoppingItem[]
+  purchased: PurchasedTotal[]
 }): ShoppingItem[] {
-  const { slots, existing } = input
+  const { slots, existing, purchased } = input
 
   const previous = new Map(
     existing
@@ -164,10 +200,31 @@ export function aggregateShoppingList(input: {
       .map((line) => [itemKey(line.name, line.unit), line])
   )
 
-  const generated = totalsFor(slots).map<ShoppingItem>((total) => {
-    const prior = previous.get(itemKey(total.name, total.unit))
-    const quantity =
+  const bought = boughtByKey(purchased)
+
+  // flatMap, not map: a line the shopper already holds produces nothing at all.
+  const generated = totalsFor(slots).flatMap<ShoppingItem>((total) => {
+    const key = itemKey(total.name, total.unit)
+    const prior = previous.get(key)
+    const already = bought.get(key)
+
+    const required =
       total.quantity === null ? null : round(total.quantity, total.unit)
+
+    let quantity = required
+
+    if (already !== undefined) {
+      // Nothing left to ask for: an unquantified line once anything of it has
+      // been bought — "olio" bought is olio bought — or a purchase that named
+      // no quantity of its own.
+      if (required === null || already.satisfied) return []
+
+      // Rounded again after the subtraction and not only before it: six eggs
+      // less four and a half is one and a half eggs.
+      const remaining = round(required - already.quantity, total.unit)
+      if (remaining <= 0) return []
+      quantity = remaining
+    }
 
     // A tick means "I have enough of this". If the list now asks for more than
     // it did before, that stops being true, so the tick — and who and when —
@@ -179,20 +236,22 @@ export function aggregateShoppingList(input: {
       quantity !== null &&
       quantity > prior.quantity
 
-    return {
-      name: total.name,
-      quantity,
-      unit: total.unit,
-      aisle: total.aisle,
-      checked: quantityRose ? false : (prior?.checked ?? false),
-      checkedById: quantityRose ? null : (prior?.checkedById ?? null),
-      checkedAt: quantityRose ? null : (prior?.checkedAt ?? null),
-      manual: false,
-      // Not carried across from `prior` the way the tick is: the days are a
-      // fact about the menu as it stands now, so a slot moved from Monday to
-      // Friday must move the line with it.
-      days: [...total.days].sort((a, b) => a - b),
-    }
+    return [
+      {
+        name: total.name,
+        quantity,
+        unit: total.unit,
+        aisle: total.aisle,
+        checked: quantityRose ? false : (prior?.checked ?? false),
+        checkedById: quantityRose ? null : (prior?.checkedById ?? null),
+        checkedAt: quantityRose ? null : (prior?.checkedAt ?? null),
+        manual: false,
+        // Not carried across from `prior` the way the tick is: the days are a
+        // fact about the menu as it stands now, so a slot moved from Monday to
+        // Friday must move the line with it.
+        days: [...total.days].sort((a, b) => a - b),
+      },
+    ]
   })
 
   const manual = existing.filter((line) => line.manual)

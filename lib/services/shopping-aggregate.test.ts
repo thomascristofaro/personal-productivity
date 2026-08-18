@@ -4,6 +4,7 @@ import { AISLE_UNKNOWN } from "@/lib/aisles"
 import {
   type AggregatorIngredient,
   type AggregatorSlot,
+  type PurchasedTotal,
   type ShoppingItem,
   aggregateShoppingList,
 } from "@/lib/services/shopping-aggregate"
@@ -57,8 +58,11 @@ const item = (overrides: Partial<ShoppingItem>): ShoppingItem => ({
   ...overrides,
 })
 
-const aggregate = (slots: AggregatorSlot[], existing: ShoppingItem[] = []) =>
-  aggregateShoppingList({ slots, existing })
+const aggregate = (
+  slots: AggregatorSlot[],
+  existing: ShoppingItem[] = [],
+  purchased: PurchasedTotal[] = []
+) => aggregateShoppingList({ slots, existing, purchased })
 
 describe("aggregateShoppingList", () => {
   it("carries each ingredient's own aisle onto its line", () => {
@@ -359,5 +363,120 @@ describe("the days a line is needed for", () => {
     )
 
     expect(result[0].days).toEqual([6])
+  })
+})
+
+describe("what has already been bought", () => {
+  const bought = (over: Partial<PurchasedTotal> = {}): PurchasedTotal => ({
+    name: "spaghetti",
+    unit: "g",
+    quantity: 320,
+    ...over,
+  })
+
+  it("drops a line whose whole quantity has been bought", () => {
+    expect(
+      aggregate(
+        [slot([{ name: "spaghetti", quantity: 320, unit: "g" }])],
+        [],
+        [bought()]
+      )
+    ).toEqual([])
+  })
+
+  it("leaves the remainder when the menu now asks for more", () => {
+    const result = aggregate(
+      [slot([{ name: "spaghetti", quantity: 500, unit: "g" }])],
+      [],
+      [bought({ quantity: 300 })]
+    )
+
+    expect(result).toHaveLength(1)
+    expect(result[0].quantity).toBe(200)
+  })
+
+  it("drops a line bought more than once, summing the trips", () => {
+    expect(
+      aggregate(
+        [slot([{ name: "spaghetti", quantity: 500, unit: "g" }])],
+        [],
+        [bought({ quantity: 300 }), bought({ quantity: 200 })]
+      )
+    ).toEqual([])
+  })
+
+  it("drops an unquantified line once anything of it has been bought", () => {
+    expect(
+      aggregate(
+        [slot([{ name: "spaghetti", quantity: null, unit: null }])],
+        [],
+        [bought({ unit: null, quantity: null })]
+      )
+    ).toEqual([])
+  })
+
+  it("treats a purchase with no quantity as satisfying the whole line", () => {
+    expect(
+      aggregate(
+        [slot([{ name: "spaghetti", quantity: 500, unit: "g" }])],
+        [],
+        [bought({ quantity: null })]
+      )
+    ).toEqual([])
+  })
+
+  it("subtracts nothing across two different units", () => {
+    const result = aggregate(
+      [slot([{ name: "spaghetti", quantity: 500, unit: "g" }])],
+      [],
+      [bought({ unit: "confezione", quantity: 2 })]
+    )
+
+    expect(result[0].quantity).toBe(500)
+  })
+
+  it("subtracts nothing for a name the menu no longer asks for", () => {
+    const result = aggregate(
+      [slot([{ name: "spaghetti", quantity: 500, unit: "g" }])],
+      [],
+      [bought({ name: "pomodori", quantity: 400 })]
+    )
+
+    expect(result).toHaveLength(1)
+    expect(result[0].quantity).toBe(500)
+  })
+
+  // Not a special case in the code, and that is the point: a hand-added row is
+  // never regenerated, so there is nothing for the subtraction to reach.
+  it("leaves a line added by hand alone, whatever has been bought", () => {
+    expect(
+      aggregate(
+        [],
+        [item({ name: "spaghetti", quantity: 320, unit: "g", manual: true })],
+        [bought()]
+      )
+    ).toHaveLength(1)
+  })
+
+  it("rounds a countable remainder up, never to a fraction of a thing", () => {
+    // Six eggs less four and a half is one and a half eggs, and no shop sells
+    // half an egg.
+    const result = aggregate(
+      [slot([{ name: "uova", quantity: 6, unit: null }])],
+      [],
+      [{ name: "uova", unit: null, quantity: 4.5 }]
+    )
+
+    expect(result[0].quantity).toBe(2)
+  })
+
+  it("keeps the tick of a line that survives the subtraction", () => {
+    const result = aggregate(
+      [slot([{ name: "spaghetti", quantity: 500, unit: "g" }])],
+      [item({ name: "spaghetti", quantity: 500, unit: "g", checked: true })],
+      [bought({ quantity: 300 })]
+    )
+
+    expect(result[0].checked).toBe(true)
   })
 })
