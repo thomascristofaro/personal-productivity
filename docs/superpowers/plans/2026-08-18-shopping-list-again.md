@@ -169,9 +169,9 @@ pnpm exec vitest run lib/week.test.ts
 
 Expected: PASS.
 
-- [ ] **Step 5: Use it in the menu page**
+- [ ] **Step 5: ~~Use it in the menu page~~ — withdrawn**
 
-In `app/(app)/menu/[weekStart]/page.tsx`, delete the local `dayFormat` const and replace the inline construction at line 49 with `const labels = dayLabels(weekStart)`, passing `dayLabels={labels}` to `WeekGrid`. The prop keeps its name.
+This step said to delete the local `dayFormat` in `app/(app)/menu/[weekStart]/page.tsx` and have both screens call `dayLabels`. **Do not.** That formatter carries `day: "numeric"` as well as `weekday: "short"`, so it produces "lun 10" and not "lun": a grid of one specific week needs to say which week, and the shopping list wants the bare weekday or a line needed on two days reads "lun 10, mer 12" and drowns the quantity beside it. Two formatters that look alike and are not. The menu page is left alone.
 
 - [ ] **Step 6: Run the gate and commit**
 

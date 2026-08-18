@@ -177,10 +177,15 @@ answer the same kind of question. Above three days the list truncates:
 `lun, mer +2`.
 
 The abbreviations are `Intl.DateTimeFormat("it-IT", { weekday: "short" })` in
-`APP_TIMEZONE`, which is what `/menu/[weekStart]` already builds inline for its
-column headings. Two screens wanting the same seven strings is one too many, so
-that becomes `dayLabels(weekStart)` in `lib/week.ts` and both call it. It is the
-only refactor this design asks for that was not requested.
+`APP_TIMEZONE`, as `dayLabels(weekStart)` in `lib/week.ts`.
+
+An earlier revision said this unified something: that `/menu/[weekStart]` built
+the same seven strings inline and both screens should share one helper. It does
+not. The menu grid's headings carry the date — `weekday: "short"` **and**
+`day: "numeric"`, so "lun 10" — because a grid of a specific week needs to say
+which week. The shopping list wants the bare weekday, because a line needed on
+two days would otherwise read "lun 10, mer 12" and drown the quantity beside it.
+Two formatters that look alike and are not. The menu page is left alone.
 
 ---
 
