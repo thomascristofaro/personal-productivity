@@ -142,6 +142,11 @@ model ShoppingListItem {
   quantity    Float?
   unit        String?
   aisle       String
+  // Which days of the week the line is needed for, 0 Monday through 6 Sunday.
+  // Empty for a line added by hand: no menu asked for it. Recomputed on every
+  // regeneration rather than carried across like the ticks are — days are a
+  // fact about the current menu, not about the shopper.
+  days        Int[]
   checked     Boolean      @default(false)
   checkedById String?
   checkedBy   User?        @relation(fields: [checkedById], references: [id], onDelete: SetNull)

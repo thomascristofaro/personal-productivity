@@ -44,6 +44,7 @@ const itemFields = {
   checkedById: true,
   checkedAt: true,
   manual: true,
+  days: true,
 } as const
 
 /**
@@ -128,6 +129,7 @@ export async function regenerateShoppingList(weekStart: Date): Promise<void> {
       id: true,
       slots: {
         select: {
+          day: true,
           servings: true,
           recipe: {
             select: {
@@ -150,6 +152,7 @@ export async function regenerateShoppingList(weekStart: Date): Promise<void> {
   if (menu === null) throw new NoMenuError()
 
   const slots: AggregatorSlot[] = menu.slots.map((slot) => ({
+    day: slot.day,
     servings: slot.servings,
     recipe:
       slot.recipe === null
@@ -256,6 +259,8 @@ export async function addManualItem(
         ? input.aisle
         : AISLE_UNKNOWN,
       manual: true,
+      // No menu asked for this one.
+      days: [],
     },
   })
 }

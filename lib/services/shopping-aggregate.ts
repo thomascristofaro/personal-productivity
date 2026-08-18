@@ -12,6 +12,8 @@ export type AggregatorIngredient = {
 }
 
 export type AggregatorSlot = {
+  // 0 Monday through 6 Sunday. Every line the slot contributes to says so.
+  day: number
   servings: number | null
   recipe: {
     servings: number | null
@@ -28,6 +30,8 @@ export type ShoppingItem = {
   checkedById: string | null
   checkedAt: Date | null
   manual: boolean
+  // Ascending, and empty on a hand-added line.
+  days: number[]
 }
 
 // A null unit alongside a quantity means a count of whole things — "2 uova".
@@ -71,6 +75,14 @@ type Total = {
   aisle: string
   unit: string | null
   quantity: number | null
+  days: number[]
+}
+
+// Mutates in place and returns the same object: the map's value never escapes
+// this module until the map is spread, so there is nothing to copy for.
+const noteDay = (total: Total, day: number) => {
+  if (!total.days.includes(day)) total.days.push(day)
+  return total
 }
 
 function totalsFor(slots: AggregatorSlot[]): Total[] {
@@ -95,17 +107,29 @@ function totalsFor(slots: AggregatorSlot[]): Total[] {
             aisle: ingredient.aisle,
             unit: null,
             quantity: null,
+            days: [slot.day],
           })
+          continue
         }
+        // An unquantified line still answers "when do I need this", so a second
+        // slot asking for it adds its day even though it adds no quantity.
+        noteDay(current, slot.day)
         continue
       }
 
-      totals.set(key, {
-        name: ingredient.name,
-        aisle: ingredient.aisle,
-        unit,
-        quantity: (current?.quantity ?? 0) + ingredient.quantity * factor,
-      })
+      totals.set(
+        key,
+        noteDay(
+          {
+            name: ingredient.name,
+            aisle: ingredient.aisle,
+            unit,
+            quantity: (current?.quantity ?? 0) + ingredient.quantity * factor,
+            days: current?.days ?? [],
+          },
+          slot.day
+        )
+      )
     }
   }
 
@@ -164,6 +188,10 @@ export function aggregateShoppingList(input: {
       checkedById: quantityRose ? null : (prior?.checkedById ?? null),
       checkedAt: quantityRose ? null : (prior?.checkedAt ?? null),
       manual: false,
+      // Not carried across from `prior` the way the tick is: the days are a
+      // fact about the menu as it stands now, so a slot moved from Monday to
+      // Friday must move the line with it.
+      days: [...total.days].sort((a, b) => a - b),
     }
   })
 

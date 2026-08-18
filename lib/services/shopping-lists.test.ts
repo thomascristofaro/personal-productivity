@@ -12,6 +12,7 @@ const item = (over: Partial<StoredItem>): StoredItem => ({
   checkedById: null,
   checkedAt: null,
   manual: false,
+  days: [],
   ...over,
 })
 

@@ -25,8 +25,15 @@ type IngredientFixture = Omit<AggregatorIngredient, "aisle"> & {
 
 const slot = (
   ingredients: IngredientFixture[],
-  options: { recipeServings?: number | null; slotServings?: number | null } = {}
+  options: {
+    recipeServings?: number | null
+    slotServings?: number | null
+    day?: number
+  } = {}
 ): AggregatorSlot => ({
+  // Monday unless a test says otherwise, so every case written before days
+  // existed keeps meaning what it meant.
+  day: options.day ?? 0,
   servings: options.slotServings ?? null,
   recipe: {
     servings: options.recipeServings ?? 2,
@@ -46,6 +53,7 @@ const item = (overrides: Partial<ShoppingItem>): ShoppingItem => ({
   checkedById: null,
   checkedAt: null,
   manual: false,
+  days: [],
   ...overrides,
 })
 
@@ -130,9 +138,9 @@ describe("aggregateShoppingList", () => {
 
   it("excludes free-text and empty slots", () => {
     const result = aggregate([
-      { servings: null, recipe: null },
+      { day: 1, servings: null, recipe: null },
       slot([{ name: "spaghetti", quantity: 100, unit: "g" }]),
-      { servings: null, recipe: null },
+      { day: 2, servings: null, recipe: null },
     ])
 
     expect(result).toHaveLength(1)
@@ -296,5 +304,60 @@ describe("aggregateShoppingList", () => {
       "spaghetti",
       "curcuma",
     ])
+  })
+})
+
+describe("the days a line is needed for", () => {
+  it("carries the day of the slot that asked for it", () => {
+    const result = aggregate([
+      slot([{ name: "spaghetti", quantity: 320, unit: "g" }], { day: 2 }),
+    ])
+
+    expect(result[0].days).toEqual([2])
+  })
+
+  it("collects every day, in order, when several slots ask for the same thing", () => {
+    const result = aggregate([
+      slot([{ name: "spaghetti", quantity: 320, unit: "g" }], { day: 4 }),
+      slot([{ name: "spaghetti", quantity: 100, unit: "g" }], { day: 1 }),
+    ])
+
+    expect(result[0].days).toEqual([1, 4])
+  })
+
+  it("lists a day once, however many meals of it ask", () => {
+    const result = aggregate([
+      slot([{ name: "spaghetti", quantity: 320, unit: "g" }], { day: 3 }),
+      slot([{ name: "spaghetti", quantity: 100, unit: "g" }], { day: 3 }),
+    ])
+
+    expect(result[0].days).toEqual([3])
+  })
+
+  it("collects the days of an unquantified line too", () => {
+    const result = aggregate([
+      slot([{ name: "sale", quantity: null, unit: null }], { day: 5 }),
+      slot([{ name: "sale", quantity: null, unit: null }], { day: 2 }),
+    ])
+
+    expect(result[0].days).toEqual([2, 5])
+  })
+
+  it("leaves a line added by hand with no days, because no menu asked for it", () => {
+    const result = aggregate(
+      [],
+      [item({ name: "sacchetti", manual: true, aisle: AISLE_UNKNOWN })]
+    )
+
+    expect(result[0].days).toEqual([])
+  })
+
+  it("recomputes the days rather than carrying the previous ones across", () => {
+    const result = aggregate(
+      [slot([{ name: "spaghetti", quantity: 320, unit: "g" }], { day: 6 })],
+      [item({ name: "spaghetti", quantity: 320, unit: "g", days: [0, 1, 2] })]
+    )
+
+    expect(result[0].days).toEqual([6])
   })
 })
