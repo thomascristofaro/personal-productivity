@@ -5,8 +5,9 @@ and state** — nothing else does. The design authority stays
 `docs/superpowers/specs/2026-08-13-menu-spesa-design.md`, and the decisions live
 in `docs/conventions/`. Do not restate either here; point at them.
 
-Last updated: 2026-08-17. `main` is deployed; work happens on a branch per plan,
-cut from `main`.
+Last updated: 2026-08-18. `main` is deployed. Work normally happens on a branch
+per plan; the branch `docs/catalog-and-purchases-design` is the standing
+exception — see "In flight".
 
 ## Shipped
 
@@ -20,12 +21,42 @@ cut from `main`.
 | [`2026-08-14-weekly-menu`](superpowers/plans/2026-08-14-weekly-menu.md)                                     | `/menu/[weekStart]`, the fourteen-slot grid, the slot drawer and `lib/services/menus.ts` — all by hand, no LLM                                                                                |
 | [`2026-08-14-shopping-list`](superpowers/plans/2026-08-14-shopping-list.md)                                 | `/spesa/[weekStart]`, the aisle-grouped list, optimistic ticking, manual items, and the freshness signal over `Menu.slotsUpdatedAt`                                                           |
 | [`2026-08-15-authentication`](superpowers/plans/2026-08-15-authentication.md)                               | Google sign-in through `better-auth`, `lib/auth/`, the session gate in `middleware.ts`, `/login` and "Esci", and the four `better-auth` tables                                                |
+| [`2026-08-18-catalogue`](superpowers/plans/2026-08-18-catalogue.md)                                         | `Ingredient` renamed `CatalogItem` with a `kind`, `/catalogo` and its three chips, and names lowercased in `lib/schemas/catalog.ts`                                                           |
 
 ## In flight
 
-Nothing. **The product loop is closed**: plan a week, generate the list, shop
-from it, and all three screens have now been driven end to end. **Authentication
-shipped on 2026-08-15**, so what is left is the LLM half and deployment.
+**The catalogue, the shopping list and the purchase history**, on the branch
+`docs/catalog-and-purchases-design`. One design document,
+[`2026-08-18-catalogue-and-purchases-design`](superpowers/specs/2026-08-18-catalogue-and-purchases-design.md),
+and three plans: A (catalogue) is **shipped**, B
+([`shopping-list-again`](superpowers/plans/2026-08-18-shopping-list-again.md))
+and C ([`shopping-done`](superpowers/plans/2026-08-18-shopping-done.md)) are
+next, in that order.
+
+**All three land on one branch, against the usual rule.** The owner's call on
+2026-08-18: merging a branch that holds only a design document and three plans
+buys nothing, so the pull request waits until there are changes worth reviewing.
+Each plan still leaves the app working and `pnpm verify` green, so the branch is
+mergeable at every task boundary.
+
+Two things plan A found that its own plan had not foreseen, both now fixed:
+
+- **The lowercasing needed a backfill.** The design asserted the catalogue was
+  already all lowercase. Two entries added from the app since — `Cocomero` and
+  `Olive verdi` — were not, which is exactly the defect being fixed. Migration
+  `20260818112000_normalise_catalog_names` corrects `CatalogItem.name`, which
+  cascades into `RecipeIngredient`, and `ShoppingListItem.name`, which is a
+  copied string and cascades from nothing.
+- **Base UI's `Select.Value` renders the raw value.** The Tipo field read
+  `INGREDIENT` on screen until the root was given an `items` map. The aisle
+  select never showed this because there the value and the label are the same
+  string — so any future select whose values differ from its labels needs
+  `items`.
+
+Before this branch: **the product loop was closed** — plan a week, generate the
+list, shop from it, and all three screens driven end to end. **Authentication
+shipped on 2026-08-15**, so what is left after this branch is the LLM half and
+deployment.
 
 ### What authentication left unverified
 

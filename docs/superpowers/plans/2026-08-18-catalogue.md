@@ -1125,10 +1125,11 @@ In `docs/roadmap.md`, add a row to the Shipped table:
 
 Update `Last updated:` to 2026-08-18. Under "Not started", add a line naming plans B and C as the next two, in that order.
 
-Two notes belong there and nowhere else, because they will otherwise be rediscovered the hard way:
+Three notes belong there and nowhere else, because they will otherwise be rediscovered the hard way:
 
-- The `Ingredient` → `CatalogItem` migration is hand-written. Regenerating it from the schema produces a DROP and a CREATE.
-- The seed's 108 entries are all `INGREDIENT`. `prisma/catalog.ts` sets no kind and relies on the column default; adding a product to the seed means adding the field.
+- The `Ingredient` → `CatalogItem` migration is hand-written. Regenerating it from the schema produces a DROP and a CREATE — Prisma refused to run at all rather than drop 110 rows, which is how it was caught.
+- The seed's entries are all `INGREDIENT`. `prisma/catalog.ts` sets no kind and relies on the column default; adding a product to the seed means adding the field.
+- **The lowercasing needed a backfill, which this plan did not foresee.** Task 2 asserted the existing rows were already lowercase; two added from the app since — `Cocomero` and `Olive verdi` — were not, and they are exactly the defect being fixed. `20260818112000_normalise_catalog_names` corrects them, and `ShoppingListItem.name` with them, because that one is a copied string rather than a cascading foreign key.
 
 - [ ] **Step 3: Commit**
 

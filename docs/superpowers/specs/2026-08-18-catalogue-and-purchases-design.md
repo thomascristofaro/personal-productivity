@@ -145,7 +145,14 @@ the Zod schema**: `CatalogItemNameSchema` and the name field of
 `ManualItemSchema`. One place, so it applies to the catalogue form, the recipe
 form and the shopping drawer at once, and so no route handler can forget it.
 
-The 108 existing rows are already lowercase. There is nothing to backfill.
+**A backfill is needed after all.** This document originally said the existing
+rows were all lowercase and there was nothing to do. Building it found two that
+were not — `Cocomero` and `Olive verdi`, both added from the app since the seed,
+and both exactly the defect the lowercasing exists to stop. Migration
+`20260818112000_normalise_catalog_names` applies the same expression to
+`CatalogItem.name`, which cascades into `RecipeIngredient`, and to
+`ShoppingListItem.name`, which is a copied string and would otherwise never
+merge with what the menu produces.
 
 **This is not `normaliseIngredientName`.** That function additionally strips
 leading articles, which is right when matching scraped prose against the

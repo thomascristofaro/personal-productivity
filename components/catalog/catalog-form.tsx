@@ -56,6 +56,16 @@ const FIELD_ORDER: (keyof CatalogFormValues)[] = [
   "aisle",
 ]
 
+// The stored values are English because they are database values that happen to
+// be enum members; the labels are Italian because they are what the user reads.
+// Base UI's Select.Value renders the raw value unless the root is given this
+// map — without it the trigger read "INGREDIENT". The aisle select needs none,
+// because there the value and the label are the same string.
+const KIND_LABELS: Record<string, string> = {
+  INGREDIENT: "Ingrediente",
+  PRODUCT: "Prodotto",
+}
+
 export function CatalogForm({
   values,
   action,
@@ -127,10 +137,11 @@ export function CatalogForm({
 
         <Field data-invalid={invalid("kind")}>
           <FieldLabel htmlFor="kind">Tipo</FieldLabel>
-          {/* The stored values are English because they are database values
-              that happen to be enum members; the labels are Italian because
-              they are what the user reads. */}
-          <Select name="kind" defaultValue={valueOf("kind")}>
+          <Select
+            name="kind"
+            defaultValue={valueOf("kind")}
+            items={KIND_LABELS}
+          >
             <SelectTrigger
               id="kind"
               aria-invalid={errorOf("kind") ? true : undefined}
@@ -139,8 +150,11 @@ export function CatalogForm({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="INGREDIENT">Ingrediente</SelectItem>
-              <SelectItem value="PRODUCT">Prodotto</SelectItem>
+              {Object.entries(KIND_LABELS).map(([value, label]) => (
+                <SelectItem key={value} value={value}>
+                  {label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <FieldDescription id="kind-description">
