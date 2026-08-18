@@ -23,14 +23,15 @@ exception — see "In flight".
 | [`2026-08-15-authentication`](superpowers/plans/2026-08-15-authentication.md)                               | Google sign-in through `better-auth`, `lib/auth/`, the session gate in `middleware.ts`, `/login` and "Esci", and the four `better-auth` tables                                                |
 | [`2026-08-18-catalogue`](superpowers/plans/2026-08-18-catalogue.md)                                         | `Ingredient` renamed `CatalogItem` with a `kind`, `/catalogo` and its three chips, and names lowercased in `lib/schemas/catalog.ts`                                                           |
 | [`2026-08-18-shopping-list-again`](superpowers/plans/2026-08-18-shopping-list-again.md)                     | `days` on a line, `lib/services/shopping-view.ts` and its merge, the `+` drawer, and free items landing in the catalogue                                                                      |
+| [`2026-08-18-shopping-done`](superpowers/plans/2026-08-18-shopping-done.md)                                 | `Purchase` and `PurchaseItem`, the bar at the till, `/spesa/storico`, `lib/money.ts`, and the aggregator subtracting what has already been bought                                             |
 
 ## In flight
 
 **The catalogue, the shopping list and the purchase history**, on the branch
 `docs/catalog-and-purchases-design`. One design document,
 [`2026-08-18-catalogue-and-purchases-design`](superpowers/specs/2026-08-18-catalogue-and-purchases-design.md),
-and three plans: A (catalogue) and B (the shopping list again) are **shipped**,
-C ([`shopping-done`](superpowers/plans/2026-08-18-shopping-done.md)) is next.
+and three plans, **all three shipped**: A the catalogue, B the shopping list
+again, C shopping done and the purchase history. The branch is ready to merge.
 
 **All three land on one branch, against the usual rule.** The owner's call on
 2026-08-18: merging a branch that holds only a design document and three plans
@@ -52,6 +53,11 @@ Plan B also found that Base UI's combobox leaves its popup open after the custom
 is ours. It covered the two fields below it, so the first tap on Quantità went
 to the overlay. `IngredientPicker` now controls its open state. The recipe form
 uses the same picker and gets the fix with it.
+
+Plan C's checklist found one more, now fixed: **the nav marked two entries as
+the current page.** `/spesa/storico` sits under `/spesa`, and the prefix test lit
+both, so `aria-current="page"` stopped meaning "this page". It now picks the
+longest matching href.
 
 Two things plan A found that its own plan had not foreseen, both now fixed:
 
@@ -316,6 +322,10 @@ or `docs/conventions/` as it was decided.
   them, and a hand-added quantity has to survive that. This is the owner's own
   proposal and it is better than the extra column the design first reached for.
   **Do not "fix" it by summing on the way in.**
+- **What has been bought is subtracted, not forgotten — 2026-08-18.**
+  `aggregateShoppingList` takes a **required** `purchased` input. Making it
+  optional would let a caller silently regenerate as if nothing had ever been
+  bought, which is the exact defect the rule exists to prevent.
 - **A Base UI `Select` whose values differ from its labels needs `items` —
   2026-08-18.** `Select.Value` renders the raw value otherwise, and the Tipo
   field read `INGREDIENT` on screen until the map was passed. The aisle select
@@ -335,6 +345,8 @@ is here because it was **decided**, not because nobody got to it — do not
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
 | `notFound()` renders the right page but answers **200**, because the layout shell has already streamed by the time it throws. Affects `/menu/[weekStart]` and `/ingredients/[name]/edit` alike; a genuinely unrouted path still answers 404. **Accepted**: the app is private and nothing crawls it, and the alternative is giving up the streamed loading state | `app/(app)/**`               |
 | No unsaved-changes warning on the **ingredient** form or the slot drawer. **Deliberate**: three short fields and a drawer, and a drawer that argues when dismissed is worse than the loss. The recipe form has one                                                                                                                                               | ingredient form, slot drawer |
+| A purchase cannot be deleted or undone. Closing a shop by mistake is recoverable only through the database. **Deliberate**: not requested, and an undo has to decide what to do when the list has been regenerated since. Add it the first time it actually happens                                                                                              | `lib/services/purchases.ts`  |
+| Two shopping rows carry the quantity in the **unit** field — `pesche` and `cocomero`, both `unit: "1"` or `"2"` with `quantity: null`. They render no amount and will not merge. `UnitSchema` now refuses this on the way in, but these two predate it and are **the owners' data**, so they were left alone. Fix them from the app when convenient              | `ShoppingListItem`           |
 
 ## Starting a fresh session
 
