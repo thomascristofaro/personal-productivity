@@ -1,52 +1,52 @@
 import { notFound } from "next/navigation"
 
 import {
-  removeIngredient,
-  saveIngredient,
-} from "@/app/(app)/ingredients/actions"
-import { IngredientForm } from "@/components/ingredients/ingredient-form"
+  removeCatalogItem,
+  saveCatalogItem,
+} from "@/app/(app)/catalogo/actions"
+import { CatalogForm } from "@/components/catalog/catalog-form"
 import { PageHeader } from "@/components/page/page-header"
 import { Button } from "@/components/ui/button"
 import { AISLE_ORDER } from "@/lib/aisles"
 import { getCatalogItem, listUsedUnits } from "@/lib/services/catalog"
 
-export const metadata = { title: "Modifica ingrediente" }
+export const metadata = { title: "Modifica voce" }
 
-export default async function EditIngredientPage({
+export default async function EditCatalogItemPage({
   params,
 }: {
   params: Promise<{ name: string }>
 }) {
   // Next decodes the segment, so this is the plain name again.
   const { name } = await params
-  const [ingredient, units] = await Promise.all([
+  const [item, units] = await Promise.all([
     getCatalogItem(name),
     listUsedUnits(),
   ])
 
-  if (ingredient === null) notFound()
+  if (item === null) notFound()
 
   return (
     <main className="flex flex-col gap-6 pt-6">
       <PageHeader
-        title="Modifica ingrediente"
-        back={{ href: "/ingredients", label: "Ingredienti" }}
+        title="Modifica voce"
+        back={{ href: "/catalogo", label: "Catalogo" }}
       />
 
-      <IngredientForm
-        action={saveIngredient}
+      <CatalogForm
+        action={saveCatalogItem}
         aisles={AISLE_ORDER}
         units={units}
         values={{
-          originalName: ingredient.name,
-          name: ingredient.name,
-          defaultUnit: ingredient.defaultUnit ?? "",
-          aisle: ingredient.aisle,
+          originalName: item.name,
+          name: item.name,
+          defaultUnit: item.defaultUnit ?? "",
+          aisle: item.aisle,
         }}
       />
 
-      {ingredient.usedIn === 0 ? (
-        <form action={removeIngredient.bind(null, ingredient.name)}>
+      {item.usedIn === 0 ? (
+        <form action={removeCatalogItem.bind(null, item.name)}>
           <Button type="submit" variant="destructive">
             Elimina
           </Button>
@@ -54,10 +54,7 @@ export default async function EditIngredientPage({
       ) : (
         <p className="text-xs text-muted-foreground">
           Non si può eliminare: è usato in{" "}
-          {ingredient.usedIn === 1
-            ? "1 ricetta"
-            : `${ingredient.usedIn} ricette`}
-          .
+          {item.usedIn === 1 ? "1 ricetta" : `${item.usedIn} ricette`}.
         </p>
       )}
     </main>

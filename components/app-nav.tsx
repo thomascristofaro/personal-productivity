@@ -23,7 +23,7 @@ const NAV_ITEMS = [
   { href: "/menu", label: "Menù" },
   { href: "/spesa", label: "Spesa" },
   { href: "/recipes", label: "Ricettario" },
-  { href: "/ingredients", label: "Ingredienti" },
+  { href: "/catalogo", label: "Catalogo" },
 ] as const
 
 // The bar and the panel share one row: same height, same padding, same theme

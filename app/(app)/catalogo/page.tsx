@@ -8,16 +8,14 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { listCatalogItems } from "@/lib/services/catalog"
 
-export const metadata = { title: "Ingredienti" }
+export const metadata = { title: "Catalogo" }
 
 function announce(count: number) {
-  if (count === 0) return "Nessun ingrediente trovato."
-  return count === 1
-    ? "1 ingrediente trovato."
-    : `${count} ingredienti trovati.`
+  if (count === 0) return "Nessuna voce trovata."
+  return count === 1 ? "1 voce trovata." : `${count} voci trovate.`
 }
 
-export default async function IngredientsPage({
+export default async function CatalogPage({
   searchParams,
 }: {
   // Next resolves a repeated `?q=` to a string array, not a string.
@@ -26,51 +24,49 @@ export default async function IngredientsPage({
   const { q: rawQuery } = await searchParams
   const q = Array.isArray(rawQuery) ? rawQuery[0] : rawQuery
   const isSearching = Boolean(q?.trim())
-  const ingredients = await listCatalogItems(q)
+  const items = await listCatalogItems(q)
 
   return (
     <main className="flex flex-col gap-4 pt-6">
-      <PageHeader title="Ingredienti">
-        <Button render={<Link href="/ingredients/new" />} nativeButton={false}>
-          Nuovo
+      <PageHeader title="Catalogo">
+        <Button render={<Link href="/catalogo/new" />} nativeButton={false}>
+          Nuova
         </Button>
       </PageHeader>
 
       <DataList
-        items={ingredients}
-        announcement={announce(ingredients.length)}
-        renderItem={(ingredient) => (
+        items={items}
+        announcement={announce(items.length)}
+        renderItem={(item) => (
           <DataListRow
-            key={ingredient.name}
-            href={`/ingredients/${encodeURIComponent(ingredient.name)}/edit`}
-            title={ingredient.name}
+            key={item.name}
+            href={`/catalogo/${encodeURIComponent(item.name)}/edit`}
+            title={item.name}
           >
-            <Badge variant="secondary">{ingredient.aisle}</Badge>
-            {ingredient.defaultUnit === null ? null : (
-              <span>{ingredient.defaultUnit}</span>
-            )}
+            <Badge variant="secondary">{item.aisle}</Badge>
+            {item.defaultUnit === null ? null : <span>{item.defaultUnit}</span>}
             <span>
-              {ingredient.usedIn === 0
+              {item.usedIn === 0
                 ? "non usato"
-                : ingredient.usedIn === 1
+                : item.usedIn === 1
                   ? "1 ricetta"
-                  : `${ingredient.usedIn} ricette`}
+                  : `${item.usedIn} ricette`}
             </span>
           </DataListRow>
         )}
         empty={
           isSearching ? (
-            <EmptyState title="Nessun ingrediente con questo nome." />
+            <EmptyState title="Nessuna voce con questo nome." />
           ) : (
             <EmptyState
               title="Il catalogo è vuoto."
-              description="Aggiungi il primo ingrediente."
+              description="Aggiungi la prima voce."
             >
               <Button
-                render={<Link href="/ingredients/new" />}
+                render={<Link href="/catalogo/new" />}
                 nativeButton={false}
               >
-                Nuovo ingrediente
+                Nuova voce
               </Button>
             </EmptyState>
           )

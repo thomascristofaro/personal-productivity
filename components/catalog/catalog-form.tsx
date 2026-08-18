@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select"
 import { useAttempt } from "@/hooks/use-attempt"
 
-export type IngredientFormValues = {
+export type CatalogFormValues = {
   // Absent when creating. Carried as a hidden field so a rename knows which
   // row to update: the name is the primary key, so the new value cannot
   // identify the old row.
@@ -31,56 +31,56 @@ export type IngredientFormValues = {
   aisle: string
 }
 
-export type IngredientFormState = {
+export type CatalogFormState = {
   errors: Record<string, string[]>
   message: string | null
   values?: Record<string, string>
 }
 
-export type SaveIngredientAction = (
-  state: IngredientFormState,
+export type SaveCatalogItemAction = (
+  state: CatalogFormState,
   formData: FormData
-) => Promise<IngredientFormState>
+) => Promise<CatalogFormState>
 
-export const EMPTY_INGREDIENT_FORM_STATE: IngredientFormState = {
+export const EMPTY_CATALOG_FORM_STATE: CatalogFormState = {
   errors: {},
   message: null,
   values: undefined,
 }
 
-const FIELD_ORDER: (keyof IngredientFormValues)[] = [
+const FIELD_ORDER: (keyof CatalogFormValues)[] = [
   "name",
   "defaultUnit",
   "aisle",
 ]
 
-export function IngredientForm({
+export function CatalogForm({
   values,
   action,
   aisles,
   units,
 }: {
-  values: IngredientFormValues
-  action: SaveIngredientAction
+  values: CatalogFormValues
+  action: SaveCatalogItemAction
   aisles: readonly string[]
   units: string[]
 }) {
   const [state, formAction, isPending] = useActionState(
     action,
-    EMPTY_INGREDIENT_FORM_STATE
+    EMPTY_CATALOG_FORM_STATE
   )
   const attempt = useAttempt(state)
 
-  const errorOf = (field: keyof IngredientFormValues) =>
+  const errorOf = (field: keyof CatalogFormValues) =>
     state.errors[field]?.[0]
-  const invalid = (field: keyof IngredientFormValues) =>
+  const invalid = (field: keyof CatalogFormValues) =>
     errorOf(field) ? "true" : undefined
   // React 19 resets the form to its defaultValues before an action-driven
   // submit runs. Reading the echoed value first keeps what the user typed.
-  const valueOf = (field: keyof IngredientFormValues) =>
+  const valueOf = (field: keyof CatalogFormValues) =>
     state.values?.[field] ?? values[field] ?? ""
   const describedBy = (
-    field: keyof IngredientFormValues,
+    field: keyof CatalogFormValues,
     hasDescription = false
   ) =>
     [
@@ -186,7 +186,7 @@ export function IngredientForm({
         </Button>
         <Button
           variant="ghost"
-          render={<Link href="/ingredients" />}
+          render={<Link href="/catalogo" />}
           nativeButton={false}
         >
           Annulla

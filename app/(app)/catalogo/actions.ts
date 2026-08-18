@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 import { redirect, RedirectType } from "next/navigation"
 import { z } from "zod"
 
-import type { IngredientFormState } from "@/components/ingredients/ingredient-form"
+import type { CatalogFormState } from "@/components/catalog/catalog-form"
 import { requireSession } from "@/lib/auth"
 import {
   CatalogItemInputSchema,
@@ -49,10 +49,10 @@ function fieldErrorsFrom(error: z.ZodError): Record<string, string[]> {
   return errors
 }
 
-export async function saveIngredient(
-  _state: IngredientFormState,
+export async function saveCatalogItem(
+  _state: CatalogFormState,
   formData: FormData
-): Promise<IngredientFormState> {
+): Promise<CatalogFormState> {
   const parsed = CatalogItemInputSchema.safeParse({
     name: formData.get("name"),
     defaultUnit: formData.get("defaultUnit") ?? "",
@@ -75,7 +75,7 @@ export async function saveIngredient(
       ? CatalogItemNameSchema.safeParse(rawOriginal)
       : null
 
-  const failure = (message: string): IngredientFormState => ({
+  const failure = (message: string): CatalogFormState => ({
     errors: {},
     message,
     values: valuesFrom(formData),
@@ -108,14 +108,14 @@ export async function saveIngredient(
     throw error
   }
 
-  revalidatePath("/ingredients")
+  revalidatePath("/catalogo")
   revalidatePath("/recipes")
   // Replace, not push: `redirect` defaults to push inside a Server Action, and
   // Back would then land on the form that was just submitted.
-  redirect("/ingredients", RedirectType.replace)
+  redirect("/catalogo", RedirectType.replace)
 }
 
-export async function removeIngredient(name: string): Promise<void> {
+export async function removeCatalogItem(name: string): Promise<void> {
   const parsed = CatalogItemNameSchema.safeParse(name)
   if (!parsed.success) return
 
@@ -137,6 +137,6 @@ export async function removeIngredient(name: string): Promise<void> {
     }
   }
 
-  revalidatePath("/ingredients")
-  redirect("/ingredients", RedirectType.replace)
+  revalidatePath("/catalogo")
+  redirect("/catalogo", RedirectType.replace)
 }
