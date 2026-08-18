@@ -19,7 +19,12 @@ export default async function NewCatalogItemPage() {
         action={saveCatalogItem}
         aisles={AISLE_ORDER}
         units={units}
-        values={{ name: "", defaultUnit: "", aisle: AISLE_UNKNOWN }}
+        values={{
+          name: "",
+          kind: "INGREDIENT",
+          defaultUnit: "",
+          aisle: AISLE_UNKNOWN,
+        }}
       />
     </main>
   )

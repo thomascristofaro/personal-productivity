@@ -40,6 +40,7 @@ export default async function EditCatalogItemPage({
         values={{
           originalName: item.name,
           name: item.name,
+          kind: item.kind,
           defaultUnit: item.defaultUnit ?? "",
           aisle: item.aisle,
         }}

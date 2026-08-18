@@ -266,9 +266,7 @@ export async function listCatalogItems(
  * @param name The exact entry name.
  * @returns The entry, or null when the catalogue has no such name.
  */
-export async function getCatalogItem(
-  name: string
-): Promise<CatalogRow | null> {
+export async function getCatalogItem(name: string): Promise<CatalogRow | null> {
   const row = await db.catalogItem.findUnique({
     where: { name },
     select: {

@@ -27,6 +27,7 @@ export type CatalogFormValues = {
   // identify the old row.
   originalName?: string
   name: string
+  kind: string
   defaultUnit: string
   aisle: string
 }
@@ -50,6 +51,7 @@ export const EMPTY_CATALOG_FORM_STATE: CatalogFormState = {
 
 const FIELD_ORDER: (keyof CatalogFormValues)[] = [
   "name",
+  "kind",
   "defaultUnit",
   "aisle",
 ]
@@ -71,8 +73,7 @@ export function CatalogForm({
   )
   const attempt = useAttempt(state)
 
-  const errorOf = (field: keyof CatalogFormValues) =>
-    state.errors[field]?.[0]
+  const errorOf = (field: keyof CatalogFormValues) => state.errors[field]?.[0]
   const invalid = (field: keyof CatalogFormValues) =>
     errorOf(field) ? "true" : undefined
   // React 19 resets the form to its defaultValues before an action-driven
@@ -122,6 +123,30 @@ export function CatalogForm({
             required
           />
           <FieldError id="name-error">{errorOf("name")}</FieldError>
+        </Field>
+
+        <Field data-invalid={invalid("kind")}>
+          <FieldLabel htmlFor="kind">Tipo</FieldLabel>
+          {/* The stored values are English because they are database values
+              that happen to be enum members; the labels are Italian because
+              they are what the user reads. */}
+          <Select name="kind" defaultValue={valueOf("kind")}>
+            <SelectTrigger
+              id="kind"
+              aria-invalid={errorOf("kind") ? true : undefined}
+              aria-describedby={describedBy("kind", true)}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="INGREDIENT">Ingrediente</SelectItem>
+              <SelectItem value="PRODUCT">Prodotto</SelectItem>
+            </SelectContent>
+          </Select>
+          <FieldDescription id="kind-description">
+            Solo un ingrediente si può scegliere dentro una ricetta.
+          </FieldDescription>
+          <FieldError id="kind-error">{errorOf("kind")}</FieldError>
         </Field>
 
         <Field data-invalid={invalid("defaultUnit")}>

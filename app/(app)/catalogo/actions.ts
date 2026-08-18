@@ -20,7 +20,13 @@ import {
   updateCatalogItem,
 } from "@/lib/services/catalog"
 
-const FORM_FIELDS = ["originalName", "name", "defaultUnit", "aisle"] as const
+const FORM_FIELDS = [
+  "originalName",
+  "name",
+  "kind",
+  "defaultUnit",
+  "aisle",
+] as const
 
 // Echoes exactly what was submitted, so a failed save re-renders the form from
 // these values instead of losing them to React 19's form reset.
@@ -55,6 +61,10 @@ export async function saveCatalogItem(
 ): Promise<CatalogFormState> {
   const parsed = CatalogItemInputSchema.safeParse({
     name: formData.get("name"),
+    // `?? undefined` and not `?? ""`: the schema defaults a missing kind to
+    // INGREDIENT, and an empty string would instead fail the enum with a
+    // message no user could act on.
+    kind: formData.get("kind") ?? undefined,
     defaultUnit: formData.get("defaultUnit") ?? "",
     aisle: formData.get("aisle") ?? "",
   })
