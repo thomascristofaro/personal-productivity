@@ -11,14 +11,14 @@ import {
   CatalogItemNameSchema,
 } from "@/lib/schemas/catalog"
 import {
-  createFullIngredient,
-  deleteIngredient,
-  IngredientExistsError,
-  IngredientInUseError,
-  IngredientNotFoundError,
+  CatalogItemExistsError,
+  CatalogItemInUseError,
+  CatalogItemNotFoundError,
+  createCatalogItem,
+  deleteCatalogItem,
   UnknownAisleError,
-  updateIngredient,
-} from "@/lib/services/ingredients"
+  updateCatalogItem,
+} from "@/lib/services/catalog"
 
 const FORM_FIELDS = ["originalName", "name", "defaultUnit", "aisle"] as const
 
@@ -83,22 +83,22 @@ export async function saveIngredient(
 
   try {
     if (original === null) {
-      await createFullIngredient(parsed.data)
+      await createCatalogItem(parsed.data)
     } else if (original.success) {
-      await updateIngredient(original.data, parsed.data)
+      await updateCatalogItem(original.data, parsed.data)
     } else {
-      return failure("Questo ingrediente non esiste più.")
+      return failure("Questa voce non esiste più.")
     }
   } catch (error) {
-    if (error instanceof IngredientExistsError) {
+    if (error instanceof CatalogItemExistsError) {
       return {
-        errors: { name: ["Esiste già un ingrediente con questo nome."] },
+        errors: { name: ["Esiste già una voce con questo nome."] },
         message: "Controlla i campi segnalati.",
         values: valuesFrom(formData),
       }
     }
-    if (error instanceof IngredientNotFoundError) {
-      return failure("Questo ingrediente non esiste più.")
+    if (error instanceof CatalogItemNotFoundError) {
+      return failure("Questa voce non esiste più.")
     }
     // The form only offers the known aisles, so reaching this means the action
     // was called directly — a server action is a public endpoint.
@@ -122,16 +122,16 @@ export async function removeIngredient(name: string): Promise<void> {
   await requireSession()
 
   try {
-    await deleteIngredient(parsed.data)
+    await deleteCatalogItem(parsed.data)
   } catch (error) {
     // In use: the page only offers the button when nothing uses it, so getting
     // here means a direct call or a race with someone saving a recipe. Falling
-    // through re-renders the list with the ingredient still on it and the
+    // through re-renders the list with the entry still on it and the
     // "è usato in N ricette" line, which is the honest outcome.
     // Already gone: the caller's intent is satisfied either way.
     if (
-      !(error instanceof IngredientInUseError) &&
-      !(error instanceof IngredientNotFoundError)
+      !(error instanceof CatalogItemInUseError) &&
+      !(error instanceof CatalogItemNotFoundError)
     ) {
       throw error
     }

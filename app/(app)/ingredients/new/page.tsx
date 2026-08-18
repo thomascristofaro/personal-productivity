@@ -2,7 +2,7 @@ import { saveIngredient } from "@/app/(app)/ingredients/actions"
 import { IngredientForm } from "@/components/ingredients/ingredient-form"
 import { PageHeader } from "@/components/page/page-header"
 import { AISLE_ORDER, AISLE_UNKNOWN } from "@/lib/aisles"
-import { listUsedUnits } from "@/lib/services/ingredients"
+import { listUsedUnits } from "@/lib/services/catalog"
 
 export const metadata = { title: "Nuovo ingrediente" }
 

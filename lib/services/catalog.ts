@@ -1,12 +1,12 @@
 import { AISLE_ORDER } from "@/lib/aisles"
 import { db } from "@/lib/db"
-import type { CatalogItemInput } from "@/lib/schemas/catalog"
+import type { CatalogItemInput, CatalogItemKind } from "@/lib/schemas/catalog"
 
-/** Thrown by `createIngredient` when the name is already in the catalogue. */
-export class IngredientExistsError extends Error {
+/** Thrown when the name is already in the catalogue. */
+export class CatalogItemExistsError extends Error {
   constructor(name: string) {
-    super(`An ingredient named ${name} already exists.`)
-    this.name = "IngredientExistsError"
+    super(`A catalogue entry named ${name} already exists.`)
+    this.name = "CatalogItemExistsError"
   }
 }
 
@@ -18,29 +18,34 @@ export class UnknownAisleError extends Error {
   }
 }
 
-/** Thrown by `deleteIngredient` when a recipe still uses the ingredient. */
-export class IngredientInUseError extends Error {
+/** Thrown by `deleteCatalogItem` when a recipe still uses the entry. */
+export class CatalogItemInUseError extends Error {
   constructor() {
-    super("The ingredient is still used by at least one recipe.")
-    this.name = "IngredientInUseError"
+    super("The catalogue entry is still used by at least one recipe.")
+    this.name = "CatalogItemInUseError"
   }
 }
 
-/** Thrown when the named ingredient is not in the catalogue. */
-export class IngredientNotFoundError extends Error {
+/** Thrown when the named entry is not in the catalogue. */
+export class CatalogItemNotFoundError extends Error {
   constructor() {
-    super("No ingredient with this name.")
-    this.name = "IngredientNotFoundError"
+    super("No catalogue entry with this name.")
+    this.name = "CatalogItemNotFoundError"
   }
 }
 
+// Named for the caller, not for the table: this is what the recipe form's
+// picker consumes, and it only ever sees entries of kind INGREDIENT.
 export type IngredientOption = {
   name: string
   defaultUnit: string | null
 }
 
-export type IngredientRow = {
+export type CatalogOption = IngredientOption & { aisle: string }
+
+export type CatalogRow = {
   name: string
+  kind: CatalogItemKind
   defaultUnit: string | null
   aisle: string
   usedIn: number
@@ -82,32 +87,75 @@ export function rankUnitsByUse(
 }
 
 /**
- * Lists the whole catalogue, alphabetically.
+ * Checks an aisle against the supermarket walking order.
  *
- * The catalogue is small — hundreds of rows at most — so it is loaded whole and
- * filtered in the browser rather than queried per keystroke.
+ * Exported for its own test, and used as a guard before every write: an aisle
+ * that is not in the order does not fail anywhere, it just sorts silently into
+ * the catch-all, which is the kind of defect nobody reports.
+ *
+ * @param aisle The aisle to check.
+ * @returns True when the aisle is one of the known values.
+ */
+export function isKnownAisle(aisle: string): boolean {
+  return (AISLE_ORDER as readonly string[]).includes(aisle)
+}
+
+/**
+ * Maps the `?tipo=` search param of the catalogue screen to a kind.
+ *
+ * A switch and not a lookup object: an object literal inherits from
+ * `Object.prototype`, so `KIND_BY_CHIP["constructor"]` would hand Prisma a
+ * function instead of undefined. Anything unrecognised filters nothing — a
+ * search param is typed by hand as often as it is clicked, and a screen showing
+ * zero rows for a typo reads as an empty catalogue.
+ *
+ * The chip values are Italian because they are in the address bar the user
+ * sees; the kinds are English because they are database values.
+ *
+ * @param tipo The raw search param, or undefined when no chip is chosen.
+ * @returns The kind to filter by, or undefined to filter by nothing.
+ */
+export function kindFilterFor(
+  tipo: string | undefined
+): CatalogItemKind | undefined {
+  switch (tipo) {
+    case "ingredienti":
+      return "INGREDIENT"
+    case "prodotti":
+      return "PRODUCT"
+    default:
+      return undefined
+  }
+}
+
+/**
+ * Lists the entries a recipe may reference, alphabetically.
+ *
+ * Filtered to `INGREDIENT`, which is the whole reason the kind exists: the
+ * picker inside the recipe form must never offer shampoo. The catalogue is
+ * small — hundreds of rows at most — so it is loaded whole and filtered in the
+ * browser rather than queried per keystroke.
  *
  * @returns Every ingredient, ordered by name.
  */
-export async function listIngredients(): Promise<IngredientOption[]> {
+export async function listIngredientOptions(): Promise<IngredientOption[]> {
   return db.catalogItem.findMany({
+    where: { kind: "INGREDIENT" },
     select: { name: true, defaultUnit: true },
     orderBy: { name: "asc" },
   })
 }
 
-export type CatalogueOption = IngredientOption & { aisle: string }
-
 /**
- * Lists the catalogue with each entry's aisle, for the manual-item form.
+ * Lists the whole catalogue with each entry's aisle, for the shopping drawer.
  *
- * Distinct from `listIngredients`, which the recipe form uses and which has no
- * need of the aisle, and from `listIngredientsWithUsage`, which counts recipes
- * per entry and is the catalogue screen's query.
+ * Both kinds, unlike `listIngredientOptions`: the point of the shopping list is
+ * that anything can go on it. Distinct from `listCatalogItems`, which counts
+ * recipes per entry and is the catalogue screen's query.
  *
- * @returns Every ingredient with its preferred unit and its aisle, by name.
+ * @returns Every entry with its preferred unit and its aisle, by name.
  */
-export async function listIngredientsWithAisle(): Promise<CatalogueOption[]> {
+export async function listCatalogOptions(): Promise<CatalogOption[]> {
   return db.catalogItem.findMany({
     select: { name: true, defaultUnit: true, aisle: true },
     orderBy: { name: "asc" },
@@ -117,10 +165,11 @@ export async function listIngredientsWithAisle(): Promise<CatalogueOption[]> {
 /**
  * Finds one catalogue entry by its exact name.
  *
- * Matching is exact, not normalised: the name is a primary key, and the caller
- * either picked it from the catalogue or just created it.
+ * Matching is exact, not fuzzy: the name is a primary key, the schema has
+ * already lowercased it, and the caller either picked it from the catalogue or
+ * just created it.
  *
- * @param name The exact ingredient name.
+ * @param name The exact entry name.
  * @returns The entry, or null when the catalogue has no such name.
  */
 export async function findIngredientByName(
@@ -156,38 +205,25 @@ export async function listUsedUnits(): Promise<string[]> {
  *
  * Created without a unit or an aisle: the aisle defaults to the catch-all and
  * is corrected later, because interrupting a recipe to classify a supermarket
- * aisle is how a form gets abandoned.
+ * aisle is how a form gets abandoned. The kind is stated rather than left to
+ * the column default — that default may change, and this call site must not.
  *
- * @param name The ingredient name, already trimmed and validated by the caller.
+ * @param name The name, already normalised and validated by the caller.
  * @returns The new catalogue entry.
- * @throws IngredientExistsError When the name is already in the catalogue.
+ * @throws CatalogItemExistsError When the name is already in the catalogue.
  */
 export async function createIngredient(
   name: string
 ): Promise<IngredientOption> {
   try {
     return await db.catalogItem.create({
-      data: { name },
+      data: { name, kind: "INGREDIENT" },
       select: { name: true, defaultUnit: true },
     })
   } catch (error) {
-    if (isUniqueViolation(error)) throw new IngredientExistsError(name)
+    if (isUniqueViolation(error)) throw new CatalogItemExistsError(name)
     throw error
   }
-}
-
-/**
- * Checks an aisle against the supermarket walking order.
- *
- * Exported for its own test, and used as a guard before every write: an aisle
- * that is not in the order does not fail anywhere, it just sorts silently into
- * the catch-all, which is the kind of defect nobody reports.
- *
- * @param aisle The aisle to check.
- * @returns True when the aisle is one of the known values.
- */
-export function isKnownAisle(aisle: string): boolean {
-  return (AISLE_ORDER as readonly string[]).includes(aisle)
 }
 
 /**
@@ -197,19 +233,23 @@ export function isKnownAisle(aisle: string): boolean {
  * part of the list rather than something the detail screen reveals later.
  *
  * @param query An optional case-insensitive fragment of the name.
- * @returns Every matching ingredient, ordered by name.
+ * @param kind An optional kind to filter by; undefined lists both.
+ * @returns Every matching entry, ordered by name.
  */
-export async function listIngredientsWithUsage(
-  query?: string
-): Promise<IngredientRow[]> {
+export async function listCatalogItems(
+  query?: string,
+  kind?: CatalogItemKind
+): Promise<CatalogRow[]> {
   const trimmed = query?.trim()
 
   const rows = await db.catalogItem.findMany({
-    where: trimmed
-      ? { name: { contains: trimmed, mode: "insensitive" } }
-      : undefined,
+    where: {
+      ...(trimmed ? { name: { contains: trimmed, mode: "insensitive" } } : {}),
+      ...(kind === undefined ? {} : { kind }),
+    },
     select: {
       name: true,
+      kind: true,
       defaultUnit: true,
       aisle: true,
       _count: { select: { usedIn: true } },
@@ -223,16 +263,17 @@ export async function listIngredientsWithUsage(
 /**
  * Reads one catalogue entry with its usage count.
  *
- * @param name The exact ingredient name.
+ * @param name The exact entry name.
  * @returns The entry, or null when the catalogue has no such name.
  */
-export async function getIngredient(
+export async function getCatalogItem(
   name: string
-): Promise<IngredientRow | null> {
+): Promise<CatalogRow | null> {
   const row = await db.catalogItem.findUnique({
     where: { name },
     select: {
       name: true,
+      kind: true,
       defaultUnit: true,
       aisle: true,
       _count: { select: { usedIn: true } },
@@ -246,17 +287,17 @@ export async function getIngredient(
 }
 
 /**
- * Adds a fully specified ingredient to the catalogue.
+ * Adds a fully specified entry to the catalogue.
  *
  * Distinct from `createIngredient`, which is the bare inline path used while
  * writing a recipe and deliberately sets no unit and no aisle.
  *
- * @param input The validated ingredient.
+ * @param input The validated entry, kind included.
  * @returns Nothing.
  * @throws UnknownAisleError When the aisle is not in the walking order.
- * @throws IngredientExistsError When the name is already in the catalogue.
+ * @throws CatalogItemExistsError When the name is already in the catalogue.
  */
-export async function createFullIngredient(
+export async function createCatalogItem(
   input: CatalogItemInput
 ): Promise<void> {
   if (!isKnownAisle(input.aisle)) throw new UnknownAisleError(input.aisle)
@@ -264,7 +305,7 @@ export async function createFullIngredient(
   try {
     await db.catalogItem.create({ data: input })
   } catch (error) {
-    if (isUniqueViolation(error)) throw new IngredientExistsError(input.name)
+    if (isUniqueViolation(error)) throw new CatalogItemExistsError(input.name)
     throw error
   }
 }
@@ -276,14 +317,14 @@ export async function createFullIngredient(
  * so every recipe line following the old name moves with it in the same
  * statement — see docs/conventions/data.md.
  *
- * @param name The ingredient's current name.
- * @param input The validated new values.
+ * @param name The entry's current name.
+ * @param input The validated new values, kind included.
  * @returns Nothing.
  * @throws UnknownAisleError When the aisle is not in the walking order.
- * @throws IngredientExistsError When the new name is already taken.
- * @throws IngredientNotFoundError When no ingredient has the current name.
+ * @throws CatalogItemExistsError When the new name is already taken.
+ * @throws CatalogItemNotFoundError When no entry has the current name.
  */
-export async function updateIngredient(
+export async function updateCatalogItem(
   name: string,
   input: CatalogItemInput
 ): Promise<void> {
@@ -292,30 +333,30 @@ export async function updateIngredient(
   try {
     await db.catalogItem.update({ where: { name }, data: input })
   } catch (error) {
-    if (isUniqueViolation(error)) throw new IngredientExistsError(input.name)
-    if (isRecordNotFoundError(error)) throw new IngredientNotFoundError()
+    if (isUniqueViolation(error)) throw new CatalogItemExistsError(input.name)
+    if (isRecordNotFoundError(error)) throw new CatalogItemNotFoundError()
     throw error
   }
 }
 
 /**
- * Removes an ingredient no recipe uses.
+ * Removes a catalogue entry no recipe uses.
  *
  * The relation is `onDelete: Restrict`, so the database refuses when a recipe
  * still references it. That refusal is the check — reading the count first and
  * then deleting would leave a race between the two.
  *
- * @param name The ingredient's name.
+ * @param name The entry's name.
  * @returns Nothing.
- * @throws IngredientInUseError When a recipe still uses the ingredient.
- * @throws IngredientNotFoundError When no ingredient has that name.
+ * @throws CatalogItemInUseError When a recipe still uses the entry.
+ * @throws CatalogItemNotFoundError When no entry has that name.
  */
-export async function deleteIngredient(name: string): Promise<void> {
+export async function deleteCatalogItem(name: string): Promise<void> {
   try {
     await db.catalogItem.delete({ where: { name } })
   } catch (error) {
-    if (isForeignKeyError(error)) throw new IngredientInUseError()
-    if (isRecordNotFoundError(error)) throw new IngredientNotFoundError()
+    if (isForeignKeyError(error)) throw new CatalogItemInUseError()
+    if (isRecordNotFoundError(error)) throw new CatalogItemNotFoundError()
     throw error
   }
 }

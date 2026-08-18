@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest"
 
-import { isKnownAisle, rankUnitsByUse } from "@/lib/services/ingredients"
+import {
+  isKnownAisle,
+  kindFilterFor,
+  rankUnitsByUse,
+} from "@/lib/services/catalog"
 
 describe("rankUnitsByUse", () => {
   it("puts the most used unit first", () => {
@@ -51,5 +55,29 @@ describe("isKnownAisle", () => {
 
   it("rejects anything else, so a typo cannot silently sort to the end", () => {
     expect(isKnownAisle("ortofruta")).toBe(false)
+  })
+})
+
+describe("kindFilterFor", () => {
+  it("maps the ingredients chip to a kind", () => {
+    expect(kindFilterFor("ingredienti")).toBe("INGREDIENT")
+  })
+
+  it("maps the products chip to a kind", () => {
+    expect(kindFilterFor("prodotti")).toBe("PRODUCT")
+  })
+
+  it("filters nothing when no chip is chosen", () => {
+    expect(kindFilterFor(undefined)).toBeUndefined()
+  })
+
+  it("filters nothing for a value nobody offered, rather than listing zero rows", () => {
+    expect(kindFilterFor("INGREDIENT")).toBeUndefined()
+    expect(kindFilterFor("shampoo")).toBeUndefined()
+  })
+
+  it("cannot be made to return a value inherited from Object.prototype", () => {
+    expect(kindFilterFor("constructor")).toBeUndefined()
+    expect(kindFilterFor("toString")).toBeUndefined()
   })
 })

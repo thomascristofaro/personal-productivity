@@ -8,7 +8,7 @@ import { IngredientForm } from "@/components/ingredients/ingredient-form"
 import { PageHeader } from "@/components/page/page-header"
 import { Button } from "@/components/ui/button"
 import { AISLE_ORDER } from "@/lib/aisles"
-import { getIngredient, listUsedUnits } from "@/lib/services/ingredients"
+import { getCatalogItem, listUsedUnits } from "@/lib/services/catalog"
 
 export const metadata = { title: "Modifica ingrediente" }
 
@@ -20,7 +20,7 @@ export default async function EditIngredientPage({
   // Next decodes the segment, so this is the plain name again.
   const { name } = await params
   const [ingredient, units] = await Promise.all([
-    getIngredient(name),
+    getCatalogItem(name),
     listUsedUnits(),
   ])
 

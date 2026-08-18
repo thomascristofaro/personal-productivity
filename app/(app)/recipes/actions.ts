@@ -9,11 +9,11 @@ import { requireSession } from "@/lib/auth"
 import { CatalogItemNameSchema } from "@/lib/schemas/catalog"
 import { RecipeInputSchema } from "@/lib/schemas/recipe"
 import {
+  CatalogItemExistsError,
   createIngredient,
   findIngredientByName,
-  IngredientExistsError,
   type IngredientOption,
-} from "@/lib/services/ingredients"
+} from "@/lib/services/catalog"
 import {
   createRecipe,
   deleteRecipe,
@@ -194,7 +194,7 @@ export async function addIngredient(
   } catch (error) {
     // Someone else added the same name between the search and the tap. The
     // caller's intent is satisfied by the row that already exists.
-    if (error instanceof IngredientExistsError) {
+    if (error instanceof CatalogItemExistsError) {
       return await findIngredientByName(parsed.data)
     }
     throw error

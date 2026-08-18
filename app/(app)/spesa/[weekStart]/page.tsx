@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button"
 import { AISLE_ORDER } from "@/lib/aisles"
 import { APP_TIMEZONE, DAYS_IN_WEEK } from "@/lib/config"
 import { WeekStartSchema } from "@/lib/schemas/menu"
-import { listIngredientsWithAisle } from "@/lib/services/ingredients"
+import { listCatalogOptions } from "@/lib/services/catalog"
 import { getShoppingList, groupByAisle } from "@/lib/services/shopping-lists"
 import { dateForDay } from "@/lib/week"
 
@@ -44,7 +44,7 @@ export default async function ShoppingWeekPage({
   const weekStart = parsed.data
   const [list, catalogue] = await Promise.all([
     getShoppingList(weekStart),
-    listIngredientsWithAisle(),
+    listCatalogOptions(),
   ])
 
   const week = iso(weekStart)

@@ -6,7 +6,7 @@ import { EmptyState } from "@/components/page/empty-state"
 import { PageHeader } from "@/components/page/page-header"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { listIngredientsWithUsage } from "@/lib/services/ingredients"
+import { listCatalogItems } from "@/lib/services/catalog"
 
 export const metadata = { title: "Ingredienti" }
 
@@ -26,7 +26,7 @@ export default async function IngredientsPage({
   const { q: rawQuery } = await searchParams
   const q = Array.isArray(rawQuery) ? rawQuery[0] : rawQuery
   const isSearching = Boolean(q?.trim())
-  const ingredients = await listIngredientsWithUsage(q)
+  const ingredients = await listCatalogItems(q)
 
   return (
     <main className="flex flex-col gap-4 pt-6">
