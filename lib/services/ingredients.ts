@@ -90,7 +90,7 @@ export function rankUnitsByUse(
  * @returns Every ingredient, ordered by name.
  */
 export async function listIngredients(): Promise<IngredientOption[]> {
-  return db.ingredient.findMany({
+  return db.catalogItem.findMany({
     select: { name: true, defaultUnit: true },
     orderBy: { name: "asc" },
   })
@@ -108,7 +108,7 @@ export type CatalogueOption = IngredientOption & { aisle: string }
  * @returns Every ingredient with its preferred unit and its aisle, by name.
  */
 export async function listIngredientsWithAisle(): Promise<CatalogueOption[]> {
-  return db.ingredient.findMany({
+  return db.catalogItem.findMany({
     select: { name: true, defaultUnit: true, aisle: true },
     orderBy: { name: "asc" },
   })
@@ -126,7 +126,7 @@ export async function listIngredientsWithAisle(): Promise<CatalogueOption[]> {
 export async function findIngredientByName(
   name: string
 ): Promise<IngredientOption | null> {
-  return db.ingredient.findUnique({
+  return db.catalogItem.findUnique({
     where: { name },
     select: { name: true, defaultUnit: true },
   })
@@ -166,7 +166,7 @@ export async function createIngredient(
   name: string
 ): Promise<IngredientOption> {
   try {
-    return await db.ingredient.create({
+    return await db.catalogItem.create({
       data: { name },
       select: { name: true, defaultUnit: true },
     })
@@ -204,7 +204,7 @@ export async function listIngredientsWithUsage(
 ): Promise<IngredientRow[]> {
   const trimmed = query?.trim()
 
-  const rows = await db.ingredient.findMany({
+  const rows = await db.catalogItem.findMany({
     where: trimmed
       ? { name: { contains: trimmed, mode: "insensitive" } }
       : undefined,
@@ -229,7 +229,7 @@ export async function listIngredientsWithUsage(
 export async function getIngredient(
   name: string
 ): Promise<IngredientRow | null> {
-  const row = await db.ingredient.findUnique({
+  const row = await db.catalogItem.findUnique({
     where: { name },
     select: {
       name: true,
@@ -262,7 +262,7 @@ export async function createFullIngredient(
   if (!isKnownAisle(input.aisle)) throw new UnknownAisleError(input.aisle)
 
   try {
-    await db.ingredient.create({ data: input })
+    await db.catalogItem.create({ data: input })
   } catch (error) {
     if (isUniqueViolation(error)) throw new IngredientExistsError(input.name)
     throw error
@@ -290,7 +290,7 @@ export async function updateIngredient(
   if (!isKnownAisle(input.aisle)) throw new UnknownAisleError(input.aisle)
 
   try {
-    await db.ingredient.update({ where: { name }, data: input })
+    await db.catalogItem.update({ where: { name }, data: input })
   } catch (error) {
     if (isUniqueViolation(error)) throw new IngredientExistsError(input.name)
     if (isRecordNotFoundError(error)) throw new IngredientNotFoundError()
@@ -312,7 +312,7 @@ export async function updateIngredient(
  */
 export async function deleteIngredient(name: string): Promise<void> {
   try {
-    await db.ingredient.delete({ where: { name } })
+    await db.catalogItem.delete({ where: { name } })
   } catch (error) {
     if (isForeignKeyError(error)) throw new IngredientInUseError()
     if (isRecordNotFoundError(error)) throw new IngredientNotFoundError()
