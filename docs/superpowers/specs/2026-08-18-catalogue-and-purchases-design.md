@@ -12,7 +12,7 @@ says so.
 ## 1. What this changes, and why
 
 The shopping list has been used for real for four days. Seven things came back
-from that use. Six are changes; one turned out not to be a defect.
+from that use. Five are changes; two turned out not to be defects.
 
 | Request                                                               | Answered by |
 | --------------------------------------------------------------------- | ----------- |
@@ -24,9 +24,11 @@ from that use. Six are changes; one turned out not to be a defect.
 | Put anything on the list, not only things that exist as ingredients   | §3          |
 | "Shopping done": move what is ticked into a history, with the amount  | §8, §9      |
 
-**Missing units of measure was not a defect.** Raised, investigated, withdrawn
-by the owner: the lines showing a bare number are the ones counted in pieces,
-where `unit` is legitimately null. `lib/units.ts` is behaving.
+**Two of the seven were withdrawn by the owner**, and are kept in the table so
+nobody reopens them as oversights. _Missing units of measure_: the lines showing
+a bare number are the ones counted in pieces, where `unit` is legitimately null —
+`lib/units.ts` is behaving. _A line added by hand shows no quantity_: withdrawn
+on 2026-08-18 as the owner's own mistake, see §14.
 
 Three decisions in here were argued and settled in conversation, and are not to
 be relitigated:
@@ -430,16 +432,19 @@ decision. Each plan ends with one.
 
 ---
 
-## 14. One defect not yet explained
+## 14. The quantity that was never missing
 
-"A line added by hand shows no quantity" is real and reported, and reading the
-code does not account for it: the form sends `quantity`, `ManualItemSchema`
-accepts it, `addManualItem` writes it, and the row renders it through the same
-`amountOf` as every other line.
+"A line added by hand shows no quantity" was reported, and reading the code did
+not account for it: the form sends `quantity`, `ManualItemSchema` accepts it,
+`addManualItem` writes it, and the row renders it through the same `amountOf` as
+every other line. An earlier revision of this document therefore made plan B
+open by reproducing it in a browser.
 
-Plan B replaces that form with the drawer of §7. It **reproduces the defect in a
-browser first**, and only then rewrites — otherwise the rewrite either carries
-the cause forward or hides it, and neither is knowing.
+**Withdrawn on 2026-08-18.** The owner confirmed it was their own mistake, so
+there is nothing to chase and plan B does not chase it. Plan B replaces that
+form with the drawer of §7 all the same, and its browser checklist still checks
+that the quantity is rendered — which costs nothing and would catch this if it
+were ever real.
 
 ---
 
@@ -457,8 +462,9 @@ the cause forward or hides it, and neither is knowing.
 
 ## 16. Sequence
 
-Three plans, one design. Each is cut from `main` on its own branch, and each
-leaves the app working.
+Three plans, one design, one branch. The roadmap's rule is a branch per plan;
+the owner overrode it on 2026-08-18, because a branch holding only documents is
+not worth merging. Each plan still leaves the app working and the gate green.
 
 | #   | Plan                    | Contents                                                                       |
 | --- | ----------------------- | ------------------------------------------------------------------------------ |

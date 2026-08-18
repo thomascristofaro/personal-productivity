@@ -10,7 +10,9 @@
 
 **Spec:** `docs/superpowers/specs/2026-08-18-catalogue-and-purchases-design.md` — §8 (the models and the transaction), §9 (the screens), §10 (the subtraction and its four cases), §13 (testing), §15 (what is deliberately out).
 
-**This is plan C of three.** Cut from `main` after **A** (`2026-08-18-catalogue.md`) and **B** (`2026-08-18-shopping-list-again.md`) have merged: it names `CatalogItem`, `mergeLines`, `groupByAisle` in its new home, and the `days` column.
+**This is plan C of three.** It runs after **A** (`2026-08-18-catalogue.md`) and **B** (`2026-08-18-shopping-list-again.md`): it names `CatalogItem`, `mergeLines`, `groupByAisle` in its new home, and the `days` column.
+
+**All three plans land on one branch, `docs/catalog-and-purchases-design`, and one pull request.** The roadmap's standing rule is one branch per plan; the owner overrode it on 2026-08-18, on the grounds that merging a branch that contains only a design document and three plans buys nothing. Each plan still ends with a working app and a green gate, so the branch is mergeable at every task boundary — it is just not merged until C is done.
 
 ## Global Constraints
 
@@ -1572,4 +1574,4 @@ git commit -m "docs: record the purchase history as shipped
 Co-authored-by: Claude Opus 5 <noreply@anthropic.com>"
 ```
 
-Then `superpowers:finishing-a-development-branch`. One PR, squash-merged, branch deleted.
+Then `superpowers:finishing-a-development-branch`, for the whole branch and all three plans at once. One PR, squash-merged, branch deleted.

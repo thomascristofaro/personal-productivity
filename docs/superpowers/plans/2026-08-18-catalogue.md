@@ -10,7 +10,9 @@
 
 **Spec:** `docs/superpowers/specs/2026-08-18-catalogue-and-purchases-design.md` — §3 (the rename and the migration), §4 (normalisation), §11 (the screens), §13 (testing). Read §3 before Task 1: it contains the SQL and the reason it is written by hand.
 
-**This is plan A of three.** B (`2026-08-18-shopping-list-again.md`) and C (`2026-08-18-shopping-done.md`) both name `CatalogItem`, so this one lands first.
+**This is plan A of three.** B (`2026-08-18-shopping-list-again.md`) and C (`2026-08-18-shopping-done.md`) both name `CatalogItem`, so this one runs first.
+
+**All three plans land on one branch, `docs/catalog-and-purchases-design`, and one pull request.** The roadmap's standing rule is one branch per plan; the owner overrode it on 2026-08-18, on the grounds that merging a branch that contains only a design document and three plans buys nothing. Each plan still ends with a working app and a green gate, so the branch is mergeable at every task boundary — it is just not merged until C is done.
 
 ## Global Constraints
 
@@ -1137,6 +1139,6 @@ git commit -m "docs: record the catalogue plan as shipped
 Co-authored-by: Claude Opus 5 <noreply@anthropic.com>"
 ```
 
-- [ ] **Step 4: Finish the branch**
+- [ ] **Step 4: Hand over to plan B**
 
-Use `superpowers:finishing-a-development-branch`. One PR, squash-merged — the roadmap's standing decision — and the branch deleted afterwards. Plan B is cut from `main`, not from this branch.
+Nothing is merged here. `pnpm verify` is green, the checklist above passed, and the branch carries a working app — that is what plan B builds on. Push, so the pull request shows the work, and start plan B's Task 1 on the same branch.

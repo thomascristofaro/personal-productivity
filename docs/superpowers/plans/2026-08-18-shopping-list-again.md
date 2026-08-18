@@ -8,9 +8,11 @@
 
 **Tech Stack:** Prisma 7 / PostgreSQL, Zod 4, Next.js 16 App Router, React 19, shadcn/ui on Base UI (`maia` / `olive` / `lime`).
 
-**Spec:** `docs/superpowers/specs/2026-08-18-catalogue-and-purchases-design.md` — §5 (days), §6 (the merge and every one of its rules), §7 (the drawer), §13 (testing), §14 (the defect Task 1 chases).
+**Spec:** `docs/superpowers/specs/2026-08-18-catalogue-and-purchases-design.md` — §5 (days), §6 (the merge and every one of its rules), §7 (the drawer), §13 (testing). §14 is withdrawn: the owner confirmed on 2026-08-18 that the hand-added quantity was their own mistake and not a defect, so this plan does not chase it. Task 7's checklist still checks the quantity is rendered, which costs nothing and would catch it if it were ever real.
 
-**This is plan B of three.** It is cut from `main` **after plan A has merged**: everything here names `CatalogItem`, `lib/services/catalog.ts` and `lib/schemas/catalog.ts`. Plan C is cut after this one.
+**This is plan B of three.** It runs **after plan A is finished**: everything here names `CatalogItem`, `lib/services/catalog.ts` and `lib/schemas/catalog.ts`. Plan C runs after this one.
+
+**All three plans land on one branch, `docs/catalog-and-purchases-design`, and one pull request.** The roadmap's standing rule is one branch per plan; the owner overrode it on 2026-08-18, on the grounds that merging a branch that contains only a design document and three plans buys nothing. Each plan still ends with a working app and a green gate, so the branch is mergeable at every task boundary — it is just not merged until C is done.
 
 ## Global Constraints
 
@@ -29,7 +31,7 @@
 
 ## Testing
 
-Per `docs/conventions/testing.md`: Zod schemas and pure functions are tested; React components are not — `vitest.config.ts` runs `environment: "node"` with no DOM. The two pure modules this plan touches are where the risk is, and they get the tests. Component tasks verify with `pnpm verify` plus the written browser check in Task 8.
+Per `docs/conventions/testing.md`: Zod schemas and pure functions are tested; React components are not — `vitest.config.ts` runs `environment: "node"` with no DOM. The two pure modules this plan touches are where the risk is, and they get the tests. Component tasks verify with `pnpm verify` plus the written browser check in Task 7.
 
 ## The shell
 
@@ -81,45 +83,7 @@ pnpm verify
 
 ---
 
-## Task 1: Why a hand-added line shows no quantity
-
-**REQUIRED SUB-SKILL: `superpowers:systematic-debugging`.** The defect is reported and real; reading the code does not account for it. Task 7 replaces the form that has it, so this has to be understood _before_ the rewrite, or the rewrite either carries the cause forward or hides it — and neither is knowing.
-
-**Files:** whatever the diagnosis names. Possibly none.
-
-- [ ] **Step 1: Reproduce it**
-
-At 390px, on `/spesa/<the current week>`, with a list already generated: fill the form at the foot with name `sacchetti`, quantity `3`, unit empty, reparto `casa e pulizia`. Submit. Record exactly what the new row renders.
-
-- [ ] **Step 2: Bisect the path**
-
-The value crosses four boundaries. Find the first one it does not survive, rather than guessing:
-
-1. **The DOM** — before submitting, in the console: `document.querySelector('#quantity').value`.
-2. **The action** — temporarily `console.log(formData.get("quantity"))` at the top of `addItem` in `app/(app)/spesa/[weekStart]/actions.ts`. Server logs land in the `pnpm dev` terminal.
-3. **The schema** — log `input.success` and `input.error?.issues` in the same place.
-4. **The row** — `pnpm db:studio`, table `ShoppingListItem`, newest row, column `quantity`.
-
-- [ ] **Step 3: Write down the finding**
-
-One paragraph, in this task, saying which boundary lost it and why. If the answer is that the value was never typed — the form is below the fold and the field is easy to miss — that is a finding too, and Task 7's drawer is the fix.
-
-- [ ] **Step 4: Fix it, or record that Task 7 does**
-
-If the cause is in code that Task 7 deletes, do not patch it: note it here and add a case to Task 7's browser checklist that would catch it again. If the cause is in code that survives — the action, the schema, the service, the row — fix it now, with a test if the broken thing is pure.
-
-- [ ] **Step 5: Remove the logging, run the gate, commit**
-
-```powershell
-$env:PATH = ($env:PATH -split ';' | Where-Object { $_ -notmatch 'app\.asar' }) -join ';'
-pnpm verify
-```
-
-Commit only if Step 4 changed a file. A commit whose only content is a finding belongs in this plan document instead.
-
----
-
-## Task 2: `dayLabels`, in one place
+## Task 1: `dayLabels`, in one place
 
 **Files:**
 
@@ -229,7 +193,7 @@ Co-authored-by: Claude Opus 5 <noreply@anthropic.com>"
 
 ---
 
-## Task 3: A line knows which days it is for
+## Task 2: A line knows which days it is for
 
 **Files:**
 
@@ -452,7 +416,7 @@ Co-authored-by: Claude Opus 5 <noreply@anthropic.com>"
 
 ---
 
-## Task 4: The merge, in the read path
+## Task 3: The merge, in the read path
 
 The heart of the plan. Everything here is pure and has no database, which is why it gets the tests and the screen does not.
 
@@ -862,7 +826,7 @@ Expected: PASS, 22 cases.
 
 Delete `groupByAisle` and the `AisleGroup` type from `lib/services/shopping-lists.ts`, and delete the whole `describe("groupByAisle")` block from `lib/services/shopping-lists.test.ts` — it now lives in `shopping-view.test.ts` in its merged-line form. If nothing is left in `shopping-lists.test.ts`, delete the file: `isListStale` is tested in `menus.test.ts`, which is where it lives.
 
-`app/(app)/spesa/[weekStart]/page.tsx` imports `groupByAisle` from the old module. Leave it broken until Task 6 — or, if a red `tsc` between tasks is intolerable, change the import now and add `mergeLines` around it in the same edit; Task 6 then only changes the rendering.
+`app/(app)/spesa/[weekStart]/page.tsx` imports `groupByAisle` from the old module. Leave it broken until Task 5 — or, if a red `tsc` between tasks is intolerable, change the import now and add `mergeLines` around it in the same edit; Task 5 then only changes the rendering.
 
 - [ ] **Step 6: Run the gate and commit**
 
@@ -893,7 +857,7 @@ Co-authored-by: Claude Opus 5 <noreply@anthropic.com>"
 
 ---
 
-## Task 5: One line, several ids
+## Task 4: One line, several ids
 
 **Files:**
 
@@ -1069,7 +1033,7 @@ $env:PATH = ($env:PATH -split ';' | Where-Object { $_ -notmatch 'app\.asar' }) -
 pnpm verify
 ```
 
-`tsc` will point at `components/shopping/shopping-item-row.tsx`, which still posts one id. Task 6 fixes it; if a red gate between tasks is intolerable, do Steps 1-3 of Task 6 before committing this one.
+`tsc` will point at `components/shopping/shopping-item-row.tsx`, which still posts one id. Task 5 fixes it; if a red gate between tasks is intolerable, do Steps 1-3 of Task 5 before committing this one.
 
 ```bash
 git add lib/schemas lib/services app/\(app\)/spesa
@@ -1085,7 +1049,7 @@ Co-authored-by: Claude Opus 5 <noreply@anthropic.com>"
 
 ---
 
-## Task 6: The row says what it is for
+## Task 5: The row says what it is for
 
 **Files:**
 
@@ -1095,7 +1059,7 @@ Co-authored-by: Claude Opus 5 <noreply@anthropic.com>"
 
 **Interfaces:**
 
-- Consumes: `MergedLine`, `AisleGroup`, `mergeLines`, `groupByAisle` from Task 4; `dayLabels` from Task 2.
+- Consumes: `MergedLine`, `AisleGroup`, `mergeLines`, `groupByAisle` from Task 3; `dayLabels` from Task 1.
 - Produces: `ShoppingItemRow` taking `line: MergedLine` and `dayLabels: string[]`.
 
 `components/**` may not import `lib/services/**`, so the row cannot import `MergedLine`. It declares the shape it needs, exactly as it declares `ShoppingRow` today, and the page's call site is what checks the two agree.
@@ -1270,7 +1234,7 @@ Co-authored-by: Claude Opus 5 <noreply@anthropic.com>"
 
 ---
 
-## Task 7: The `+`, and anything you like on the list
+## Task 6: The `+`, and anything you like on the list
 
 **Files:**
 
@@ -1488,7 +1452,7 @@ export async function addItem(
 }
 ```
 
-The old version swallowed every refusal and re-rendered as if nothing had happened, which is how a quantity can vanish without a word — see Task 1.
+The old version swallowed every refusal and re-rendered as if nothing had happened. Nothing is known to be wrong with it, but an action that cannot say no is one whose failures are only ever discovered by noticing something missing.
 
 - [ ] **Step 5: The drawer**
 
@@ -1791,7 +1755,7 @@ Co-authored-by: Claude Opus 5 <noreply@anthropic.com>"
 
 ---
 
-## Task 8: The browser checklist, and the roadmap
+## Task 7: The browser checklist, and the roadmap
 
 **Files:**
 
@@ -1807,7 +1771,7 @@ Reuse the running `pnpm dev`. Every point is pass or fail; a fail is fixed befor
 4. The header carries a `+` and «Rigenera», in that order, and neither wraps.
 5. `+` opens the drawer. It has no Tipo and no checkbox yet, because nothing is typed.
 6. Type `pomodori` — an existing entry: the aisle and unit fill in, and **no** Tipo or checkbox appears.
-7. Quantity `200`, submit: the drawer closes and the line reads the **sum** of the generated quantity and 200. **This is the case Task 1 was about — the quantity must be there.**
+7. Quantity `200`, submit: the drawer closes and the line reads the **sum** of the generated quantity and 200 — the quantity must actually be rendered, not just the name.
 8. Untick that line: it unticks. Tick it: it ticks. Refresh: it is still ticked.
 9. The bin on that line removes only the 200 g; the generated quantity stays.
 10. `+`, type `Shampoo`: Tipo appears defaulting to `Prodotto`, and the checkbox «Non salvare nel catalogo» appears unticked.
@@ -1829,8 +1793,6 @@ Update `Last updated:`. Under the standing decisions, add the one that will othe
 
 > **Duplicate shopping rows are merged in the read path, not in the database — 2026-08-18.** `mergeLines` in `lib/services/shopping-view.ts` unites rows with the same name and unit when the list is rendered. The rows stay apart in Postgres on purpose: a regeneration deletes the generated rows and rebuilds them, and a hand-added quantity has to survive that. Do not "fix" it by summing on the way in.
 
-If Task 1 found something worth keeping, put its paragraph here too.
-
 - [ ] **Step 3: Commit and finish the branch**
 
 ```bash
@@ -1840,4 +1802,4 @@ git commit -m "docs: record the shopping-list revision as shipped
 Co-authored-by: Claude Opus 5 <noreply@anthropic.com>"
 ```
 
-Then `superpowers:finishing-a-development-branch`. One PR, squash-merged, branch deleted. Plan C is cut from `main`.
+Nothing is merged here either. Push, and start plan C's Task 1 on the same branch.
