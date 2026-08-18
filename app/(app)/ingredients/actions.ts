@@ -7,9 +7,9 @@ import { z } from "zod"
 import type { IngredientFormState } from "@/components/ingredients/ingredient-form"
 import { requireSession } from "@/lib/auth"
 import {
-  IngredientInputSchema,
-  IngredientNameSchema,
-} from "@/lib/schemas/ingredient"
+  CatalogItemInputSchema,
+  CatalogItemNameSchema,
+} from "@/lib/schemas/catalog"
 import {
   createFullIngredient,
   deleteIngredient,
@@ -53,7 +53,7 @@ export async function saveIngredient(
   _state: IngredientFormState,
   formData: FormData
 ): Promise<IngredientFormState> {
-  const parsed = IngredientInputSchema.safeParse({
+  const parsed = CatalogItemInputSchema.safeParse({
     name: formData.get("name"),
     defaultUnit: formData.get("defaultUnit") ?? "",
     aisle: formData.get("aisle") ?? "",
@@ -72,7 +72,7 @@ export async function saveIngredient(
   const rawOriginal = formData.get("originalName")
   const original =
     typeof rawOriginal === "string" && rawOriginal !== ""
-      ? IngredientNameSchema.safeParse(rawOriginal)
+      ? CatalogItemNameSchema.safeParse(rawOriginal)
       : null
 
   const failure = (message: string): IngredientFormState => ({
@@ -116,7 +116,7 @@ export async function saveIngredient(
 }
 
 export async function removeIngredient(name: string): Promise<void> {
-  const parsed = IngredientNameSchema.safeParse(name)
+  const parsed = CatalogItemNameSchema.safeParse(name)
   if (!parsed.success) return
 
   await requireSession()

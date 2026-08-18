@@ -1,6 +1,6 @@
 import { AISLE_ORDER } from "@/lib/aisles"
 import { db } from "@/lib/db"
-import type { IngredientInput } from "@/lib/schemas/ingredient"
+import type { CatalogItemInput } from "@/lib/schemas/catalog"
 
 /** Thrown by `createIngredient` when the name is already in the catalogue. */
 export class IngredientExistsError extends Error {
@@ -257,7 +257,7 @@ export async function getIngredient(
  * @throws IngredientExistsError When the name is already in the catalogue.
  */
 export async function createFullIngredient(
-  input: IngredientInput
+  input: CatalogItemInput
 ): Promise<void> {
   if (!isKnownAisle(input.aisle)) throw new UnknownAisleError(input.aisle)
 
@@ -285,7 +285,7 @@ export async function createFullIngredient(
  */
 export async function updateIngredient(
   name: string,
-  input: IngredientInput
+  input: CatalogItemInput
 ): Promise<void> {
   if (!isKnownAisle(input.aisle)) throw new UnknownAisleError(input.aisle)
 

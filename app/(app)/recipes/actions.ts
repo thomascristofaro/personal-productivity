@@ -6,7 +6,7 @@ import { z } from "zod"
 
 import type { RecipeFormState } from "@/components/recipes/recipe-form-state"
 import { requireSession } from "@/lib/auth"
-import { IngredientNameSchema } from "@/lib/schemas/ingredient"
+import { CatalogItemNameSchema } from "@/lib/schemas/catalog"
 import { RecipeInputSchema } from "@/lib/schemas/recipe"
 import {
   createIngredient,
@@ -184,7 +184,7 @@ export async function saveRecipe(
 export async function addIngredient(
   name: string
 ): Promise<IngredientOption | null> {
-  const parsed = IngredientNameSchema.safeParse(name)
+  const parsed = CatalogItemNameSchema.safeParse(name)
   if (!parsed.success) return null
 
   await requireSession()

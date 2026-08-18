@@ -1,20 +1,14 @@
 import { z } from "zod"
 
-import { INGREDIENT_NAME_MAX, UNIT_MAX } from "@/lib/schemas/ingredient"
+import { catalogName, UNIT_MAX } from "@/lib/schemas/catalog"
 
 export const ShoppingItemIdSchema = z.cuid("Questa riga non è valida.")
 
 export const ManualItemSchema = z.object({
-  // Not IngredientNameSchema: a manual item is free text and need not exist in
-  // the catalogue — "sacchetti" never will. Only the length is shared.
-  name: z
-    .string()
-    .trim()
-    .min(1, "Scrivi che cosa serve.")
-    .max(
-      INGREDIENT_NAME_MAX,
-      `Il nome può avere al massimo ${INGREDIENT_NAME_MAX} caratteri.`
-    ),
+  // A manual line need not exist in the catalogue — "sacchetti" never will —
+  // but it is normalised the same way, because the merge of design document
+  // section 6 keys on this name and "Pomodori" would open a second line.
+  name: catalogName("Scrivi che cosa serve."),
   // A plain string, not an enum: lib/schemas may import Zod and its siblings,
   // so AISLE_ORDER is out of reach. The service checks membership.
   aisle: z

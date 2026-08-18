@@ -38,6 +38,17 @@ describe("ManualItemSchema", () => {
     ).toBe("sacchetti")
   })
 
+  it("lowercases the name, so it merges with a generated line", () => {
+    expect(
+      ManualItemSchema.parse({
+        ...valid,
+        name: "Pomodori",
+        quantity: 200,
+        unit: "g",
+      }).name
+    ).toBe("pomodori")
+  })
+
   it("rejects an empty name", () => {
     const result = ManualItemSchema.safeParse({ ...valid, name: "   " })
     expect(result.success).toBe(false)
