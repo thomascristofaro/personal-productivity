@@ -8,6 +8,38 @@ import {
 
 export const ShoppingItemIdSchema = z.cuid("Questa riga non è valida.")
 
+export const PurchaseIdSchema = z.cuid("Questa spesa non è valida.")
+
+// Ten thousand euro. Far above any weekly shop and far below what a slipped key
+// produces, which is the point: this is what catches 100000 typed for 100,00.
+const MAX_CENTS = 1_000_000
+
+const AMOUNT = /^\d+([.]\d{1,2})?$/
+
+/**
+ * The amount paid, as typed. Empty means "not yet", which is a real state: a
+ * shop can be closed at the till and priced when the receipt is to hand.
+ *
+ * Named for what it returns. A name saying "amount" would invite somebody to
+ * treat the output as euro, and it is cents.
+ */
+export const EuroCentsSchema = z
+  .string()
+  .trim()
+  // One comma, because an Italian keyboard gives a comma and a numeric keypad
+  // gives a dot. A thousands separator therefore fails the pattern below, and
+  // the message says so rather than reading 1.234,56 as something else.
+  .transform((value) => value.replace(",", "."))
+  .refine((value) => value === "" || AMOUNT.test(value), {
+    message: "Scrivi l’importo come 12,34, senza separatore delle migliaia.",
+  })
+  // Math.round and not a bare multiplication: 12.34 * 100 is 1233.9999999999998,
+  // and truncating loses a cent on roughly every third amount.
+  .transform((value) => (value === "" ? null : Math.round(Number(value) * 100)))
+  .refine((cents) => cents === null || cents <= MAX_CENTS, {
+    message: "L’importo sembra troppo alto. Controlla la virgola.",
+  })
+
 // A merged line stands for every row behind it, so a tick posts several ids.
 // Twenty is far above what one name and one unit can realistically produce and
 // far below what a forged post would want.

@@ -2,10 +2,69 @@ import { describe, expect, it } from "vitest"
 
 import {
   AddShoppingItemSchema,
+  EuroCentsSchema,
   ManualItemSchema,
   ShoppingItemIdSchema,
   ShoppingItemIdsSchema,
 } from "@/lib/schemas/shopping"
+
+describe("EuroCentsSchema", () => {
+  it("takes the comma an Italian keyboard produces", () => {
+    expect(EuroCentsSchema.parse("12,34")).toBe(1234)
+  })
+
+  it("takes a dot too, because a numeric keypad may give one", () => {
+    expect(EuroCentsSchema.parse("12.34")).toBe(1234)
+  })
+
+  it("takes a whole number of euro", () => {
+    expect(EuroCentsSchema.parse("12")).toBe(1200)
+  })
+
+  it("takes a single decimal", () => {
+    expect(EuroCentsSchema.parse("12,5")).toBe(1250)
+  })
+
+  it("does not lose a cent to floating point", () => {
+    expect(EuroCentsSchema.parse("0,07")).toBe(7)
+    expect(EuroCentsSchema.parse("1,15")).toBe(115)
+  })
+
+  it("accepts nothing spent", () => {
+    expect(EuroCentsSchema.parse("0")).toBe(0)
+  })
+
+  it("reads an empty field as an amount to fill in later", () => {
+    expect(EuroCentsSchema.parse("")).toBeNull()
+    expect(EuroCentsSchema.parse("   ")).toBeNull()
+  })
+
+  it("refuses a negative amount, which no shop produces", () => {
+    expect(EuroCentsSchema.safeParse("-1").success).toBe(false)
+  })
+
+  it("refuses three decimals, because that is a typo rather than a price", () => {
+    expect(EuroCentsSchema.safeParse("12,345").success).toBe(false)
+  })
+
+  it("refuses words", () => {
+    expect(EuroCentsSchema.safeParse("dodici").success).toBe(false)
+  })
+
+  it("refuses a thousands separator, and says so in Italian", () => {
+    const result = EuroCentsSchema.safeParse("1.234,56")
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues[0].message).toBe(
+        "Scrivi l’importo come 12,34, senza separatore delle migliaia."
+      )
+    }
+  })
+
+  it("refuses an amount no weekly shop reaches, so a slipped key is caught", () => {
+    expect(EuroCentsSchema.safeParse("100000").success).toBe(false)
+  })
+})
 
 describe("ShoppingItemIdSchema", () => {
   it("accepts a cuid", () => {

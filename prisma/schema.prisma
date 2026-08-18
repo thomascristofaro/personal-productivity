@@ -128,6 +128,7 @@ model ShoppingList {
   menuId      String             @unique
   menu        Menu               @relation(fields: [menuId], references: [id], onDelete: Cascade)
   items       ShoppingListItem[]
+  purchases   Purchase[]
   createdAt   DateTime           @default(now())
   // Set on every regeneration. Replacing the child items does not touch this
   // row, so `@updatedAt` would stand still across exactly the event it names.
@@ -154,6 +155,40 @@ model ShoppingListItem {
   manual      Boolean      @default(false)
 
   @@index([listId])
+}
+
+// One trip to the shop. Hangs off the ShoppingList rather than off the week, so
+// "what has already been bought for this list" is a single query — which is what
+// stops a regeneration putting the tomatoes back. See sections 8 and 10 of
+// docs/superpowers/specs/2026-08-18-catalogue-and-purchases-design.md.
+model Purchase {
+  id          String         @id @default(cuid())
+  listId      String
+  list        ShoppingList   @relation(fields: [listId], references: [id], onDelete: Cascade)
+  purchasedAt DateTime       @default(now())
+  // Integer cents, not Decimal: a Prisma Decimal does not survive the
+  // server-to-client component boundary, so every read would need a conversion
+  // by hand and a forgotten one is a runtime error rather than a type error.
+  // Nullable because the amount can be filled in later, from the receipt.
+  totalCents  Int?
+  items       PurchaseItem[]
+
+  @@index([listId])
+}
+
+// A copy, not a reference. The shopping row is deleted when the shop closes, and
+// a history must say what was bought then rather than what the catalogue says
+// now.
+model PurchaseItem {
+  id         String   @id @default(cuid())
+  purchaseId String
+  purchase   Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  name       String
+  quantity   Float?
+  unit       String?
+  aisle      String
+
+  @@index([purchaseId])
 }
 
 // The models below are better-auth's core schema. Their field names are fixed
