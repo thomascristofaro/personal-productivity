@@ -76,10 +76,20 @@ model CatalogItem {
 }
 ```
 
-`RecipeIngredient.ingredientName` becomes `itemName`, its relation field
-`ingredient` becomes `item`. `kind` earns its place in one place only: the
-ingredient picker inside the recipe form lists `INGREDIENT` and nothing else, so
-shampoo can never end up in a recipe.
+`kind` earns its place in one place only: the ingredient picker inside the
+recipe form lists `INGREDIENT` and nothing else, so shampoo can never end up in
+a recipe.
+
+**`RecipeIngredient` keeps saying `ingredientName`.** An earlier draft of this
+document renamed it to `itemName`; mapping the references showed that to be
+churn without a gain. `RecipeIngredient` is by definition about ingredients —
+the model name already says so, and the picker that fills it is filtered to
+`INGREDIENT`. Renaming the column would additionally rename a Zod field, a form
+field posted by `components/ingredients/ingredient-rows.tsx`, and their
+assertions across four test files, none of which would read any better
+afterwards. What is renamed is the thing that stopped being true: the catalogue
+model. The relation field on `RecipeIngredient` stays `ingredient`, because from
+a recipe's side that is what it is.
 
 ### The migration is written by hand
 
@@ -93,20 +103,17 @@ Postgres performs atomically and which carry the foreign key with them:
 ALTER TABLE "Ingredient" RENAME TO "CatalogItem";
 ALTER INDEX "Ingredient_pkey" RENAME TO "CatalogItem_pkey";
 
-ALTER TABLE "RecipeIngredient" RENAME COLUMN "ingredientName" TO "itemName";
-ALTER TABLE "RecipeIngredient"
-  RENAME CONSTRAINT "RecipeIngredient_ingredientName_fkey" TO "RecipeIngredient_itemName_fkey";
-ALTER INDEX "RecipeIngredient_ingredientName_idx" RENAME TO "RecipeIngredient_itemName_idx";
-
 CREATE TYPE "CatalogItemKind" AS ENUM ('INGREDIENT', 'PRODUCT');
 ALTER TABLE "CatalogItem"
   ADD COLUMN "kind" "CatalogItemKind" NOT NULL DEFAULT 'INGREDIENT';
 ```
 
-The constraint and index renames are not cosmetic: leaving them named after the
-old column is what makes a later `prisma migrate dev` believe the schema has
-drifted. The plan verifies by running `prisma migrate dev` again afterwards and
-seeing it generate nothing.
+The primary-key rename is not cosmetic: leaving the index named after the old
+table is what makes a later `prisma migrate dev` believe the schema has drifted.
+`RecipeIngredient` needs no statement at all, because its column keeps its name
+and Postgres carries the foreign key across the table rename by itself. The plan
+verifies by running `prisma migrate dev` again afterwards and seeing it generate
+nothing.
 
 The following are renamed with the model, because a file called
 `ingredients.ts` that exports a catalogue of shampoo is a lie:
@@ -304,7 +311,9 @@ conversion by hand at the call site — and forgetting one is a runtime error in
 production, not a type error. Integer cents have neither that problem nor
 floating-point rounding. The input accepts `12,34` and `12.34` alike via an
 `EuroAmountSchema` in `lib/schemas/shopping.ts` that transforms to cents; the
-Italian keyboard produces a comma.
+Italian keyboard produces a comma. The schema is named for what it returns —
+`EuroCentsSchema` — because a name saying "amount" would invite somebody to
+treat its output as euro.
 
 **Lines are copied, not referenced.** The shopping row is deleted when the shop
 closes, and in any case a history must say what was bought then, not what the
@@ -411,7 +420,7 @@ screen does not — `docs/conventions/testing.md`.
   that motivated it — a manual line and a generated line becoming one, and the
   bin removing only the manual half.
 - `catalog.test.ts` (was `ingredients.test.ts`): the `kind` filter.
-- The schema tests: lowercasing, and `EuroAmountSchema` — `12,34` and `12.34`
+- The schema tests: lowercasing, and `EuroCentsSchema` — `12,34` and `12.34`
   both give 1234, `12` gives 1200, `0` is accepted, `-1` and `12,345` are
   refused. A free shop is a real thing; a negative one is not, and three
   decimals means a typo rather than a price.
