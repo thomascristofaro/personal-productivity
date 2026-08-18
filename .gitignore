@@ -43,6 +43,11 @@ next-env.d.ts
 /.claude/skills
 /.windsurf
 
+# the one-off import of the owners' handwritten menu history. It is their
+# personal data — what they ate, and which evenings they were away from home —
+# and this repository is public
+/prisma/import
+
 # snapshots and traces the playwright MCP server drops while driving the app
 # through a manual checklist — output of a verification, never a source
 /.playwright-mcp
