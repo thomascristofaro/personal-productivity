@@ -90,6 +90,40 @@ renamed to `aglio fresco` with its aisle moved to `dispensa`, all three as
 checklist steps. **Re-running the seed would leave `aglio` sitting next to
 `aglio fresco`**, so reset the database rather than reseeding over it.
 
+**None of it is in the database any more.** The history import below was rerun
+with `--reset` on the owner's call, which emptied the recipes, the ingredients
+and the menus first. The paragraph above is kept because it explains rows that
+existed for two days, not rows anybody will meet again.
+
+### The Keep history was imported on 2026-08-17
+
+The owners kept their weekly menus in a Google Keep note before this app
+existed. Ten weeks of it are now in the database: **31 recipes and 131 slots**
+across 2026-06-01 to 2026-08-10, the week of 03/08 skipped because they were
+away. The most cooked dish appears seven times, which is the point — nothing
+recorded when a recipe was last cooked, and now the `MenuSlot` rows carry enough
+history for the cooldown of §6.2 to be derived rather than waited for.
+
+The catalogue went from 92 to 108 entries and stopped being generic Italian
+cookbook: the owners cook cold summer salads, so `cetrioli`, `feta`, `valeriana`,
+`farro`, `cous cous`, `fiocchi di latte`, `straccetti veggie` and the rest went
+in, and the herbs they never buy came out.
+
+**The data files are git-ignored** — `/prisma/import`, and the folder holds the
+transcription, `run.ts` and `verify.ts`. This repository is public, and ten weeks
+of menus say which evenings two named people were away from home. `run.ts` is
+idempotent and validates everything before writing; `verify.ts` reads the result
+back through `getMenuWeek`.
+
+**The database now holds exactly what those files say and nothing else.** Neither
+the seed nor an ordinary import deletes anything, so rows dropped from the source
+files survive — nineteen ingredients and four recipes did, until `--reset` took
+them. `verify.ts` lists any that appear again.
+
+`--reset` is a flag and not the default on purpose: a recipe added from the app
+later is real work, and rerunning the import must not be what destroys it. Use it
+only when the files are meant to be the whole truth.
+
 ### The shell changed on 2026-08-16
 
 Three things, on the owner's call, none of them planned in a document:
