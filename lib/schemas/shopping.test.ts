@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest"
 
-import { ManualItemSchema, ShoppingItemIdSchema } from "@/lib/schemas/shopping"
+import {
+  ManualItemSchema,
+  ShoppingItemIdSchema,
+  ShoppingItemIdsSchema,
+} from "@/lib/schemas/shopping"
 
 describe("ShoppingItemIdSchema", () => {
   it("accepts a cuid", () => {
@@ -11,6 +15,29 @@ describe("ShoppingItemIdSchema", () => {
 
   it("rejects anything else", () => {
     expect(ShoppingItemIdSchema.safeParse("42").success).toBe(false)
+  })
+})
+
+describe("ShoppingItemIdsSchema", () => {
+  const id = "cm3xk1p2h0000abcdefghijkl"
+
+  it("takes the several ids one merged line stands for", () => {
+    expect(ShoppingItemIdsSchema.parse([id, id])).toEqual([id, id])
+  })
+
+  it("refuses an empty list, which would tick nothing and report success", () => {
+    expect(ShoppingItemIdsSchema.safeParse([]).success).toBe(false)
+  })
+
+  it("refuses anything that is not an id", () => {
+    expect(ShoppingItemIdsSchema.safeParse(["1 OR 1=1"]).success).toBe(false)
+  })
+
+  it("caps the count, so a forged post cannot tick the whole list at once", () => {
+    expect(
+      ShoppingItemIdsSchema.safeParse(Array.from({ length: 21 }, () => id))
+        .success
+    ).toBe(false)
   })
 })
 

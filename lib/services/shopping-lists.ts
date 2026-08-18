@@ -1,4 +1,4 @@
-import { AISLE_ORDER, AISLE_UNKNOWN, aisleRank } from "@/lib/aisles"
+import { AISLE_ORDER, AISLE_UNKNOWN } from "@/lib/aisles"
 import { db } from "@/lib/db"
 import type { ManualItem } from "@/lib/schemas/shopping"
 import { isListStale } from "@/lib/services/menus"
@@ -26,8 +26,6 @@ export class NoListError extends Error {
 
 export type StoredItem = ShoppingItem & { id: string }
 
-export type AisleGroup = { aisle: string; items: StoredItem[] }
-
 export type ShoppingListView = {
   items: StoredItem[]
   generatedAt: Date
@@ -46,41 +44,6 @@ const itemFields = {
   manual: true,
   days: true,
 } as const
-
-/**
- * Gathers the list into the aisles of the supermarket walking order.
- *
- * Exported for its own test. Sorts as well as groups, because the rows arrive
- * from Postgres in whatever order it liked and no SQL `ORDER BY` can express a
- * walking order that is not alphabetical.
- *
- * @param items Every line of the list.
- * @returns One group per aisle that has items, in walking order, each group's
- *   items by name.
- */
-export function groupByAisle(items: StoredItem[]): AisleGroup[] {
-  const sorted = [...items].sort(
-    (a, b) =>
-      aisleRank(a.aisle) - aisleRank(b.aisle) ||
-      a.name.localeCompare(b.name, "it")
-  )
-
-  const groups: AisleGroup[] = []
-
-  for (const item of sorted) {
-    const last = groups[groups.length - 1]
-    // Adjacency is enough because the sort already put one aisle's items
-    // together, and it keeps an unrecognised aisle folded in with the catch-all
-    // exactly the way aisleRank ranks it.
-    if (last !== undefined && aisleRank(last.aisle) === aisleRank(item.aisle)) {
-      last.items.push(item)
-      continue
-    }
-    groups.push({ aisle: item.aisle, items: [item] })
-  }
-
-  return groups
-}
 
 /**
  * Reads a week's list, and whether the menu has moved on since it was built.
@@ -200,24 +163,26 @@ export async function regenerateShoppingList(weekStart: Date): Promise<void> {
 }
 
 /**
- * Ticks or unticks one line, recording who did it.
+ * Ticks or unticks every row behind one line, recording who did it.
  *
- * Last-write-wins per item, which §8 of the design accepts at this scale: two
- * people and a checkbox.
+ * A line the screen shows is several rows when the menu and a hand-added entry
+ * both asked for the same thing, and half a line ticked is not a state the
+ * shopper can express. Last-write-wins per row, which §8 of the original design
+ * accepts at this scale: two people and a checkbox.
  *
- * @param id The line's id.
+ * @param ids Every row behind the line.
  * @param actorId The session's user id — never a value from the request body.
  * @param checked The new state.
  * @returns Nothing.
- * @throws NoListError When the line is already gone.
+ * @throws NoListError When none of the rows is there any more.
  */
 export async function setItemChecked(
-  id: string,
+  ids: string[],
   actorId: string,
   checked: boolean
 ): Promise<void> {
   const updated = await db.shoppingListItem.updateMany({
-    where: { id },
+    where: { id: { in: ids } },
     data: {
       checked,
       checkedById: checked ? actorId : null,
@@ -266,14 +231,18 @@ export async function addManualItem(
 }
 
 /**
- * Removes a line added by hand.
+ * Removes the rows of a line that were added by hand.
  *
- * Generated lines are not removable: the next regeneration would bring them
- * back, so the `where` refuses them rather than offering a button that lies.
+ * Generated rows are not removable: the next regeneration would bring them
+ * back, so the `where` refuses them rather than offering a button that lies. A
+ * line that is part generated and part hand-added therefore survives with only
+ * what the menu asks for, which is the point.
  *
- * @param id The line's id.
+ * @param ids The rows to remove.
  * @returns Nothing.
  */
-export async function removeManualItem(id: string): Promise<void> {
-  await db.shoppingListItem.deleteMany({ where: { id, manual: true } })
+export async function removeManualItems(ids: string[]): Promise<void> {
+  await db.shoppingListItem.deleteMany({
+    where: { id: { in: ids }, manual: true },
+  })
 }

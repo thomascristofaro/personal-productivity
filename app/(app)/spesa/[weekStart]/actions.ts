@@ -4,13 +4,13 @@ import { revalidatePath } from "next/cache"
 
 import { requireSession } from "@/lib/auth"
 import { WeekStartSchema } from "@/lib/schemas/menu"
-import { ManualItemSchema, ShoppingItemIdSchema } from "@/lib/schemas/shopping"
+import { ManualItemSchema, ShoppingItemIdsSchema } from "@/lib/schemas/shopping"
 import {
   addManualItem,
   NoListError,
   NoMenuError,
   regenerateShoppingList,
-  removeManualItem,
+  removeManualItems,
   setItemChecked,
 } from "@/lib/services/shopping-lists"
 
@@ -45,9 +45,10 @@ export async function regenerate(formData: FormData): Promise<void> {
 }
 
 export async function toggle(formData: FormData): Promise<void> {
-  const id = ShoppingItemIdSchema.safeParse(formData.get("id"))
+  // getAll, not get: one line on the screen is every row behind it.
+  const ids = ShoppingItemIdsSchema.safeParse(formData.getAll("id"))
   const weekStart = WeekStartSchema.safeParse(formData.get("weekStart"))
-  if (!id.success || !weekStart.success) return
+  if (!ids.success || !weekStart.success) return
 
   // The identity comes from the session and never from the form: a client that
   // could name the ticker could tick as the other user.
@@ -55,12 +56,12 @@ export async function toggle(formData: FormData): Promise<void> {
 
   try {
     await setItemChecked(
-      id.data,
+      ids.data,
       session.userId,
       formData.get("checked") === "1"
     )
   } catch (error) {
-    // The line went away under us — a regeneration between the render and the
+    // The rows went away under us — a regeneration between the render and the
     // tap. Re-rendering shows the list as it now is.
     if (!(error instanceof NoListError)) throw error
   }
@@ -91,13 +92,15 @@ export async function addItem(formData: FormData): Promise<void> {
 }
 
 export async function removeItem(formData: FormData): Promise<void> {
-  const id = ShoppingItemIdSchema.safeParse(formData.get("id"))
+  // Only the hand-added rows of the line are posted, so a part-generated line
+  // keeps what the menu asks for.
+  const ids = ShoppingItemIdsSchema.safeParse(formData.getAll("id"))
   const weekStart = WeekStartSchema.safeParse(formData.get("weekStart"))
-  if (!id.success || !weekStart.success) return
+  if (!ids.success || !weekStart.success) return
 
   await requireSession()
 
-  await removeManualItem(id.data)
+  await removeManualItems(ids.data)
 
   revalidatePath(`/spesa/${iso(weekStart.data)}`)
 }

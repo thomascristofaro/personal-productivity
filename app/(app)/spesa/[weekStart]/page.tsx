@@ -16,8 +16,9 @@ import { AISLE_ORDER } from "@/lib/aisles"
 import { APP_TIMEZONE, DAYS_IN_WEEK } from "@/lib/config"
 import { WeekStartSchema } from "@/lib/schemas/menu"
 import { listCatalogOptions } from "@/lib/services/catalog"
-import { getShoppingList, groupByAisle } from "@/lib/services/shopping-lists"
-import { dateForDay } from "@/lib/week"
+import { getShoppingList } from "@/lib/services/shopping-lists"
+import { groupByAisle, mergeLines } from "@/lib/services/shopping-view"
+import { dateForDay, dayLabels } from "@/lib/week"
 
 export const metadata = { title: "Spesa" }
 
@@ -104,7 +105,8 @@ export default async function ShoppingWeekPage({
             </EmptyState>
           ) : (
             <ShoppingList
-              groups={groupByAisle(list.items)}
+              groups={groupByAisle(mergeLines(list.items))}
+              dayLabels={dayLabels(weekStart)}
               weekStart={week}
               toggleAction={toggle}
               removeAction={removeItem}

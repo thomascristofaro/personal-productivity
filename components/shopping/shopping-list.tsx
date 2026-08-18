@@ -8,7 +8,7 @@ import {
   type ShoppingRow,
 } from "@/components/shopping/shopping-item-row"
 
-export type ShoppingGroup = { aisle: string; items: ShoppingRow[] }
+export type ShoppingGroup = { aisle: string; lines: ShoppingRow[] }
 
 // The other phone may be ticking items off at the same time. §6.3 settles the
 // mechanism: refresh the server component, no JSON endpoint and no fetching
@@ -18,11 +18,13 @@ const REFRESH_MS = 30_000
 
 export function ShoppingList({
   groups,
+  dayLabels,
   weekStart,
   toggleAction,
   removeAction,
 }: {
   groups: ShoppingGroup[]
+  dayLabels: string[]
   weekStart: string
   toggleAction: (formData: FormData) => Promise<void>
   removeAction: (formData: FormData) => Promise<void>
@@ -54,9 +56,10 @@ export function ShoppingList({
     }
   }
 
+  // Counts lines, not rows: a merged line is one thing to pick up.
   const left = groups
-    .flatMap((group) => group.items)
-    .filter((item) => !item.checked).length
+    .flatMap((group) => group.lines)
+    .filter((line) => !line.checked).length
 
   return (
     <div className="flex flex-col gap-6">
@@ -78,10 +81,11 @@ export function ShoppingList({
             {group.aisle}
           </h2>
           <ul className="flex flex-col">
-            {group.items.map((item) => (
+            {group.lines.map((line) => (
               <ShoppingItemRow
-                key={item.id}
-                item={item}
+                key={line.key}
+                line={line}
+                dayLabels={dayLabels}
                 toggleAction={withWeek(toggleAction)}
                 removeAction={withWeek(removeAction)}
               />
