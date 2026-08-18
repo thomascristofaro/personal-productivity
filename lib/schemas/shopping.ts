@@ -3,7 +3,7 @@ import { z } from "zod"
 import {
   catalogName,
   CatalogItemKindSchema,
-  UNIT_MAX,
+  UnitSchema,
 } from "@/lib/schemas/catalog"
 
 export const ShoppingItemIdSchema = z.cuid("Questa riga non è valida.")
@@ -33,12 +33,9 @@ export const ManualItemSchema = z.object({
     .positive("La quantità deve essere maggiore di zero.")
     .max(100000, "La quantità non può superare 100000.")
     .nullable(),
-  unit: z
-    .string()
-    .trim()
-    .max(UNIT_MAX, `L’unità può avere al massimo ${UNIT_MAX} caratteri.`)
-    .nullable()
-    .transform((value) => (value === null || value === "" ? null : value)),
+  // Shared with the catalogue and the recipe row, which is what makes the
+  // numeric-unit refusal apply everywhere a unit can be typed.
+  unit: UnitSchema,
 })
 
 export type ManualItem = z.infer<typeof ManualItemSchema>

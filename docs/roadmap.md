@@ -22,22 +22,36 @@ exception — see "In flight".
 | [`2026-08-14-shopping-list`](superpowers/plans/2026-08-14-shopping-list.md)                                 | `/spesa/[weekStart]`, the aisle-grouped list, optimistic ticking, manual items, and the freshness signal over `Menu.slotsUpdatedAt`                                                           |
 | [`2026-08-15-authentication`](superpowers/plans/2026-08-15-authentication.md)                               | Google sign-in through `better-auth`, `lib/auth/`, the session gate in `middleware.ts`, `/login` and "Esci", and the four `better-auth` tables                                                |
 | [`2026-08-18-catalogue`](superpowers/plans/2026-08-18-catalogue.md)                                         | `Ingredient` renamed `CatalogItem` with a `kind`, `/catalogo` and its three chips, and names lowercased in `lib/schemas/catalog.ts`                                                           |
+| [`2026-08-18-shopping-list-again`](superpowers/plans/2026-08-18-shopping-list-again.md)                     | `days` on a line, `lib/services/shopping-view.ts` and its merge, the `+` drawer, and free items landing in the catalogue                                                                      |
 
 ## In flight
 
 **The catalogue, the shopping list and the purchase history**, on the branch
 `docs/catalog-and-purchases-design`. One design document,
 [`2026-08-18-catalogue-and-purchases-design`](superpowers/specs/2026-08-18-catalogue-and-purchases-design.md),
-and three plans: A (catalogue) is **shipped**, B
-([`shopping-list-again`](superpowers/plans/2026-08-18-shopping-list-again.md))
-and C ([`shopping-done`](superpowers/plans/2026-08-18-shopping-done.md)) are
-next, in that order.
+and three plans: A (catalogue) and B (the shopping list again) are **shipped**,
+C ([`shopping-done`](superpowers/plans/2026-08-18-shopping-done.md)) is next.
 
 **All three land on one branch, against the usual rule.** The owner's call on
 2026-08-18: merging a branch that holds only a design document and three plans
 buys nothing, so the pull request waits until there are changes worth reviewing.
 Each plan still leaves the app working and `pnpm verify` green, so the branch is
 mergeable at every task boundary.
+
+Plan B's browser checklist settled the one open question from the original
+report. **The quantity that "did not appear" was typed into the Unità field**:
+both rows the owners added by hand carry `unit: "2"` and `quantity: null`. The
+line then renders no amount, because `amountOf` needs a quantity, and it will
+not merge with the same thing bought properly, because the units differ. Not a
+code defect — but the form made it easy, so `UnitSchema` now refuses a unit that
+is only a number and says where the quantity goes. **Their two existing rows are
+still wrong in the database**; they are the owners' data and were left alone.
+
+Plan B also found that Base UI's combobox leaves its popup open after the custom
+«Crea «…»» button is clicked — Base UI closes on its own items, and that button
+is ours. It covered the two fields below it, so the first tap on Quantità went
+to the overlay. `IngredientPicker` now controls its open state. The recipe form
+uses the same picker and gets the fix with it.
 
 Two things plan A found that its own plan had not foreseen, both now fixed:
 
@@ -295,6 +309,18 @@ or `docs/conventions/` as it was decided.
   developer and asked for React and UI patterns to come from the skills in
   `.agents/skills/` rather than from memory, and for any debatable frontend call
   to be raised explicitly.
+- **Duplicate shopping rows are merged in the read path, not in the database —
+  2026-08-18.** `mergeLines` in `lib/services/shopping-view.ts` unites rows with
+  the same name and unit when the list is rendered. The rows stay apart in
+  Postgres on purpose: a regeneration deletes the generated rows and rebuilds
+  them, and a hand-added quantity has to survive that. This is the owner's own
+  proposal and it is better than the extra column the design first reached for.
+  **Do not "fix" it by summing on the way in.**
+- **A Base UI `Select` whose values differ from its labels needs `items` —
+  2026-08-18.** `Select.Value` renders the raw value otherwise, and the Tipo
+  field read `INGREDIENT` on screen until the map was passed. The aisle select
+  never showed this because there the value and the label are the same string,
+  so the next one will be caught the same way: only in the browser.
 
 ## Parked defects
 

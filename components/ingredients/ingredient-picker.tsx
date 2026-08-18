@@ -41,6 +41,11 @@ export function IngredientPicker({
   // blank would hide the name of an ingredient the row already holds. The
   // query has to exist all the same — "Crea «…»" is decided from it.
   const [query, setQuery] = useState(value ?? "")
+  // Controlled only so that "Crea «…»" can close it. Base UI closes the popup
+  // when one of its own items is chosen, but that button is ours and it has no
+  // idea a choice was made — so the popup stayed open over whatever field came
+  // next, and the first tap on that field went to the overlay instead.
+  const [open, setOpen] = useState(false)
   const trimmed = query.trim()
   const isNew =
     trimmed.length > 0 &&
@@ -58,6 +63,8 @@ export function IngredientPicker({
       }}
       inputValue={query}
       onInputValueChange={setQuery}
+      open={open}
+      onOpenChange={setOpen}
     >
       <ComboboxInput
         id={id}
@@ -70,7 +77,10 @@ export function IngredientPicker({
             <button
               type="button"
               className="w-full rounded-md px-2 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground"
-              onClick={() => onCreate(trimmed)}
+              onClick={() => {
+                onCreate(trimmed)
+                setOpen(false)
+              }}
             >
               Crea «{trimmed}»
             </button>

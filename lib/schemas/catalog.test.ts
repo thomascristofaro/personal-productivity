@@ -175,6 +175,32 @@ describe("CatalogItemInputSchema", () => {
     ).toBe(false)
   })
 
+  it("refuses a unit that is only a number, which means it was typed in the wrong field", () => {
+    const result = CatalogItemInputSchema.safeParse({
+      ...valid,
+      defaultUnit: "2",
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues[0].message).toBe(
+        "L’unità non è un numero. La quantità va nel campo accanto."
+      )
+    }
+  })
+
+  it("refuses a decimal typed into the unit too", () => {
+    expect(
+      CatalogItemInputSchema.safeParse({ ...valid, defaultUnit: "1,5" }).success
+    ).toBe(false)
+  })
+
+  it("still accepts a unit that merely contains a digit", () => {
+    expect(
+      CatalogItemInputSchema.parse({ ...valid, defaultUnit: "cl 33" })
+        .defaultUnit
+    ).toBe("cl 33")
+  })
+
   it("turns an empty preferred unit into null — most entries are counted", () => {
     expect(
       CatalogItemInputSchema.parse({ ...valid, defaultUnit: "  " }).defaultUnit

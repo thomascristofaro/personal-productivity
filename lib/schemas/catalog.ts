@@ -45,10 +45,19 @@ export const CatalogItemNameSchema = catalogName(
 
 // An empty unit is absent, not blank: the aggregator treats "" and null
 // differently, and a blank string would open a second line for the same thing.
-const unit = z
+//
+// A unit is never a bare number, and the two owners have already typed one into
+// this field instead of into the quantity beside it — twice, on 2026-08-17. It
+// is not a harmless slip: the line then renders no amount at all, because
+// `amountOf` needs a quantity, and it will not merge with the same thing bought
+// properly, because the units differ. Refusing it says what happened.
+export const UnitSchema = z
   .string()
   .trim()
   .max(UNIT_MAX, `L’unità può avere al massimo ${UNIT_MAX} caratteri.`)
+  .refine((value) => !/^\d+([.,]\d+)?$/.test(value), {
+    message: "L’unità non è un numero. La quantità va nel campo accanto.",
+  })
   .nullable()
   .transform((value) => (value === null || value === "" ? null : value))
 
@@ -66,7 +75,7 @@ export const RecipeIngredientRowSchema = z.object({
   // not hold. Only the empty-row message differs, because here it means "you
   // left a row blank".
   ingredientName: catalogName("Scegli un ingrediente."),
-  unit,
+  unit: UnitSchema,
   quantity: z
     .number("La quantità deve essere un numero.")
     .positive("La quantità deve essere maggiore di zero.")
@@ -79,7 +88,7 @@ export type RecipeIngredientRow = z.infer<typeof RecipeIngredientRowSchema>
 export const CatalogItemInputSchema = z.object({
   name: CatalogItemNameSchema,
   kind: CatalogItemKindSchema.default("INGREDIENT"),
-  defaultUnit: unit,
+  defaultUnit: UnitSchema,
   aisle,
 })
 

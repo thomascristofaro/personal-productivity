@@ -91,6 +91,15 @@ describe("ManualItemSchema", () => {
     )
   })
 
+  // The mistake the owners actually made, twice, on 2026-08-17: the quantity
+  // went into the unit field, the line rendered no amount, and it would not
+  // merge with the same thing bought properly.
+  it("refuses a unit that is only a number", () => {
+    expect(ManualItemSchema.safeParse({ ...valid, unit: "2" }).success).toBe(
+      false
+    )
+  })
+
   it("turns a blank unit into null, so it is absent rather than empty", () => {
     expect(ManualItemSchema.parse({ ...valid, unit: "  " }).unit).toBeNull()
   })
