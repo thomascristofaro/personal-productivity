@@ -20,7 +20,7 @@ from that use. Five are changes; two turned out not to be defects.
 | A new ingredient typed by hand arrives capitalised, unlike the others | §4          |
 | A line added by hand shows no quantity                                | §14         |
 | Two lines for the same thing and unit must become one                 | §6          |
-| Add through a `+` in the header, not a block at the foot              | §7          |
+| Add through a `+`, not a block at the foot                            | §7          |
 | Put anything on the list, not only things that exist as ingredients   | §3          |
 | "Shopping done": move what is ticked into a history, with the amount  | §8, §9      |
 
@@ -246,9 +246,17 @@ action reads `formData.getAll("id")`.
 
 ## 7. Adding a line
 
-The block at the foot of the page becomes a `+` in the header, opening a
-`Drawer` — the same component and the same shape as the menu's slot drawer, so
-the two screens feel like one app.
+The block at the foot of the page becomes a `+` opening a `Drawer` — the same
+component and the same shape as the menu's slot drawer, so the two screens feel
+like one app.
+
+**The `+` floats, bottom right, over the list.** It was in the header for half a
+day; the owner moved it on 2026-08-18 and was right to: it is the control you
+reach for most while walking the shop, and the thumb is already down there. It
+shares that corner with the completion bar of §8, so when the bar is showing the
+button lifts above it rather than sitting on top — the page passes it whether
+anything is ticked. It is present whenever the week has a list, and only then,
+because with no list there is nothing to add to and the action would refuse.
 
 | Field           | Notes                                                                      |
 | --------------- | -------------------------------------------------------------------------- |
@@ -285,12 +293,14 @@ A fixed bar at the foot appears as soon as one line is ticked, reading
 `Spesa completata (7)`. It respects `env(safe-area-inset-bottom)`, without which
 it sits under the home indicator on an installed PWA.
 
-It is at the foot and not in the header for two reasons: the header would then
-carry three controls at 390px, and this is the action taken at the till, with a
-thumb.
+It is at the foot and not in the header because this is the action taken at the
+till, with a thumb. The header carries **Storico** and **Rigenera**, which are
+both read-and-think controls rather than till controls.
 
-Tapping it opens a drawer asking for the amount paid, with **Salta** alongside
-**Conferma** — the amount is optional and editable later (§9).
+Tapping it opens a drawer asking for the amount paid. There is no separate
+**Salta**: confirming with the field empty is skipping, and two buttons that both
+close the shop is one more decision at the till than the moment deserves. The
+amount is optional and editable later (§9).
 
 ```prisma
 model Purchase {
@@ -346,7 +356,14 @@ Multiple shops per week are the expected case, not an edge one.
 
 ## 9. The history screen
 
-`/spesa/storico`, reached from a new nav entry **Storico spesa**. It lists every
+`/spesa/storico`, reached from a **Storico** button in the shopping list's
+header, beside «Rigenera». An earlier revision put it in the side menu; the
+owner moved it on 2026-08-18, and it is the better place — the history is read
+from the shopping screen, not navigated to from cold, and the side menu stays
+one entry per module. The button shows even on a week with no list, because the
+history crosses the weeks and is never irrelevant.
+
+It lists every
 purchase across every week, newest first: date, the week it belonged to, the
 number of items, and the total — or a visible _totale da inserire_ where there
 is none.
@@ -399,7 +416,7 @@ an English parameter.
 Final nav order:
 
 ```
-Menù · Spesa · Storico spesa · Ricettario · Catalogo
+Menù · Spesa · Ricettario · Catalogo
 ```
 
 ---

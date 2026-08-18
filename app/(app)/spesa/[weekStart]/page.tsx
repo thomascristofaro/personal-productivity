@@ -50,6 +50,9 @@ export default async function ShoppingWeekPage({
     listCatalogOptions(),
   ])
 
+  // Over the stored rows and not the merged lines: what moves into the history
+  // is rows, and a part-ticked line contributes only its ticked half.
+  const checkedCount = (list?.items ?? []).filter((item) => item.checked).length
   const week = iso(weekStart)
   const range = `${rangeFormat.format(weekStart)} – ${rangeFormat.format(
     dateForDay(weekStart, DAYS_IN_WEEK - 1)
@@ -61,21 +64,22 @@ export default async function ShoppingWeekPage({
   return (
     <main className="flex flex-col gap-4 pt-6 pb-24">
       <PageHeader title="Spesa" back={{ href: `/menu/${week}`, label: "Menù" }}>
+        {/* Shown even on a week with no list: the history crosses the weeks, so
+            it is never irrelevant. "Rigenera" is, and is not. */}
+        <Button
+          variant="outline"
+          render={<Link href="/spesa/storico" />}
+          nativeButton={false}
+        >
+          Storico
+        </Button>
         {list === null ? null : (
-          <>
-            <AddItemDrawer
-              weekStart={week}
-              catalog={catalog}
-              aisles={AISLE_ORDER}
-              action={addItem}
-            />
-            <form action={regenerate}>
-              <input type="hidden" name="weekStart" value={week} />
-              <Button type="submit" variant="outline">
-                Rigenera
-              </Button>
-            </form>
-          </>
+          <form action={regenerate}>
+            <input type="hidden" name="weekStart" value={week} />
+            <Button type="submit" variant="outline">
+              Rigenera
+            </Button>
+          </form>
         )}
       </PageHeader>
 
@@ -126,9 +130,17 @@ export default async function ShoppingWeekPage({
             />
           )}
 
+          <AddItemDrawer
+            weekStart={week}
+            catalog={catalog}
+            aisles={AISLE_ORDER}
+            action={addItem}
+            aboveBar={checkedCount > 0}
+          />
+
           <CompletePurchaseBar
             weekStart={week}
-            checkedCount={list.items.filter((item) => item.checked).length}
+            checkedCount={checkedCount}
             action={complete}
           />
         </>

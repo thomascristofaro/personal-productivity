@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { AISLE_UNKNOWN } from "@/lib/aisles"
+import { cn } from "@/lib/utils"
 
 export type CatalogEntry = {
   name: string
@@ -58,11 +59,15 @@ export function AddItemDrawer({
   catalog,
   aisles,
   action,
+  aboveBar,
 }: {
   weekStart: string
   catalog: CatalogEntry[]
   aisles: readonly string[]
   action: AddItemAction
+  // The completion bar is fixed across the same corner. When it is showing the
+  // button lifts above it rather than sitting on top of it.
+  aboveBar: boolean
 }) {
   const [open, setOpen] = useState(false)
   const [state, formAction, isPending] = useActionState(
@@ -113,13 +118,22 @@ export function AddItemDrawer({
 
   return (
     <Drawer open={open} onOpenChange={setOpen}>
+      {/* Floating, bottom right, over the list rather than in the header: it is
+          the thing you reach for most while walking the shop, and the thumb is
+          already down there. The inset keeps it off the home indicator once the
+          app is installed to the home screen. */}
       <Button
-        variant="outline"
         size="icon"
         aria-label="Aggiungi alla lista"
         onClick={() => setOpen(true)}
+        className={cn(
+          "fixed right-4 z-40 size-14 rounded-full shadow-lg",
+          aboveBar
+            ? "bottom-[calc(5.5rem+env(safe-area-inset-bottom))]"
+            : "bottom-[calc(1rem+env(safe-area-inset-bottom))]"
+        )}
       >
-        <Plus aria-hidden="true" />
+        <Plus aria-hidden="true" className="size-6" />
       </Button>
 
       <DrawerContent>

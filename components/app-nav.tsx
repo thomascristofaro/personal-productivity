@@ -22,9 +22,6 @@ import { cn } from "@/lib/utils"
 const NAV_ITEMS = [
   { href: "/menu", label: "Menù" },
   { href: "/spesa", label: "Spesa" },
-  // "Storico spesa" and not "Storico": personal finance is a planned module and
-  // will want a history of its own.
-  { href: "/spesa/storico", label: "Storico spesa" },
   { href: "/recipes", label: "Ricettario" },
   { href: "/catalogo", label: "Catalogo" },
 ] as const
@@ -41,9 +38,10 @@ export function AppNav({ userName }: { userName: string }) {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
 
-  // The longest matching href, not every matching one. /spesa/storico is under
-  // /spesa, so a plain prefix test lights both entries and `aria-current="page"`
-  // stops meaning "this page".
+  // The longest matching href, not every matching one. Nothing in the menu
+  // needs it today — the entry for /spesa/storico was moved into the shopping
+  // header — but a plain prefix test lights every ancestor, and the moment two
+  // entries nest again `aria-current="page"` stops meaning "this page".
   const activeHref = NAV_ITEMS.filter(
     (item) => pathname === item.href || pathname.startsWith(`${item.href}/`)
   ).sort((a, b) => b.href.length - a.href.length)[0]?.href
