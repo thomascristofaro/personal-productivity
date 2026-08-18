@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  AddShoppingItemSchema,
   ManualItemSchema,
   ShoppingItemIdSchema,
   ShoppingItemIdsSchema,
@@ -104,5 +105,47 @@ describe("ManualItemSchema", () => {
     expect(ManualItemSchema.safeParse({ ...valid, quantity: -1 }).success).toBe(
       false
     )
+  })
+})
+
+describe("AddShoppingItemSchema", () => {
+  const base = {
+    name: "shampoo",
+    aisle: "casa e pulizia",
+    quantity: null,
+    unit: null,
+  }
+
+  it("takes both flags", () => {
+    expect(
+      AddShoppingItemSchema.parse({ ...base, remember: true, kind: "PRODUCT" })
+    ).toEqual({ ...base, remember: true, kind: "PRODUCT" })
+  })
+
+  it("has no default for remember: what a missing checkbox means is the action's call", () => {
+    expect(
+      AddShoppingItemSchema.safeParse({ ...base, kind: "PRODUCT" }).success
+    ).toBe(false)
+  })
+
+  it("still lowercases the name", () => {
+    expect(
+      AddShoppingItemSchema.parse({
+        ...base,
+        name: "Shampoo",
+        remember: false,
+        kind: "PRODUCT",
+      }).name
+    ).toBe("shampoo")
+  })
+
+  it("rejects a kind nobody defined", () => {
+    expect(
+      AddShoppingItemSchema.safeParse({
+        ...base,
+        remember: true,
+        kind: "HOUSEHOLD",
+      }).success
+    ).toBe(false)
   })
 })

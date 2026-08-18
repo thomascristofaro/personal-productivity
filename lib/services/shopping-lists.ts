@@ -1,6 +1,7 @@
-import { AISLE_ORDER, AISLE_UNKNOWN } from "@/lib/aisles"
+import { AISLE_UNKNOWN } from "@/lib/aisles"
 import { db } from "@/lib/db"
-import type { ManualItem } from "@/lib/schemas/shopping"
+import type { AddShoppingItem } from "@/lib/schemas/shopping"
+import { isKnownAisle } from "@/lib/services/catalog"
 import { isListStale } from "@/lib/services/menus"
 import {
   aggregateShoppingList,
@@ -194,16 +195,21 @@ export async function setItemChecked(
 }
 
 /**
- * Adds a line by hand, which survives every later regeneration.
+ * Adds a line by hand, and remembers it in the catalogue unless told not to.
+ *
+ * The line survives every later regeneration, because the aggregator holds
+ * hand-added rows apart from generated ones. Both writes are one transaction: a
+ * line pointing at a catalogue entry that failed to be created is the kind of
+ * half-write that is found a week later.
  *
  * @param weekStart The Monday naming the week, at UTC midnight.
- * @param input The validated line.
+ * @param input The validated line, with what to do about the catalogue.
  * @returns Nothing.
  * @throws NoListError When the week has no list to add to.
  */
 export async function addManualItem(
   weekStart: Date,
-  input: ManualItem
+  input: AddShoppingItem
 ): Promise<void> {
   const menu = await db.menu.findUnique({
     where: { weekStart },
@@ -212,21 +218,41 @@ export async function addManualItem(
 
   if (menu?.list == null) throw new NoListError()
 
-  await db.shoppingListItem.create({
-    data: {
-      listId: menu.list.id,
-      name: input.name,
-      quantity: input.quantity,
-      unit: input.unit,
-      // An aisle nobody recognises would sort with the catch-all anyway; making
-      // it the catch-all keeps the stored row honest about where it will show.
-      aisle: (AISLE_ORDER as readonly string[]).includes(input.aisle)
-        ? input.aisle
-        : AISLE_UNKNOWN,
-      manual: true,
-      // No menu asked for this one.
-      days: [],
-    },
+  const listId = menu.list.id
+  // An aisle nobody recognises would sort with the catch-all anyway; making it
+  // the catch-all keeps the stored row honest about where it will show.
+  const aisle = isKnownAisle(input.aisle) ? input.aisle : AISLE_UNKNOWN
+
+  await db.$transaction(async (tx) => {
+    if (input.remember) {
+      // Upsert and not create: both phones can add the same new thing at once,
+      // and the second must still get its line rather than losing the write.
+      // `update: {}` because an entry that already exists was curated by
+      // somebody, and a shopping line is not the place to overwrite it.
+      await tx.catalogItem.upsert({
+        where: { name: input.name },
+        update: {},
+        create: {
+          name: input.name,
+          kind: input.kind,
+          defaultUnit: input.unit,
+          aisle,
+        },
+      })
+    }
+
+    await tx.shoppingListItem.create({
+      data: {
+        listId,
+        name: input.name,
+        quantity: input.quantity,
+        unit: input.unit,
+        aisle,
+        manual: true,
+        // No menu asked for this one.
+        days: [],
+      },
+    })
   })
 }
 

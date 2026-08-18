@@ -122,9 +122,9 @@ describe("mergeLines", () => {
   })
 
   it("names no manual rows when the menu produced all of them", () => {
-    expect(mergeLines([item({ quantity: 300, unit: "g" })])[0].manualIds).toEqual(
-      []
-    )
+    expect(
+      mergeLines([item({ quantity: 300, unit: "g" })])[0].manualIds
+    ).toEqual([])
   })
 
   it("unites the days, in order, without repeating one", () => {

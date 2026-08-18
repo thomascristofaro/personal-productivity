@@ -4,7 +4,11 @@ import { revalidatePath } from "next/cache"
 
 import { requireSession } from "@/lib/auth"
 import { WeekStartSchema } from "@/lib/schemas/menu"
-import { ManualItemSchema, ShoppingItemIdsSchema } from "@/lib/schemas/shopping"
+import type { AddItemState } from "@/components/shopping/add-item-drawer"
+import {
+  AddShoppingItemSchema,
+  ShoppingItemIdsSchema,
+} from "@/lib/schemas/shopping"
 import {
   addManualItem,
   NoListError,
@@ -69,26 +73,46 @@ export async function toggle(formData: FormData): Promise<void> {
   revalidatePath(`/spesa/${iso(weekStart.data)}`)
 }
 
-export async function addItem(formData: FormData): Promise<void> {
+export async function addItem(
+  _state: AddItemState,
+  formData: FormData
+): Promise<AddItemState> {
   const weekStart = WeekStartSchema.safeParse(formData.get("weekStart"))
-  const input = ManualItemSchema.safeParse({
+  const input = AddShoppingItemSchema.safeParse({
     name: formData.get("name"),
     aisle: formData.get("aisle") ?? "",
     quantity: optionalNumber(formData.get("quantity")),
     unit: optionalText(formData.get("unit")),
+    // An unticked checkbox posts nothing at all, so absent means "remember" —
+    // the box reads «Non salvare nel catalogo» and starts unticked.
+    remember: formData.get("skipCatalog") === null,
+    kind: formData.get("kind") ?? "PRODUCT",
   })
 
-  if (!weekStart.success || !input.success) return
+  if (!weekStart.success) return { ok: false, message: "Settimana non valida." }
+  if (!input.success) {
+    return {
+      ok: false,
+      message: input.error.issues[0]?.message ?? "Controlla i campi.",
+    }
+  }
 
   await requireSession()
 
   try {
     await addManualItem(weekStart.data, input.data)
   } catch (error) {
-    if (!(error instanceof NoListError)) throw error
+    // The previous version swallowed every refusal and re-rendered as if
+    // nothing had happened, which is how a line can fail to appear without a
+    // word being said about it.
+    if (error instanceof NoListError) {
+      return { ok: false, message: "Questa settimana non ha una lista." }
+    }
+    throw error
   }
 
   revalidatePath(`/spesa/${iso(weekStart.data)}`)
+  return { ok: true, message: null }
 }
 
 export async function removeItem(formData: FormData): Promise<void> {

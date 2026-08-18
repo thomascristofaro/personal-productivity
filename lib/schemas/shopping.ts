@@ -1,6 +1,10 @@
 import { z } from "zod"
 
-import { catalogName, UNIT_MAX } from "@/lib/schemas/catalog"
+import {
+  catalogName,
+  CatalogItemKindSchema,
+  UNIT_MAX,
+} from "@/lib/schemas/catalog"
 
 export const ShoppingItemIdSchema = z.cuid("Questa riga non è valida.")
 
@@ -38,3 +42,16 @@ export const ManualItemSchema = z.object({
 })
 
 export type ManualItem = z.infer<typeof ManualItemSchema>
+
+// What the drawer posts: a line, plus what to do about the catalogue. Separate
+// from ManualItemSchema because the line itself does not care — see section 7
+// of the design document of 2026-08-18.
+export const AddShoppingItemSchema = ManualItemSchema.extend({
+  // No default. An unticked checkbox posts nothing at all, so what a missing
+  // field means is the action's decision, and this schema stays honest about
+  // having been handed a boolean.
+  remember: z.boolean(),
+  kind: CatalogItemKindSchema,
+})
+
+export type AddShoppingItem = z.infer<typeof AddShoppingItemSchema>

@@ -9,7 +9,7 @@ import {
 } from "@/app/(app)/spesa/[weekStart]/actions"
 import { EmptyState } from "@/components/page/empty-state"
 import { PageHeader } from "@/components/page/page-header"
-import { AddItemForm } from "@/components/shopping/add-item-form"
+import { AddItemDrawer } from "@/components/shopping/add-item-drawer"
 import { ShoppingList } from "@/components/shopping/shopping-list"
 import { Button } from "@/components/ui/button"
 import { AISLE_ORDER } from "@/lib/aisles"
@@ -43,7 +43,7 @@ export default async function ShoppingWeekPage({
   if (!parsed.success) notFound()
 
   const weekStart = parsed.data
-  const [list, catalogue] = await Promise.all([
+  const [list, catalog] = await Promise.all([
     getShoppingList(weekStart),
     listCatalogOptions(),
   ])
@@ -57,12 +57,20 @@ export default async function ShoppingWeekPage({
     <main className="flex flex-col gap-4 pt-6">
       <PageHeader title="Spesa" back={{ href: `/menu/${week}`, label: "Menù" }}>
         {list === null ? null : (
-          <form action={regenerate}>
-            <input type="hidden" name="weekStart" value={week} />
-            <Button type="submit" variant="outline">
-              Rigenera
-            </Button>
-          </form>
+          <>
+            <AddItemDrawer
+              weekStart={week}
+              catalog={catalog}
+              aisles={AISLE_ORDER}
+              action={addItem}
+            />
+            <form action={regenerate}>
+              <input type="hidden" name="weekStart" value={week} />
+              <Button type="submit" variant="outline">
+                Rigenera
+              </Button>
+            </form>
+          </>
         )}
       </PageHeader>
 
@@ -112,13 +120,6 @@ export default async function ShoppingWeekPage({
               removeAction={removeItem}
             />
           )}
-
-          <AddItemForm
-            weekStart={week}
-            catalogue={catalogue}
-            aisles={AISLE_ORDER}
-            action={addItem}
-          />
         </>
       )}
     </main>
