@@ -1,7 +1,7 @@
 import "dotenv/config"
 
 import { db } from "../lib/db"
-import { INGREDIENTS } from "./ingredients"
+import { INGREDIENTS } from "./catalog"
 
 // `lib/env.ts` is server-only and validates far more than this script needs.
 // prisma/ sits outside the ESLint block that forbids process.env, so the seed
