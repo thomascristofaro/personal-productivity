@@ -5,10 +5,13 @@ import { revalidatePath } from "next/cache"
 import { requireSession } from "@/lib/auth"
 import { WeekStartSchema } from "@/lib/schemas/menu"
 import type { AddItemState } from "@/components/shopping/add-item-drawer"
+import type { CompleteState } from "@/components/shopping/complete-purchase-bar"
 import {
   AddShoppingItemSchema,
+  EuroCentsSchema,
   ShoppingItemIdsSchema,
 } from "@/lib/schemas/shopping"
+import { completePurchase, NothingCheckedError } from "@/lib/services/purchases"
 import {
   addManualItem,
   NoListError,
@@ -127,4 +130,37 @@ export async function removeItem(formData: FormData): Promise<void> {
   await removeManualItems(ids.data)
 
   revalidatePath(`/spesa/${iso(weekStart.data)}`)
+}
+
+export async function complete(
+  _state: CompleteState,
+  formData: FormData
+): Promise<CompleteState> {
+  const weekStart = WeekStartSchema.safeParse(formData.get("weekStart"))
+  const total = EuroCentsSchema.safeParse(formData.get("total") ?? "")
+
+  if (!weekStart.success) return { ok: false, message: "Settimana non valida." }
+  if (!total.success) {
+    return { ok: false, message: total.error.issues[0].message }
+  }
+
+  await requireSession()
+
+  try {
+    await completePurchase(weekStart.data, total.data)
+  } catch (error) {
+    if (error instanceof NoListError) {
+      return { ok: false, message: "Questa settimana non ha una lista." }
+    }
+    // The other phone closed the shop first, or unticked everything between the
+    // render and the tap. Saying so beats a silent no-op.
+    if (error instanceof NothingCheckedError) {
+      return { ok: false, message: "Non c’è niente di spuntato." }
+    }
+    throw error
+  }
+
+  revalidatePath(`/spesa/${iso(weekStart.data)}`)
+  revalidatePath("/spesa/storico")
+  return { ok: true, message: null }
 }

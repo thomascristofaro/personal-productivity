@@ -19,7 +19,7 @@ export type MergedLine = {
   checked: boolean
 }
 
-export type AisleGroup = { aisle: string; lines: MergedLine[] }
+export type AisleGroup<T> = { aisle: string; lines: T[] }
 
 // JSON rather than string concatenation, so a name containing the separator
 // cannot forge another line's key and a null unit stays distinct from "". The
@@ -90,25 +90,32 @@ export function mergeLines(items: StoredItem[]): MergedLine[] {
 }
 
 /**
- * Gathers the lines into the aisles of the supermarket walking order.
+ * Gathers anything with a name and an aisle into the supermarket walking order.
  *
  * Sorts as well as groups, because the rows arrive from Postgres in whatever
  * order it liked and no SQL `ORDER BY` can express a walking order that is not
  * alphabetical. Moved here from shopping-lists.ts when that file grew to two
  * jobs — talking to the database, and shaping a list for a screen.
  *
- * @param lines Every line of the list, already merged.
+ * Generic because two screens want it: the shopping list, whose lines are
+ * merged rows, and one past purchase, whose lines are copies with no ids-plural,
+ * no days and no ticks. Widening the signature is cheaper and truer than a
+ * second implementation.
+ *
+ * @param lines Every line, in any order.
  * @returns One group per aisle that has lines, in walking order, each group's
  *   lines by name.
  */
-export function groupByAisle(lines: MergedLine[]): AisleGroup[] {
+export function groupByAisle<T extends { aisle: string; name: string }>(
+  lines: T[]
+): AisleGroup<T>[] {
   const sorted = [...lines].sort(
     (a, b) =>
       aisleRank(a.aisle) - aisleRank(b.aisle) ||
       a.name.localeCompare(b.name, "it")
   )
 
-  const groups: AisleGroup[] = []
+  const groups: AisleGroup<T>[] = []
 
   for (const line of sorted) {
     const last = groups[groups.length - 1]

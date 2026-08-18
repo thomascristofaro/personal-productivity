@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 
 import {
   addItem,
+  complete,
   regenerate,
   removeItem,
   toggle,
@@ -10,6 +11,7 @@ import {
 import { EmptyState } from "@/components/page/empty-state"
 import { PageHeader } from "@/components/page/page-header"
 import { AddItemDrawer } from "@/components/shopping/add-item-drawer"
+import { CompletePurchaseBar } from "@/components/shopping/complete-purchase-bar"
 import { ShoppingList } from "@/components/shopping/shopping-list"
 import { Button } from "@/components/ui/button"
 import { AISLE_ORDER } from "@/lib/aisles"
@@ -53,8 +55,11 @@ export default async function ShoppingWeekPage({
     dateForDay(weekStart, DAYS_IN_WEEK - 1)
   )}`
 
+  // pb-24 unconditionally: the completion bar is fixed over the foot of the
+  // page, and an empty strip nobody scrolls to is cheaper than a conditional
+  // that has to know whether the bar is showing.
   return (
-    <main className="flex flex-col gap-4 pt-6">
+    <main className="flex flex-col gap-4 pt-6 pb-24">
       <PageHeader title="Spesa" back={{ href: `/menu/${week}`, label: "Menù" }}>
         {list === null ? null : (
           <>
@@ -120,6 +125,12 @@ export default async function ShoppingWeekPage({
               removeAction={removeItem}
             />
           )}
+
+          <CompletePurchaseBar
+            weekStart={week}
+            checkedCount={list.items.filter((item) => item.checked).length}
+            action={complete}
+          />
         </>
       )}
     </main>
