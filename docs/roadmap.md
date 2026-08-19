@@ -27,12 +27,18 @@ now.
 
 ## In flight
 
-**Type the app can be read at**, on the branch `feat/readable-type`: `text-xs`
-and `text-sm` raised by two pixels in the theme, the `prodotto` badge dropped
-from the catalogue list, and `middleware.ts` renamed `proxy.ts` for Next 16. The
-typographic divergence is written up in
-[`docs/conventions/ui.md`](conventions/ui.md) — it is the kind of thing somebody
-"corrects" back if nobody wrote down why.
+**Two tidy-ups**, on the branch `feat/readable-type`: the `prodotto` badge
+dropped from the catalogue list, and `middleware.ts` renamed `proxy.ts` for Next 16.
+
+**The type scale stays Tailwind's.** The app reads small on a phone — content at
+14px, details at 12px — and two theme-wide fixes were built and tried at 390px:
+raising `text-xs`/`text-sm` by two pixels, and raising the root to 18px. **Both
+rejected on 2026-08-19**, the owner's call: a scale whose names stop matching
+their values costs more later than the forty class names it saves. Sizes will be
+raised per element instead, at the call sites, when each screen calls for it.
+What was learnt on the way is in [`docs/conventions/ui.md`](conventions/ui.md) —
+chiefly that no `Button` size raises its text, so `className="text-base"` is the
+lever.
 
 **Shipped, and merged on 2026-08-19:**
 

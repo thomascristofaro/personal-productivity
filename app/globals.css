@@ -4,29 +4,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* The two steps this app actually reads in. Tailwind ships 12px and 14px;
-   nothing on a phone should carry content at 12px, and 14px is a caption size
-   rather than a reading size. Raised here rather than by editing forty class
-   names, so a screen written tomorrow with `text-sm` is the right size without
-   anyone having to remember this decision — and so the shadcn components, which
-   use the same two utilities, keep step with the content around them.
-
-   The price is that the names understate their values. See the divergence noted
-   in docs/conventions/ui.md before "fixing" one of them back.
-
-   Everything above `sm` is untouched: `text-base` upwards already means what it
-   says, and the headings were never the problem.
-
-   A plain @theme block, not the `inline` one below: `inline` exists so a utility
-   can resolve a variable defined in :root, which is what the colours need and a
-   font size does not. */
-@theme {
-  --text-xs: 0.875rem;
-  --text-xs--line-height: 1.25rem;
-  --text-sm: 1rem;
-  --text-sm--line-height: 1.5rem;
-}
-
 @theme inline {
   --font-heading: var(--font-sans);
   --font-sans: var(--font-sans);
