@@ -47,13 +47,10 @@ export default async function CatalogPage({
             href={`/catalogo/${encodeURIComponent(item.name)}/edit`}
             title={item.name}
           >
-            {/* Only products are badged. Marking both kinds would put a badge
-                on every row of a list that is mostly ingredients, which is
-                noise rather than information. The same neutral variant as the
-                aisle beside it: the kind is worth saying, not worth shouting. */}
-            {item.kind === "PRODUCT" ? (
-              <Badge variant="secondary">prodotto</Badge>
-            ) : null}
+            {/* No badge for the kind. It was there, first coloured and then
+                neutral, and neither earned its place: the chips above filter to
+                one kind in a tap, which is the question the badge was answering
+                one row at a time. */}
             <Badge variant="secondary">{item.aisle}</Badge>
             {item.defaultUnit === null ? null : <span>{item.defaultUnit}</span>}
             <span>

@@ -27,11 +27,20 @@ now.
 
 ## In flight
 
-**The development database moves off production**, on the branch
-`chore/local-postgres`: `docker-compose.yml`, the `.env` pointing at it, and
-`prisma migrate deploy` folded into `pnpm build`. Production's data was copied
-into the container once — 32 recipes, 11 menus, the catalogue — with `Session`,
-`Account` and `Verification` truncated on arrival. See
+**Type the app can be read at**, on the branch `feat/readable-type`: `text-xs`
+and `text-sm` raised by two pixels in the theme, the `prodotto` badge dropped
+from the catalogue list, and `middleware.ts` renamed `proxy.ts` for Next 16. The
+typographic divergence is written up in
+[`docs/conventions/ui.md`](conventions/ui.md) — it is the kind of thing somebody
+"corrects" back if nobody wrote down why.
+
+**Shipped, and merged on 2026-08-19:**
+
+**The development database moved off production** (`chore/local-postgres`):
+`docker-compose.yml`, the `.env` pointing at it, and `prisma migrate deploy`
+folded into `pnpm build`. Production's data was copied into the container once —
+32 recipes, 11 menus, the catalogue — with `Session`, `Account` and
+`Verification` truncated on arrival. See
 [`docs/conventions/data.md`](conventions/data.md).
 
 **Two decisions the shopper makes on the line**, on the branch

@@ -142,6 +142,32 @@ hardcoded hex colours and no raw palette classes** like `bg-slate-800`: they bre
 the dark theme silently. Compose class names with `cn()` from `lib/utils`;
 Prettier's Tailwind plugin sorts them, so do not reorder by hand.
 
+### `text-xs` and `text-sm` are two pixels larger than Tailwind ships them
+
+A deliberate divergence, made on 2026-08-19 and declared in `app/globals.css`:
+
+| Utility   | Tailwind | Here |
+| --------- | -------- | ---- |
+| `text-xs` | 12px     | 14px |
+| `text-sm` | 14px     | 16px |
+
+The owner found the app hard to read on a phone and was right: nothing carried
+content at 16px, the reading size the browser defaults to. Everything from
+`text-base` up is untouched.
+
+Raised in the theme rather than by editing the forty-odd class names that use
+them, for two reasons. A screen written next month with `text-sm` gets the right
+size without anyone remembering this page. And the shadcn components use those
+same two utilities, so they keep step with the content instead of drifting two
+pixels behind it.
+
+**Nothing in `components/ui/` was edited.** Those files are still byte-identical
+to the registry; what changed is what the utility compiles to.
+
+The cost is that the names understate their values, so an example copied from
+elsewhere renders slightly larger than its author intended. Live with it, or
+change the value here — do not "correct" one occurrence back.
+
 ## PWA
 
 The app is installed to the home screen and receives shared links through the
