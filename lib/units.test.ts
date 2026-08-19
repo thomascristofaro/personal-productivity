@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { amountOf, unitFor } from "@/lib/units"
+import { amountOf, takenAmountOf, unitFor } from "@/lib/units"
 
 describe("unitFor", () => {
   it("leaves the unit alone for exactly one", () => {
@@ -69,5 +69,29 @@ describe("amountOf", () => {
     expect(amountOf(1, "spicchio")).toBe("1 spicchio")
     expect(amountOf(5, "spicchio")).toBe("5 spicchi")
     expect(amountOf(320, "g")).toBe("320 g")
+  })
+})
+
+describe("takenAmountOf", () => {
+  it("shows the line as it is when nobody said how much to take", () => {
+    expect(takenAmountOf(null, 2, "burratina")).toBe("2 burratine")
+    expect(takenAmountOf(null, null, null)).toBeNull()
+  })
+
+  it("names both numbers when less is going in the trolley", () => {
+    expect(takenAmountOf(1, 2, "burratina")).toBe("1 di 2 burratine")
+    expect(takenAmountOf(200, 500, "g")).toBe("200 di 500 g")
+  })
+
+  it("names both numbers when more is going in the trolley", () => {
+    expect(takenAmountOf(3, 2, "burratina")).toBe("3 di 2 burratine")
+  })
+
+  it("says it once when the two numbers agree", () => {
+    expect(takenAmountOf(2, 2, "burratina")).toBe("2 burratine")
+  })
+
+  it("shows the taken amount alone on an unquantified line", () => {
+    expect(takenAmountOf(2, null, null)).toBe("2")
   })
 })

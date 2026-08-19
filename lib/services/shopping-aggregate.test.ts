@@ -55,6 +55,8 @@ const item = (overrides: Partial<ShoppingItem>): ShoppingItem => ({
   checkedAt: null,
   manual: false,
   days: [],
+  takenQuantity: null,
+  dismissed: false,
   ...overrides,
 })
 
@@ -478,5 +480,105 @@ describe("what has already been bought", () => {
     )
 
     expect(result[0].checked).toBe(true)
+  })
+})
+
+// Two decisions the shopper makes on the line itself, which the menu knows
+// nothing about: how much of it is going in the trolley, and that it is not
+// being bought at all. Both have to outlive a regeneration or the bin and the
+// pencil would be undone by the next tap on "Rigenera".
+describe("what the shopper decided about a line", () => {
+  it("carries the taken quantity across a regeneration", () => {
+    const result = aggregate(
+      [slot([{ name: "uova", quantity: 6, unit: null }])],
+      [item({ name: "uova", quantity: 6, unit: null, takenQuantity: 4 })]
+    )
+
+    expect(result[0].takenQuantity).toBe(4)
+  })
+
+  it("keeps the taken quantity even when the menu asks for more", () => {
+    // The tick falls, because "I have enough" stopped being true. How many the
+    // shopper decided to put in the trolley did not: it is a decision about the
+    // trolley, not an answer to the menu.
+    const result = aggregate(
+      [slot([{ name: "uova", quantity: 12, unit: null }])],
+      [
+        item({
+          name: "uova",
+          quantity: 6,
+          unit: null,
+          checked: true,
+          takenQuantity: 4,
+        }),
+      ]
+    )
+
+    expect(result[0]).toMatchObject({ checked: false, takenQuantity: 4 })
+  })
+
+  it("does not resurrect a taken quantity under a different unit", () => {
+    const result = aggregate(
+      [slot([{ name: "spaghetti", quantity: 1, unit: "confezione" }])],
+      [
+        item({
+          name: "spaghetti",
+          unit: "g",
+          quantity: 500,
+          takenQuantity: 300,
+        }),
+      ]
+    )
+
+    expect(result[0].takenQuantity).toBeNull()
+  })
+
+  it("keeps a line out of the list across a regeneration once it is dismissed", () => {
+    const result = aggregate(
+      [slot([{ name: "spaghetti", quantity: 500, unit: "g" }])],
+      [
+        item({
+          name: "spaghetti",
+          quantity: 500,
+          unit: "g",
+          dismissed: true,
+        }),
+      ]
+    )
+
+    expect(result[0].dismissed).toBe(true)
+  })
+
+  it("puts a dismissed line back when the menu asks for more than it did", () => {
+    // "We have this at home" was an answer to 200 g. It is not an answer to 500.
+    const result = aggregate(
+      [slot([{ name: "spaghetti", quantity: 500, unit: "g" }])],
+      [
+        item({
+          name: "spaghetti",
+          quantity: 200,
+          unit: "g",
+          dismissed: true,
+        }),
+      ]
+    )
+
+    expect(result[0].dismissed).toBe(false)
+  })
+
+  it("leaves a dismissed line dismissed when the menu asks for less", () => {
+    const result = aggregate(
+      [slot([{ name: "spaghetti", quantity: 200, unit: "g" }])],
+      [
+        item({
+          name: "spaghetti",
+          quantity: 500,
+          unit: "g",
+          dismissed: true,
+        }),
+      ]
+    )
+
+    expect(result[0].dismissed).toBe(true)
   })
 })

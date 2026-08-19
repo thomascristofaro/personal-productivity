@@ -153,6 +153,17 @@ model ShoppingListItem {
   checkedBy   User?        @relation(fields: [checkedById], references: [id], onDelete: SetNull)
   checkedAt   DateTime?
   manual      Boolean      @default(false)
+  // How much of `quantity` is actually going in the trolley. Null means all of
+  // it, which is the ordinary case: the field is only written when the shop had
+  // one burrata and the menu asked for two. Closing the shop records this amount
+  // and leaves the difference on the list, so the remainder is never lost.
+  takenQuantity Float?
+  // Taken out of the list by hand — we have it at home, or we are not buying it
+  // this week. Not a deletion: a generated row deleted comes straight back on
+  // the next regeneration, so the flag is what lets the bin work on a row the
+  // menu owns. Survives a regeneration the way the tick does, and falls for the
+  // same reason, when the menu starts asking for more than it did.
+  dismissed     Boolean    @default(false)
 
   @@index([listId])
 }

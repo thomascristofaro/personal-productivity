@@ -1,5 +1,6 @@
 import { aisleRank } from "@/lib/aisles"
 import { HOUSEHOLD_SERVINGS } from "@/lib/config"
+import { isCountable } from "@/lib/units"
 
 // `name` is a foreign key into the ingredient catalogue, not typed text, so two
 // lines carrying the same name are the same ingredient by construction. `aisle`
@@ -32,6 +33,10 @@ export type ShoppingItem = {
   manual: boolean
   // Ascending, and empty on a hand-added line.
   days: number[]
+  // How much of the line is going in the trolley, when that is not all of it.
+  takenQuantity: number | null
+  // Taken out of the list by hand: we have it, or we are not buying it.
+  dismissed: boolean
 }
 
 /** One line of one past trip, as it needs to be seen from here. */
@@ -41,27 +46,10 @@ export type PurchasedTotal = {
   quantity: number | null
 }
 
-// A null unit alongside a quantity means a count of whole things — "2 uova".
-const COUNTABLE_UNITS = new Set([
-  "pz",
-  "spicchio",
-  "fetta",
-  "foglia",
-  "rametto",
-  "barattolo",
-  "lattina",
-  "confezione",
-  "bustina",
-  "mazzetto",
-])
-
 // JSON rather than string concatenation, so a name containing the separator
 // cannot forge another line's key, and a null unit stays distinct from "".
 const itemKey = (name: string, unit: string | null) =>
   JSON.stringify([name, unit])
-
-const isCountable = (unit: string | null) =>
-  unit === null || COUNTABLE_UNITS.has(unit)
 
 // Half an egg left over costs nothing; an egg missing is found at the stove.
 // Rounding a weight would instead misstate what the recipe asked for, so weights
@@ -226,10 +214,10 @@ export function aggregateShoppingList(input: {
       quantity = remaining
     }
 
-    // A tick means "I have enough of this". If the list now asks for more than
-    // it did before, that stops being true, so the tick — and who and when —
-    // does not survive. A lower or unquantified either side still means what
-    // it meant, so those keep the tick.
+    // A tick means "I have enough of this", and so does a dismissal. If the
+    // list now asks for more than it did before, both stop being true, so
+    // neither — nor who ticked and when — survives. A lower or unquantified
+    // either side still means what it meant, so those keep them.
     const quantityRose =
       prior !== undefined &&
       prior.quantity !== null &&
@@ -245,6 +233,13 @@ export function aggregateShoppingList(input: {
         checked: quantityRose ? false : (prior?.checked ?? false),
         checkedById: quantityRose ? null : (prior?.checkedById ?? null),
         checkedAt: quantityRose ? null : (prior?.checkedAt ?? null),
+        dismissed: quantityRose ? false : (prior?.dismissed ?? false),
+        // Unlike the tick, this one survives a rise. It answers "how many am I
+        // putting in the trolley", which is the shopper's decision and not an
+        // assertion about the menu, so a menu asking for more does not make it
+        // untrue. Keyed on name and unit like everything else here, so it does
+        // not follow the line across a change of unit.
+        takenQuantity: prior?.takenQuantity ?? null,
         manual: false,
         // Not carried across from `prior` the way the tick is: the days are a
         // fact about the menu as it stands now, so a slot moved from Monday to

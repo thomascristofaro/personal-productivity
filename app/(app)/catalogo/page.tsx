@@ -49,8 +49,11 @@ export default async function CatalogPage({
           >
             {/* Only products are badged. Marking both kinds would put a badge
                 on every row of a list that is mostly ingredients, which is
-                noise rather than information. */}
-            {item.kind === "PRODUCT" ? <Badge>prodotto</Badge> : null}
+                noise rather than information. The same neutral variant as the
+                aisle beside it: the kind is worth saying, not worth shouting. */}
+            {item.kind === "PRODUCT" ? (
+              <Badge variant="secondary">prodotto</Badge>
+            ) : null}
             <Badge variant="secondary">{item.aisle}</Badge>
             {item.defaultUnit === null ? null : <span>{item.defaultUnit}</span>}
             <span>

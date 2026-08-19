@@ -17,6 +17,13 @@ export type MergedLine = {
   aisle: string
   days: number[]
   checked: boolean
+  // How much of the line is going in the trolley. Null is the ordinary case and
+  // means all of it; a number means the pencil was used on at least one row
+  // behind the line, and the rest are counted in full.
+  takenQuantity: number | null
+  // Out of the list: we have it, or we are not buying it this week. True only
+  // when every row behind the line is, for the same reason as `checked`.
+  dismissed: boolean
 }
 
 export type AisleGroup<T> = { aisle: string; lines: T[] }
@@ -59,12 +66,24 @@ export function mergeLines(items: StoredItem[]): MergedLine[] {
         aisle: row.aisle,
         days: [...row.days],
         checked: row.checked,
+        takenQuantity: row.takenQuantity,
+        dismissed: row.dismissed,
       })
       continue
     }
 
     line.ids.push(row.id)
     if (row.manual) line.manualIds.push(row.id)
+    // Before the quantity is summed, not after: the fallback below reads the
+    // line's quantity as the rows so far, and a line already holding this row's
+    // quantity would count it twice.
+    if (row.takenQuantity !== null || line.takenQuantity !== null) {
+      // Once any row says how much of it is being taken, the line has to answer
+      // for all of them, and a row nobody touched is being taken in full.
+      line.takenQuantity =
+        (line.takenQuantity ?? line.quantity ?? 0) +
+        (row.takenQuantity ?? row.quantity ?? 0)
+    }
     if (row.quantity !== null) {
       line.quantity = (line.quantity ?? 0) + row.quantity
     }
@@ -73,6 +92,7 @@ export function mergeLines(items: StoredItem[]): MergedLine[] {
     }
     // A tick means "I have this". Half of it ticked means the line is not done.
     line.checked = line.checked && row.checked
+    line.dismissed = line.dismissed && row.dismissed
     // Two rows for one name should agree on the aisle, and in every real case
     // do. When they do not the earlier one wins: finding a thing too early in
     // the shop costs a moment, finding it too late costs the walk back.
@@ -86,6 +106,10 @@ export function mergeLines(items: StoredItem[]): MergedLine[] {
     // 0.1 + 0.2 is 0.30000000000000004.
     quantity:
       line.quantity === null ? null : Math.round(line.quantity * 100) / 100,
+    takenQuantity:
+      line.takenQuantity === null
+        ? null
+        : Math.round(line.takenQuantity * 100) / 100,
   }))
 }
 

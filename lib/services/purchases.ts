@@ -41,6 +41,11 @@ export type PurchaseDetail = {
  * referenced: a history must say what was bought then, and the rows themselves
  * go — which is what leaves the list holding only what is still to buy.
  *
+ * A row the shopper took only part of is recorded at what was taken and stays
+ * on the list holding the difference, unticked. Taking more than the menu asked
+ * for is recorded in full and clears the row, because there is no difference
+ * left to buy.
+ *
  * @param weekStart The Monday naming the week, at UTC midnight.
  * @param totalCents What was paid, or null to fill in later.
  * @returns Nothing.
@@ -62,17 +67,26 @@ export async function completePurchase(
 
   await db.$transaction(async (tx) => {
     const checked = await tx.shoppingListItem.findMany({
-      where: { listId, checked: true },
+      // dismissed is belt and braces: taking a line off the list already clears
+      // its tick, so a row that is both would be a bug elsewhere. It must not
+      // become a purchase either way.
+      where: { listId, checked: true, dismissed: false },
       select: {
         id: true,
         name: true,
         quantity: true,
         unit: true,
         aisle: true,
+        takenQuantity: true,
       },
     })
 
     if (checked.length === 0) throw new NothingCheckedError()
+
+    const bought = checked.map((row) => ({
+      row,
+      quantity: row.takenQuantity ?? row.quantity,
+    }))
 
     await tx.purchase.create({
       data: {
@@ -80,11 +94,11 @@ export async function completePurchase(
         totalCents,
         // The row's own id is dropped: a PurchaseItem is a copy and gets its
         // own, and reusing the shopping row's would suggest a link that the
-        // deleteMany below is about to break.
+        // delete below is about to break.
         items: {
-          create: checked.map((row) => ({
+          create: bought.map(({ row, quantity }) => ({
             name: row.name,
-            quantity: row.quantity,
+            quantity,
             unit: row.unit,
             aisle: row.aisle,
           })),
@@ -93,8 +107,43 @@ export async function completePurchase(
       select: { id: true },
     })
 
+    // flatMap rather than filter, so what is left of each row is worked out
+    // where TypeScript can still see that neither number is null.
+    const partial = bought.flatMap(({ row, quantity }) =>
+      row.quantity !== null && quantity !== null && quantity < row.quantity
+        ? [
+            {
+              id: row.id,
+              left: Math.round((row.quantity - quantity) * 100) / 100,
+            },
+          ]
+        : []
+    )
+    const partialIds = new Set(partial.map((row) => row.id))
+
+    for (const row of partial) {
+      await tx.shoppingListItem.update({
+        where: { id: row.id },
+        // The days are left alone: what is still wanted is still wanted on the
+        // same days. The tick goes, because it is no longer true.
+        data: {
+          quantity: row.left,
+          takenQuantity: null,
+          checked: false,
+          checkedById: null,
+          checkedAt: null,
+        },
+      })
+    }
+
     await tx.shoppingListItem.deleteMany({
-      where: { id: { in: checked.map((line) => line.id) } },
+      where: {
+        id: {
+          in: bought
+            .map(({ row }) => row.id)
+            .filter((id) => !partialIds.has(id)),
+        },
+      },
     })
   })
 }

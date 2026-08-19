@@ -5,9 +5,9 @@ and state** — nothing else does. The design authority stays
 `docs/superpowers/specs/2026-08-13-menu-spesa-design.md`, and the decisions live
 in `docs/conventions/`. Do not restate either here; point at them.
 
-Last updated: 2026-08-18. `main` is deployed. Work normally happens on a branch
-per plan; the branch `docs/catalog-and-purchases-design` is the standing
-exception — see "In flight".
+Last updated: 2026-08-19. `main` is deployed. Work normally happens on a branch
+per plan — see "In flight" for the one standing exception and the branch open
+now.
 
 ## Shipped
 
@@ -27,17 +27,26 @@ exception — see "In flight".
 
 ## In flight
 
-**The catalogue, the shopping list and the purchase history**, on the branch
-`docs/catalog-and-purchases-design`. One design document,
-[`2026-08-18-catalogue-and-purchases-design`](superpowers/specs/2026-08-18-catalogue-and-purchases-design.md),
-and three plans, **all three shipped**: A the catalogue, B the shopping list
-again, C shopping done and the purchase history. The branch is ready to merge.
+**Two decisions the shopper makes on the line**, on the branch
+`feat/partial-and-already-home`. No plan document: a bounded change to screens
+that already exist, designed in chat and argued in
+[§17 of the design document](superpowers/specs/2026-08-18-catalogue-and-purchases-design.md).
+A pencil on each row records how much is actually going in the trolley, and the
+bin now takes the whole line — deleting a hand-added row, and moving a generated
+one to **Tolte dalla lista** at the foot of the page. Migration
+`20260819083852_shopping_item_taken_and_dismissed`. The catalogue's `prodotto`
+badge lost its colour in the same branch.
 
-**All three land on one branch, against the usual rule.** The owner's call on
+**Shipped before it, and merged:** the catalogue, the shopping list and the
+purchase history, from the branch `docs/catalog-and-purchases-design` —
+[`2026-08-18-catalogue-and-purchases-design`](superpowers/specs/2026-08-18-catalogue-and-purchases-design.md)
+and its three plans, squash-merged into `main` on 2026-08-18.
+
+**All three landed on one branch, against the usual rule.** The owner's call on
 2026-08-18: merging a branch that holds only a design document and three plans
-buys nothing, so the pull request waits until there are changes worth reviewing.
-Each plan still leaves the app working and `pnpm verify` green, so the branch is
-mergeable at every task boundary.
+buys nothing, so the pull request waited until there were changes worth
+reviewing. Each plan still left the app working and `pnpm verify` green, so the
+branch was mergeable at every task boundary.
 
 Plan B's browser checklist settled the one open question from the original
 report. **The quantity that "did not appear" was typed into the Unità field**:
@@ -331,6 +340,15 @@ or `docs/conventions/` as it was decided.
   field read `INGREDIENT` on screen until the map was passed. The aisle select
   never showed this because there the value and the label are the same string,
   so the next one will be caught the same way: only in the browser.
+- **What the menu needs and what the shopper buys are two numbers —
+  2026-08-19.** `ShoppingListItem.takenQuantity` holds the second; `quantity`
+  stays the menu's. Editing `quantity` from the row would look simpler and would
+  be undone by the first regeneration, silently. Same reasoning as the merge
+  above: keep the shopper's answer where the recomputation cannot reach it.
+- **A generated row cannot be deleted, only dismissed — 2026-08-19.** The bin
+  deletes a hand-added row and flags a generated one `dismissed`, because
+  deleting the latter lasts until the next regeneration rebuilds it. Dismissed
+  lines show under «Tolte dalla lista» with one tap back.
 
 ## Parked defects
 
