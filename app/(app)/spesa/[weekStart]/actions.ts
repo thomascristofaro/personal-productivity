@@ -10,6 +10,7 @@ import {
   AddShoppingItemSchema,
   EuroCentsSchema,
   ShoppingItemIdsSchema,
+  TakenQuantitySchema,
 } from "@/lib/schemas/shopping"
 import { completePurchase, NothingCheckedError } from "@/lib/services/purchases"
 import {
@@ -17,8 +18,10 @@ import {
   NoListError,
   NoMenuError,
   regenerateShoppingList,
-  removeManualItems,
+  removeFromList,
+  restoreToList,
   setItemChecked,
+  setItemTaken,
 } from "@/lib/services/shopping-lists"
 
 const iso = (date: Date) => date.toISOString().slice(0, 10)
@@ -119,15 +122,48 @@ export async function addItem(
 }
 
 export async function removeItem(formData: FormData): Promise<void> {
-  // Only the hand-added rows of the line are posted, so a part-generated line
-  // keeps what the menu asks for.
+  // Every row behind the line, not only the hand-added ones: the bin means "I
+  // am not buying this", and half a line left behind would not say that.
   const ids = ShoppingItemIdsSchema.safeParse(formData.getAll("id"))
   const weekStart = WeekStartSchema.safeParse(formData.get("weekStart"))
   if (!ids.success || !weekStart.success) return
 
   await requireSession()
 
-  await removeManualItems(ids.data)
+  await removeFromList(ids.data)
+
+  revalidatePath(`/spesa/${iso(weekStart.data)}`)
+}
+
+export async function restoreItem(formData: FormData): Promise<void> {
+  const ids = ShoppingItemIdsSchema.safeParse(formData.getAll("id"))
+  const weekStart = WeekStartSchema.safeParse(formData.get("weekStart"))
+  if (!ids.success || !weekStart.success) return
+
+  await requireSession()
+
+  await restoreToList(ids.data)
+
+  revalidatePath(`/spesa/${iso(weekStart.data)}`)
+}
+
+export async function setTaken(formData: FormData): Promise<void> {
+  const ids = ShoppingItemIdsSchema.safeParse(formData.getAll("id"))
+  const weekStart = WeekStartSchema.safeParse(formData.get("weekStart"))
+  const taken = TakenQuantitySchema.safeParse(
+    optionalNumber(formData.get("taken"))
+  )
+  if (!ids.success || !weekStart.success || !taken.success) return
+
+  await requireSession()
+
+  try {
+    await setItemTaken(ids.data, taken.data)
+  } catch (error) {
+    // The rows went away under us — a regeneration, or the other phone closing
+    // the shop, between the render and the tap.
+    if (!(error instanceof NoListError)) throw error
+  }
 
   revalidatePath(`/spesa/${iso(weekStart.data)}`)
 }

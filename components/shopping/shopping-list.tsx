@@ -22,12 +22,14 @@ export function ShoppingList({
   weekStart,
   toggleAction,
   removeAction,
+  takeAction,
 }: {
   groups: ShoppingGroup[]
   dayLabels: string[]
   weekStart: string
   toggleAction: (formData: FormData) => Promise<void>
   removeAction: (formData: FormData) => Promise<void>
+  takeAction: (formData: FormData) => Promise<void>
 }) {
   const router = useRouter()
 
@@ -88,6 +90,7 @@ export function ShoppingList({
                 dayLabels={dayLabels}
                 toggleAction={withWeek(toggleAction)}
                 removeAction={withWeek(removeAction)}
+                takeAction={withWeek(takeAction)}
               />
             ))}
           </ul>

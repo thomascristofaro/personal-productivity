@@ -238,6 +238,10 @@ The consequence of the last rule is deliberate: deleting the hand-added 200 g
 leaves the line at the 300 g the menu asks for, rather than removing something
 the menu still needs.
 
+**The bin rule was replaced on 2026-08-19 — see §17.** It is left standing above
+because §14 of that section argues against it, and an argument needs the thing
+it argues against.
+
 Because a line now stands for several rows, `toggle` and `removeItem` take a
 list of ids rather than one. The form posts one `id` field per row and the
 action reads `formData.getAll("id")`.
@@ -503,3 +507,76 @@ not worth merging. Each plan still leaves the app working and the gate green.
 
 A first because everything else names `CatalogItem`. B before C because C
 deletes rows that B teaches the list to merge.
+
+---
+
+## 17. Two decisions the shopper makes on the line (2026-08-19)
+
+Added after a week of use. Both are answers the shopper gives standing in the
+shop, and the menu knows nothing about either — which is what decides where they
+live and how they survive a regeneration.
+
+Two columns on `ShoppingListItem`:
+
+| Column          | Meaning                                                            |
+| --------------- | ------------------------------------------------------------------ |
+| `takenQuantity` | how much of the line is going in the trolley. Null means all of it |
+| `dismissed`     | not being bought: we have it at home, or not this week             |
+
+### 17.1 The pencil writes what is bought, not what is needed
+
+The obvious design — let the pencil edit `quantity` — cannot work. That number
+is computed from the menu, so the first "Rigenera" recomputes it and the
+correction is silently lost. Storing the shopper's answer in a second column
+keeps the two apart: the menu owns what is needed, the shopper owns what is
+bought, and neither overwrites the other.
+
+It therefore covers both directions, which the owner asked for on the same day:
+one burrata of the two the menu wants, and three of them because the shop had an
+offer. The schema caps neither at the other.
+
+`takenQuantity` **survives a rise in the required quantity**, unlike the tick.
+The tick asserts "I have enough of this", which a menu asking for more falsifies.
+"I am putting three in the trolley" asserts nothing about the menu, so nothing
+the menu does can falsify it.
+
+Closing a shop is where the two numbers meet. A ticked row is copied into the
+purchase at `takenQuantity ?? quantity`; if that is less than `quantity`, the row
+is **updated to the difference and unticked** rather than deleted, so the
+remainder stays on the list. Taking more clears the row, because nothing is left
+to buy.
+
+On a merged line the amount is spread over the rows in turn — each takes as much
+as it asks for until the amount runs out, and the last takes the remainder, which
+is what allows a total above what the line asks for. An amount equal to the
+line's own is stored as null, so "no correction" has one representation and not
+two.
+
+### 17.2 The bin now means "I am not buying this"
+
+One icon, two outcomes, and the outcome is decided by what the row is:
+
+| Row           | What the bin does                                                                                     |
+| ------------- | ----------------------------------------------------------------------------------------------------- |
+| added by hand | deleted. Nothing recreates it, and the `+` puts it back                                               |
+| generated     | flagged `dismissed`, and shown under **Tolte dalla lista** at the foot of the list, with one tap back |
+
+Deleting a generated row would last exactly until the next regeneration rebuilt
+it from the menu, which is the whole reason the flag exists. `dismissed` survives
+a regeneration the way the tick does and falls the way the tick does, when the
+menu starts asking for more than it did: "we have this at home" was an answer to
+200 g and is not an answer to 500.
+
+Dismissing also clears the tick, so a line nobody is buying cannot walk into the
+history when the shop is closed.
+
+This replaces the rule in §6 that the bin removes only the hand-added rows of a
+merged line. That rule protected what the menu still needs; in use it read as the
+button not working. The bin now takes the whole line, both halves.
+
+### 17.3 The `⋯` menu that was not built
+
+The first sketch put three actions behind an overflow menu, on the grounds that
+three icon buttons crowd a 390px row. The owner cut it to two — pencil, bin —
+and the menu with it. Two is what fits, and an overflow menu holding two items is
+a tap tax. Nothing here needs a third.

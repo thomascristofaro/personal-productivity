@@ -15,6 +15,8 @@ const item = (over: Partial<StoredItem>): StoredItem => ({
   checkedAt: null,
   manual: false,
   days: [],
+  takenQuantity: null,
+  dismissed: false,
   ...over,
 })
 
@@ -161,6 +163,64 @@ describe("mergeLines", () => {
         item({ name: "pomodori", unit: "g" }),
       ])
     ).toHaveLength(2)
+  })
+
+  it("takes all of a line nobody set a taken quantity on", () => {
+    const lines = mergeLines([
+      item({ quantity: 300, unit: "g" }),
+      item({ quantity: 200, unit: "g", manual: true }),
+    ])
+
+    expect(lines[0].takenQuantity).toBeNull()
+  })
+
+  it("counts the untouched rows in full once one row names a taken quantity", () => {
+    // The pencil writes on the line, so what it means is "of these 500 g I am
+    // taking 400" — the row the shopper did not touch still goes in whole.
+    const lines = mergeLines([
+      item({ quantity: 300, unit: "g", takenQuantity: 200 }),
+      item({ quantity: 200, unit: "g", manual: true }),
+    ])
+
+    expect(lines[0].takenQuantity).toBe(400)
+  })
+
+  it("counts them in full whichever row the pencil touched", () => {
+    // The same case as above with the rows the other way round, which is the
+    // order Postgres happens to return them in as often as not.
+    const lines = mergeLines([
+      item({ quantity: 300, unit: "g" }),
+      item({ quantity: 200, unit: "g", manual: true, takenQuantity: 150 }),
+    ])
+
+    expect(lines[0].takenQuantity).toBe(450)
+  })
+
+  it("loses the floating-point noise a sum of taken quantities introduces", () => {
+    const lines = mergeLines([
+      item({ quantity: 1, unit: "kg", takenQuantity: 0.1 }),
+      item({ quantity: 1, unit: "kg", takenQuantity: 0.2 }),
+    ])
+
+    expect(lines[0].takenQuantity).toBe(0.3)
+  })
+
+  it("is out of the list only when every row behind it is", () => {
+    const lines = mergeLines([
+      item({ quantity: 300, unit: "g", dismissed: true }),
+      item({ quantity: 200, unit: "g", manual: true }),
+    ])
+
+    expect(lines[0].dismissed).toBe(false)
+  })
+
+  it("is out of the list when they all are", () => {
+    const lines = mergeLines([
+      item({ quantity: 300, unit: "g", dismissed: true }),
+      item({ quantity: 200, unit: "g", manual: true, dismissed: true }),
+    ])
+
+    expect(lines[0].dismissed).toBe(true)
   })
 })
 

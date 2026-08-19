@@ -6,12 +6,15 @@ import {
   complete,
   regenerate,
   removeItem,
+  restoreItem,
+  setTaken,
   toggle,
 } from "@/app/(app)/spesa/[weekStart]/actions"
 import { EmptyState } from "@/components/page/empty-state"
 import { PageHeader } from "@/components/page/page-header"
 import { AddItemDrawer } from "@/components/shopping/add-item-drawer"
 import { CompletePurchaseBar } from "@/components/shopping/complete-purchase-bar"
+import { DismissedList } from "@/components/shopping/dismissed-list"
 import { ShoppingList } from "@/components/shopping/shopping-list"
 import { Button } from "@/components/ui/button"
 import { AISLE_ORDER } from "@/lib/aisles"
@@ -51,8 +54,14 @@ export default async function ShoppingWeekPage({
   ])
 
   // Over the stored rows and not the merged lines: what moves into the history
-  // is rows, and a part-ticked line contributes only its ticked half.
-  const checkedCount = (list?.items ?? []).filter((item) => item.checked).length
+  // is rows, and a part-ticked line contributes only its ticked half. A line
+  // taken off the list is never one of them, whatever its tick says.
+  const checkedCount = (list?.items ?? []).filter(
+    (item) => item.checked && !item.dismissed
+  ).length
+
+  const lines = mergeLines(list?.items ?? [])
+  const dismissed = lines.filter((line) => line.dismissed)
   const week = iso(weekStart)
   const range = `${rangeFormat.format(weekStart)} – ${rangeFormat.format(
     dateForDay(weekStart, DAYS_IN_WEEK - 1)
@@ -121,13 +130,31 @@ export default async function ShoppingWeekPage({
               </Button>
             </EmptyState>
           ) : (
-            <ShoppingList
-              groups={groupByAisle(mergeLines(list.items))}
-              dayLabels={dayLabels(weekStart)}
-              weekStart={week}
-              toggleAction={toggle}
-              removeAction={removeItem}
-            />
+            <>
+              {/* Not the empty state above: a list every line of which has been
+                  taken off is not an empty list, and the block below says where
+                  everything went. */}
+              {lines.length === dismissed.length ? (
+                <p className="text-sm text-muted-foreground">
+                  Non resta niente da prendere.
+                </p>
+              ) : (
+                <ShoppingList
+                  groups={groupByAisle(lines.filter((line) => !line.dismissed))}
+                  dayLabels={dayLabels(weekStart)}
+                  weekStart={week}
+                  toggleAction={toggle}
+                  removeAction={removeItem}
+                  takeAction={setTaken}
+                />
+              )}
+
+              <DismissedList
+                lines={dismissed}
+                weekStart={week}
+                restoreAction={restoreItem}
+              />
+            </>
           )}
 
           <AddItemDrawer

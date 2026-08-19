@@ -20,6 +20,34 @@ const PLURAL_RULES: [RegExp, string][] = [
   [/e$/, "i"],
 ]
 
+// A null unit alongside a quantity means a count of whole things — "2 uova".
+const COUNTABLE_UNITS = new Set([
+  "pz",
+  "spicchio",
+  "fetta",
+  "foglia",
+  "rametto",
+  "barattolo",
+  "lattina",
+  "confezione",
+  "bustina",
+  "mazzetto",
+])
+
+/**
+ * Whether the unit counts whole things rather than measuring them.
+ *
+ * The aggregator rounds these up — half an egg missing is found at the stove —
+ * and the shopping row offers plus and minus buttons for them, which would be
+ * useless on a line measured in grams.
+ *
+ * @param unit - the unit, or null when the thing is counted in pieces
+ * @returns true when the thing is counted
+ */
+export function isCountable(unit: string | null): boolean {
+  return unit === null || unit === "" || COUNTABLE_UNITS.has(unit)
+}
+
 /**
  * Agrees an Italian unit with the quantity in front of it.
  *
@@ -51,4 +79,27 @@ export function amountOf(
   if (quantity === null) return null
   if (unit === null || unit === "") return `${quantity}`
   return `${quantity} ${unitFor(unit, quantity)}`
+}
+
+/**
+ * Renders a shopping line whose shopper decided how much of it to take.
+ *
+ * Two numbers where the list normally shows one, so the form says which is
+ * which: "1 di 2 burratine" is one going in the trolley and two the menu wants.
+ * More than the menu asked for reads the same way round — "3 di 2 burratine" —
+ * because the first number is always what is being bought.
+ *
+ * @param taken - what is going in the trolley, or null for all of it
+ * @param quantity - what the line asks for, or null when it is unquantified
+ * @param unit - the unit, or null when the thing is counted in pieces
+ * @returns the rendered amount, or null when there is no number to show
+ */
+export function takenAmountOf(
+  taken: number | null,
+  quantity: number | null,
+  unit: string | null
+): string | null {
+  if (taken === null) return amountOf(quantity, unit)
+  if (quantity === null || taken === quantity) return amountOf(taken, unit)
+  return `${taken} di ${amountOf(quantity, unit)}`
 }

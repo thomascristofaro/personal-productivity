@@ -48,6 +48,24 @@ export const ShoppingItemIdsSchema = z
   .min(1, "Questa riga non è valida.")
   .max(20, "Questa riga non è valida.")
 
+// Shared by the line as it is added and by the pencil that corrects it later,
+// so a quantity nobody could type into the drawer cannot be smuggled in through
+// the row instead.
+const QuantitySchema = z
+  .number("La quantità deve essere un numero.")
+  .positive("La quantità deve essere maggiore di zero.")
+  .max(100000, "La quantità non può superare 100000.")
+  .nullable()
+
+/**
+ * How much of a line is going in the trolley. Null means all of it — which is
+ * also what an empty field means, and what the row shows by default.
+ *
+ * Deliberately not capped at what the menu asks for: taking three when two are
+ * needed is a normal thing to do in a shop, and the history should say three.
+ */
+export const TakenQuantitySchema = QuantitySchema
+
 export const ManualItemSchema = z.object({
   // A manual line need not exist in the catalogue — "sacchetti" never will —
   // but it is normalised the same way, because the merge of design document
@@ -60,11 +78,7 @@ export const ManualItemSchema = z.object({
     .trim()
     .min(1, "Scegli un reparto.")
     .max(50, "Il reparto può avere al massimo 50 caratteri."),
-  quantity: z
-    .number("La quantità deve essere un numero.")
-    .positive("La quantità deve essere maggiore di zero.")
-    .max(100000, "La quantità non può superare 100000.")
-    .nullable(),
+  quantity: QuantitySchema,
   // Shared with the catalogue and the recipe row, which is what makes the
   // numeric-unit refusal apply everywhere a unit can be typed.
   unit: UnitSchema,

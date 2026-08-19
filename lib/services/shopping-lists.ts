@@ -44,6 +44,8 @@ const itemFields = {
   checkedAt: true,
   manual: true,
   days: true,
+  takenQuantity: true,
+  dismissed: true,
 } as const
 
 /**
@@ -272,18 +274,113 @@ export async function addManualItem(
 }
 
 /**
- * Removes the rows of a line that were added by hand.
+ * Takes a line off the list: we have it at home, or we are not buying it.
  *
- * Generated rows are not removable: the next regeneration would bring them
- * back, so the `where` refuses them rather than offering a button that lies. A
- * line that is part generated and part hand-added therefore survives with only
- * what the menu asks for, which is the point.
+ * One button, two outcomes, because the two kinds of row cannot be treated
+ * alike. A hand-added row is deleted — nothing would recreate it, and the `+`
+ * puts it back. A generated row is only flagged, because deleting it would last
+ * exactly until the next regeneration rebuilt it from the menu. The flag also
+ * clears the tick: a line nobody is buying must not walk into the history when
+ * the shop is closed.
  *
- * @param ids The rows to remove.
+ * @param ids Every row behind the line.
  * @returns Nothing.
  */
-export async function removeManualItems(ids: string[]): Promise<void> {
-  await db.shoppingListItem.deleteMany({
-    where: { id: { in: ids }, manual: true },
+export async function removeFromList(ids: string[]): Promise<void> {
+  await db.$transaction([
+    db.shoppingListItem.deleteMany({
+      where: { id: { in: ids }, manual: true },
+    }),
+    db.shoppingListItem.updateMany({
+      where: { id: { in: ids }, manual: false },
+      data: {
+        dismissed: true,
+        checked: false,
+        checkedById: null,
+        checkedAt: null,
+      },
+    }),
+  ])
+}
+
+/**
+ * Puts a dismissed line back among the things to buy.
+ *
+ * @param ids Every row behind the line.
+ * @returns Nothing.
+ */
+export async function restoreToList(ids: string[]): Promise<void> {
+  await db.shoppingListItem.updateMany({
+    where: { id: { in: ids } },
+    data: { dismissed: false },
   })
+}
+
+/**
+ * Records how much of a line is actually going in the trolley.
+ *
+ * The screen shows one line where the database may hold several rows, so the
+ * amount is spread over them in turn: each takes as much as it asks for until
+ * the amount runs out, and the last row takes whatever is left — which is what
+ * lets the shopper take more than the menu asked for. An amount equal to what
+ * the line asks for is stored as "no amount at all", so the ordinary case stays
+ * the ordinary case and the row shows no correction.
+ *
+ * @param ids Every row behind the line.
+ * @param taken The amount for the whole line, or null to take all of it.
+ * @returns Nothing.
+ * @throws NoListError When none of the rows is there any more.
+ */
+export async function setItemTaken(
+  ids: string[],
+  taken: number | null
+): Promise<void> {
+  const rows = await db.shoppingListItem.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, quantity: true },
+    // Any stable order will do, and the ids are cuids: monotonic, so this is
+    // also the order the rows were created in.
+    orderBy: { id: "asc" },
+  })
+
+  if (rows.length === 0) throw new NoListError()
+
+  const asked = rows.reduce<number | null>(
+    (total, row) =>
+      row.quantity === null ? total : (total ?? 0) + row.quantity,
+    null
+  )
+
+  const share = shareOut(rows, asked === taken ? null : taken)
+
+  await db.$transaction(
+    rows.map((row) =>
+      db.shoppingListItem.update({
+        where: { id: row.id },
+        data: { takenQuantity: share.get(row.id) ?? null },
+      })
+    )
+  )
+}
+
+// Floating point: 0.1 + 0.2 spread over two rows must still add up to what was
+// asked for, so the remainder is rounded at each step rather than accumulated.
+const shareOut = (
+  rows: { id: string; quantity: number | null }[],
+  taken: number | null
+): Map<string, number | null> => {
+  const share = new Map<string, number | null>()
+  if (taken === null) return share
+
+  let left = taken
+
+  rows.forEach((row, index) => {
+    const last = index === rows.length - 1
+    const mine = last ? left : Math.min(left, row.quantity ?? 0)
+
+    share.set(row.id, Math.round(mine * 100) / 100)
+    left = Math.round((left - mine) * 100) / 100
+  })
+
+  return share
 }
