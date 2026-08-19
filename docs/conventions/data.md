@@ -1,7 +1,7 @@
 # Data conventions
 
-Postgres on Neon, accessed through Prisma. Zod validates everything that crosses
-a boundary.
+Postgres accessed through Prisma — Neon in production, a container on the
+developer's machine. Zod validates everything that crosses a boundary.
 
 Only project decisions are recorded here. Prisma's own API — queries, filters,
 relations, transactions, CLI commands — is documented in
@@ -36,8 +36,45 @@ all. Do not add `url` or `directUrl` to it — `directUrl` is not a valid
 
 Getting the two endpoints backwards produces failures that do not look like
 connection problems: migrations that hang, or a build that works locally and
-exhausts connections in production. Both variables are set in `.env` locally and
-in Vercel Environment Variables in production.
+exhausts connections in production.
+
+## Development runs against a container, never against production
+
+`docker-compose.yml` at the root serves Postgres 18 on **port 5433** — the same
+major Neon serves, because a development database on an older one accepts SQL
+that production would reject. Locally both variables hold the same string: there
+is no pooler in front of a container.
+
+```
+docker compose up -d          start it
+pnpm db:deploy && pnpm db:seed   from empty
+docker compose down -v        throw the data away and start again
+```
+
+**The production credentials do not belong in a local `.env`.** They live in
+Vercel Environment Variables and nowhere else. This is not tidiness: on
+2026-08-19, cleaning up after a browser check meant running a `DELETE` against
+the production database, and it worked because the credentials were to hand. A
+local environment that cannot reach production cannot be made to.
+
+The consequence is that nobody is left holding a direct connection with which to
+migrate production, so **`pnpm build` runs `prisma migrate deploy` first**. Every
+Vercel deploy brings the schema up before serving the code that needs it, and a
+migration that fails fails the deploy — which is the right way round.
+
+Real data can be copied down when a bug needs it, with `pg_dump` running inside
+the container so nothing lands on the host:
+
+```
+docker compose exec -T -e SRC="<direct url>" db sh -c 'pg_dump "$SRC" --no-owner --no-privileges -f /tmp/prod.sql'
+docker compose exec -T db sh -c 'psql -v ON_ERROR_STOP=1 -U postgres -d personal_productivity -q -f /tmp/prod.sql && rm /tmp/prod.sql'
+docker compose exec -T db psql -U postgres -d personal_productivity -c 'TRUNCATE "Session", "Account", "Verification", "RateLimit";'
+```
+
+The truncate is not optional. `Account` holds real OAuth tokens, and a copy of
+production is not a reason to have them on a laptop. Signing in locally does not
+need them: `getSession()` falls back to the first seeded user in development
+(`lib/auth/index.ts`), which is why local work has never had a login screen.
 
 ### Scale to zero
 
@@ -133,8 +170,8 @@ someone typed is worse than no regeneration.
 
 | Variable            | Purpose                                     |
 | ------------------- | ------------------------------------------- |
-| `DATABASE_URL`      | pooled Neon connection, used by the app     |
-| `DIRECT_URL`        | direct Neon connection, used by migrations  |
+| `DATABASE_URL`      | the app's connection — pooled on Neon       |
+| `DIRECT_URL`        | migrations' connection — direct on Neon     |
 | `ANTHROPIC_API_KEY` | Anthropic Messages API                      |
 | `ANTHROPIC_MODEL`   | model id, so it changes without a code edit |
 | `AUTH_SECRET`       | session cookie signing                      |
