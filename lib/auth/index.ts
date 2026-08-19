@@ -35,7 +35,7 @@ async function developmentFallback(): Promise<Session | null> {
  *
  * The development fallback is deliberately not applied. The login screen asks
  * this one: were it to ask getSession(), it would see the fallback in
- * development, redirect to the app, and bounce back off the middleware.
+ * development, redirect to the app, and bounce back off the proxy.
  *
  * @returns The verified session, or null.
  */

@@ -107,7 +107,13 @@ exists.
 
 **The middleware redirects; it does not authorise.**
 
-`middleware.ts` checks only whether a session cookie is _present_ and sends a
+**Renamed on 2026-08-19.** Next 16 deprecated the `middleware` file convention
+in favour of `proxy`, so this is now `proxy.ts` exporting a function called
+`proxy`. Nothing else about this section changes — the file does the same one
+thing. One constraint arrives with the name: `proxy` always runs on the nodejs
+runtime and cannot be moved to the edge. Nothing here wanted to.
+
+`proxy.ts` checks only whether a session cookie is _present_ and sends a
 request without one to `/login`. It performs no database read and validates
 nothing. It exists so that a signed-out visitor lands on the login screen
 promptly, and for no other reason.

@@ -142,6 +142,32 @@ hardcoded hex colours and no raw palette classes** like `bg-slate-800`: they bre
 the dark theme silently. Compose class names with `cn()` from `lib/utils`;
 Prettier's Tailwind plugin sorts them, so do not reorder by hand.
 
+### The type scale is Tailwind's, unmodified
+
+`text-xs` is 12px, `text-sm` is 14px, `text-base` is 16px, `text-xl` is 20px.
+Nothing overrides `--text-*` in `app/globals.css`, and there is no `font-size` on
+`html`. Six of the thirteen steps are used: `xs`, `sm`, `base`, `lg`, `xl`, `3xl`.
+
+Raised on 2026-08-19: the app reads small on a phone, because content sits at
+`text-sm` and its details at `text-xs`, so the browser's own reading size is used
+almost nowhere. Two theme-wide fixes were built and both were rejected — the
+owner's call, and the reason is worth keeping: a scale whose names stop matching
+their values costs more, later, than the forty class names it saves.
+
+**The size is therefore decided per element, at the call site.** When a screen
+reads too small, change its classes rather than the scale. Two things to know
+before doing it:
+
+- **`Button` has no size that raises its text.** `size` governs height and
+  padding, so a `lg` button is taller with the same 14px label — upstream
+  shadcn's design, so that buttons and inputs line up at a shared height. The
+  only size that touches the font is `xs`, and it goes down. To make a button's
+  text larger, pass `className="text-base"`: `cn()` is tailwind-merge, so the
+  class from the call site beats the variant's. `components/app-nav.tsx:33`
+  already does exactly this on the "Menu" trigger.
+- The same holds for `Badge`, `Label`, `Card` and the `Field` parts: they carry
+  `text-sm` or `text-xs` from the registry, and the call site overrides them.
+
 ## PWA
 
 The app is installed to the home screen and receives shared links through the

@@ -9,8 +9,8 @@ import { db } from "@/lib/db"
 // sits beside `children` rather than around it, so the pages below keep
 // rendering on the server.
 //
-// The redirect here is the server-side gate. The middleware only looks for a
-// cookie and cannot authorise; this can, and does.
+// The redirect here is the server-side gate. The proxy only looks for a cookie
+// and cannot authorise; this can, and does.
 export default async function AppLayout({
   children,
 }: {
