@@ -1,0 +1,39 @@
+# The development database. Production is Neon, and its credentials belong in
+# Vercel and nowhere else — see docs/conventions/data.md. Keeping them out of
+# the local .env is the point of this file: a command typed here cannot reach
+# production, however distracted the person typing it.
+#
+#   docker compose up -d      start it
+#   docker compose down       stop it, keeping the data
+#   docker compose down -v    stop it and throw the data away
+services:
+  db:
+    # 18 because Neon serves 18.6, and a development database on an older major
+    # can accept SQL that production would reject. `pg_dump` refuses outright
+    # across a major, which is how this was found.
+    image: postgres:18-alpine
+    container_name: personal-productivity-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: personal_productivity
+    ports:
+      # 5433, not 5432: a Postgres already installed on the machine owns the
+      # usual port, and a silent connection to the wrong database is exactly the
+      # class of accident this file exists to prevent.
+      - "5433:5432"
+    volumes:
+      # /var/lib/postgresql, not the /var/lib/postgresql/data of every example
+      # written before Postgres 18: the image moved its declared volume, and the
+      # old path leaves the cluster in the container's writable layer, where
+      # `docker compose down` throws it away.
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d personal_productivity"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:

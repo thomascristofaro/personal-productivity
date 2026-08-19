@@ -27,6 +27,13 @@ now.
 
 ## In flight
 
+**The development database moves off production**, on the branch
+`chore/local-postgres`: `docker-compose.yml`, the `.env` pointing at it, and
+`prisma migrate deploy` folded into `pnpm build`. Production's data was copied
+into the container once — 32 recipes, 11 menus, the catalogue — with `Session`,
+`Account` and `Verification` truncated on arrival. See
+[`docs/conventions/data.md`](conventions/data.md).
+
 **Two decisions the shopper makes on the line**, on the branch
 `feat/partial-and-already-home`. No plan document: a bounded change to screens
 that already exist, designed in chat and argued in
@@ -349,6 +356,12 @@ or `docs/conventions/` as it was decided.
   deletes a hand-added row and flags a generated one `dismissed`, because
   deleting the latter lasts until the next regeneration rebuilds it. Dismissed
   lines show under «Tolte dalla lista» with one tap back.
+- **Development never touches production — 2026-08-19.** Postgres 18 in Docker
+  on port 5433, and the Neon credentials removed from the local `.env`. The
+  owner called it after watching a `DELETE` run against production to clean up a
+  browser check. `pnpm build` therefore runs `prisma migrate deploy`: with no
+  direct connection on any laptop, the deploy is the only thing left that can
+  migrate production, and it must not be something anyone has to remember.
 
 ## Parked defects
 
