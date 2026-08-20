@@ -6,9 +6,9 @@ import { DayBlock } from "@/components/menu/day-block"
 import type { RecipeOption } from "@/components/menu/recipe-picker"
 import {
   SlotDrawer,
-  type SaveSlotAction,
   type SlotDrawerValues,
 } from "@/components/menu/slot-drawer"
+import type { FormAction } from "@/lib/form"
 
 const keyOf = (slot: SlotDrawerValues) => `${slot.day}-${slot.meal}`
 
@@ -21,7 +21,6 @@ export function WeekGrid({
   todayIndex,
   recipes,
   saveAction,
-  clearAction,
 }: {
   weekStart: string
   slots: SlotDrawerValues[]
@@ -29,8 +28,7 @@ export function WeekGrid({
   // -1 when the week on screen is not the current one.
   todayIndex: number
   recipes: RecipeOption[]
-  saveAction: SaveSlotAction
-  clearAction: (formData: FormData) => Promise<void>
+  saveAction: FormAction
 }) {
   const [openKey, setOpenKey] = useState<string | null>(null)
   // Stable across renders, so the drawer's close-on-success effect does not
@@ -63,7 +61,6 @@ export function WeekGrid({
           dayLabel={dayLabels[open.day]}
           recipes={recipes}
           saveAction={saveAction}
-          clearAction={clearAction}
         />
       )}
     </div>
