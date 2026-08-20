@@ -7,6 +7,7 @@ export function FilterChips({
   param,
   chips,
   active,
+  label,
   keep = {},
 }: {
   basePath: string
@@ -16,6 +17,9 @@ export function FilterChips({
   // highlight nothing, rather than highlight "Tutti" and imply the filter was
   // understood.
   active: string | undefined
+  // The nav's own accessible name. Required rather than optional: a landmark
+  // with a wrong name is worse than one the compiler made you name.
+  label: string
   keep?: Record<string, string | undefined>
 }) {
   const hrefFor = (value: string | undefined) => {
@@ -32,7 +36,7 @@ export function FilterChips({
   }
 
   return (
-    <nav aria-label="Filtra per tipo">
+    <nav aria-label={label}>
       {/* Links and not buttons, and therefore no "use client": the choice
           belongs in the address bar, so it survives a refresh and can be sent
           to the other phone. A client component here would buy nothing and

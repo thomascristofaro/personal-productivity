@@ -8,7 +8,7 @@ import { EMPTY_FORM_STATE, type FormAction } from "@/lib/form"
 export type FieldProps = {
   id: string
   name: string
-  defaultValue: string
+  defaultValue?: string
   "aria-invalid"?: true
   "aria-describedby"?: string
 }
@@ -48,7 +48,7 @@ export function useFormState(
   // on the element as an unknown attribute. Field components take it as a prop.
   const fieldProps = (
     field: string,
-    options: { described?: boolean } = {}
+    options: { described?: boolean; controlled?: boolean } = {}
   ): FieldProps => {
     const ids = [
       options.described ? `${field}-description` : null,
@@ -58,9 +58,14 @@ export function useFormState(
     return {
       id: field,
       name: field,
-      // The echoed value wins over the server's: after a refusal it is what the
-      // user typed, and on a fresh render there is none.
-      defaultValue: state.values[field] ?? initialValues[field] ?? "",
+      // Omitted for a controlled field: the call site already supplies `value`,
+      // and React warns when a native input receives both `value` and
+      // `defaultValue`.
+      defaultValue: options.controlled
+        ? undefined
+        : // The echoed value wins over the server's: after a refusal it is what
+          // the user typed, and on a fresh render there is none.
+          (state.values[field] ?? initialValues[field] ?? ""),
       "aria-invalid": errorOf(field) ? true : undefined,
       "aria-describedby": ids.length === 0 ? undefined : ids.join(" "),
     }

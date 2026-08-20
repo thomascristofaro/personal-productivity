@@ -59,6 +59,7 @@ export default async function CatalogPage({
         param="tipo"
         chips={KIND_CHIPS}
         active={tipo}
+        label="Filtra per tipo"
         keep={{ q }}
       />
 

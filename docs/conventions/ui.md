@@ -81,7 +81,7 @@ is the thing this directory exists to prevent.
 right one: the parent supplies the data the child renders, the case
 `vercel-composition-patterns` names as appropriate for them.
 
-The catalogue screens under `app/(app)/ingredients/` are the second module built
+The catalogue screens under `app/(app)/catalogo/` are the second module built
 on these, and they added no primitive and changed none. That is the bar: if a
 third module needs one bent, bend the primitive rather than forking it.
 
@@ -97,14 +97,24 @@ equals label, the aisles — or a map — value differs from label, `INGREDIENT`
 "Ingrediente" — as the one prop that covers both, and it is exactly what Base
 UI's `items` needs to stop `Select.Value` rendering the raw value.
 
-**Reaching for `FormField` is normal, not a failure.** Written down on purpose:
-without it the typed four read as the official components, the escape hatch
-reads as a defeat, and the next person bends `TextField` to fit rather than
-dropping a level — which is the disease this directory treats. Thirteen of the
-app's eighteen fields go through the typed four; the other five — `defaultUnit`
-with its `datalist`, the two `IngredientPicker`s, the `RecipePicker` and the
-`skipCatalog` checkbox — reach for `FormField`. That ratio is healthy, not a
-smell.
+**A controlled field asks `fieldProps` to drop `defaultValue`.** Adding `value`
+and `onChange` after the spread is not enough on its own: `fieldProps` still
+carries `defaultValue`, and a native input warns when it gets both. Call
+`fieldProps(field, { controlled: true })` — `add-item-drawer.tsx`'s `unit` and
+`aisle` are the two call sites that need it.
+
+**Reaching for the escape hatch is normal, not a failure.** Written down on
+purpose: without it the typed four read as the official components, the escape
+hatch reads as a defeat, and the next person bends `TextField` to fit rather
+than dropping a level — which is the disease this directory treats. Most of the
+app's fields go through the typed four. Of the ones that do not, only three
+actually reach for `FormField` — `defaultUnit` with its `datalist`, the
+`RecipePicker` in the menu slot drawer, and the `IngredientPicker` in the
+add-item drawer. Two more skip `FormField` too: the `IngredientPicker` inside
+`IngredientRows` and the `skipCatalog` checkbox reach past it for a bare
+`aria-label` or a bare `<Field>`, with no `FormField` and no automatic id
+association at all. That range — typed, `FormField`, or a bare control — is
+healthy, not a smell.
 
 **`MessagePage` is not `EmptyState` with different copy.** `EmptyState` renders
 a `<p>`, which is correct inside a page whose `<h1>` already comes from

@@ -179,9 +179,12 @@ behaviour the counter exists for.
 
 `<TextField {...fieldProps("title")} label="Nome" />`. No context, no compound
 component, no provider. One rule for the whole layer: where a value comes from is
-visible at the call site, and a controlled field simply overwrites `value` and
+visible at the call site, and a controlled field overwrites `value` and
 `onChange` after the spread — which is what `add-item-drawer`'s unit and aisle
-need.
+need. `defaultValue` would still be in that spread, and React warns about a
+native input carrying both — so a controlled call site asks for
+`fieldProps(field, { controlled: true })`, which drops `defaultValue` instead of
+leaving it to be overwritten.
 
 ### The drawer is always controlled, and does not own the hook
 
@@ -308,6 +311,8 @@ hooks/
 components/page/
   page-body.tsx      ListBody, DetailBody
   fields.tsx         TextField, NumberField, TextareaField, SelectField
+  described-by.ts    mergeDescribedBy, joining a field's own aria-describedby
+                      with its description's id
   form-field.tsx     FormField
   form-drawer.tsx    FormDrawer
   form-message.tsx   FormMessage

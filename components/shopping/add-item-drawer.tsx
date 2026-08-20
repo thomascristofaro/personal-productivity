@@ -151,7 +151,7 @@ export function AddItemDrawer({
             autoComplete="off"
           />
           <TextField
-            {...form.fieldProps("unit")}
+            {...form.fieldProps("unit", { controlled: true })}
             label="Unità"
             error={form.errorOf("unit")}
             value={unit}
@@ -162,7 +162,7 @@ export function AddItemDrawer({
         </div>
 
         <SelectField
-          {...form.fieldProps("aisle")}
+          {...form.fieldProps("aisle", { controlled: true })}
           label="Reparto"
           error={form.errorOf("aisle")}
           options={aisles}
