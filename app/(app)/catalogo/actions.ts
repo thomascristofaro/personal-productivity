@@ -2,10 +2,10 @@
 
 import { revalidatePath } from "next/cache"
 import { redirect, RedirectType } from "next/navigation"
-import { z } from "zod"
 
-import type { CatalogFormState } from "@/components/catalog/catalog-form"
 import { requireSession } from "@/lib/auth"
+import { failure, type FormAction } from "@/lib/form"
+import { fieldErrorsFrom, valuesFrom } from "@/lib/form-errors"
 import {
   CatalogItemInputSchema,
   CatalogItemNameSchema,
@@ -28,37 +28,7 @@ const FORM_FIELDS = [
   "aisle",
 ] as const
 
-// Echoes exactly what was submitted, so a failed save re-renders the form from
-// these values instead of losing them to React 19's form reset.
-function valuesFrom(formData: FormData): Record<string, string> {
-  const values: Record<string, string> = {}
-
-  for (const field of FORM_FIELDS) {
-    const value = formData.get(field)
-    values[field] = typeof value === "string" ? value : ""
-  }
-
-  return values
-}
-
-// Built from `issues` rather than a version-specific flatten helper — the same
-// shape app/(app)/recipes/actions.ts already uses.
-function fieldErrorsFrom(error: z.ZodError): Record<string, string[]> {
-  const errors: Record<string, string[]> = {}
-
-  for (const issue of error.issues) {
-    const field = issue.path[0]
-    if (typeof field !== "string") continue
-    errors[field] = [...(errors[field] ?? []), issue.message]
-  }
-
-  return errors
-}
-
-export async function saveCatalogItem(
-  _state: CatalogFormState,
-  formData: FormData
-): Promise<CatalogFormState> {
+export const saveCatalogItem: FormAction = async (_state, formData) => {
   const parsed = CatalogItemInputSchema.safeParse({
     name: formData.get("name"),
     // `?? undefined` and not `?? ""`: the schema defaults a missing kind to
@@ -70,11 +40,10 @@ export async function saveCatalogItem(
   })
 
   if (!parsed.success) {
-    return {
+    return failure("Controlla i campi segnalati.", {
       errors: fieldErrorsFrom(parsed.error),
-      message: "Controlla i campi segnalati.",
-      values: valuesFrom(formData),
-    }
+      values: valuesFrom(formData, FORM_FIELDS),
+    })
   }
 
   await requireSession()
@@ -85,35 +54,34 @@ export async function saveCatalogItem(
       ? CatalogItemNameSchema.safeParse(rawOriginal)
       : null
 
-  const failure = (message: string): CatalogFormState => ({
-    errors: {},
-    message,
-    values: valuesFrom(formData),
-  })
-
   try {
     if (original === null) {
       await createCatalogItem(parsed.data)
     } else if (original.success) {
       await updateCatalogItem(original.data, parsed.data)
     } else {
-      return failure("Questa voce non esiste più.")
+      return failure("Questa voce non esiste più.", {
+        values: valuesFrom(formData, FORM_FIELDS),
+      })
     }
   } catch (error) {
     if (error instanceof CatalogItemExistsError) {
-      return {
+      return failure("Controlla i campi segnalati.", {
         errors: { name: ["Esiste già una voce con questo nome."] },
-        message: "Controlla i campi segnalati.",
-        values: valuesFrom(formData),
-      }
+        values: valuesFrom(formData, FORM_FIELDS),
+      })
     }
     if (error instanceof CatalogItemNotFoundError) {
-      return failure("Questa voce non esiste più.")
+      return failure("Questa voce non esiste più.", {
+        values: valuesFrom(formData, FORM_FIELDS),
+      })
     }
     // The form only offers the known aisles, so reaching this means the action
     // was called directly — a server action is a public endpoint.
     if (error instanceof UnknownAisleError) {
-      return failure("Reparto non valido.")
+      return failure("Reparto non valido.", {
+        values: valuesFrom(formData, FORM_FIELDS),
+      })
     }
     throw error
   }
