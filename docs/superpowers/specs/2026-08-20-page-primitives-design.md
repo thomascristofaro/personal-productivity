@@ -200,10 +200,18 @@ const [open, setOpen] = useState(false)
 It renders the header, the `<form>`, the `FieldGroup` keyed on the attempt, the
 message and the footer. Children are the fields and nothing else.
 
-**Close-on-success becomes one implementation**, during render inside
-`FormDrawer`: when `form.attempt` changes and `state.ok` is true, it calls
-`onOpenChange(false)`. The effect at `slot-drawer.tsx:83` and the two inline
-copies go.
+**Close-on-success becomes one implementation**, in a `useEffect` inside
+`FormDrawer` keyed on `form.attempt`: when the attempt changes and `state.ok`
+is true, it calls `onOpenChange(false)`. Not during render — `FormDrawer` is
+always controlled, so `onOpenChange` is by definition the _parent's_ setter,
+and calling another component's setter during your own render is exactly what
+React forbids, producing "Cannot update a component while rendering a
+different component" on every successful save. Adjusting your own state during
+render, which is what `add-item-drawer.tsx:87` and
+`complete-purchase-bar.tsx:45` did, is legal; adjusting a parent's is not. The
+distinction that matters is own state versus another component's state, not
+render versus effect as a style preference. The effect at `slot-drawer.tsx:83`
+and the two inline copies go.
 
 **The trigger stays outside**, where its positioning lives: the floating round
 button keeps its safe-area maths in `AddItemDrawer`, the fixed bar keeps its own
