@@ -89,8 +89,15 @@ export function RecipeForm({
         value={state.values.notes ?? values.notes}
       />
 
-      <FieldGroup key={attempt}>
+      {/* The attempt key sits on each flat field rather than on the group. Its
+          job is to remount an uncontrolled input whose defaultValue changed
+          after mount; the two fieldsets below hold components with their own
+          state, and remounting those threw away the ingredients and tags the
+          user had entered whenever a save was refused. The field name is part
+          of each key because siblings may not share one. */}
+      <FieldGroup>
         <TextField
+          key={`title-${attempt}`}
           {...fieldProps("title")}
           label="Nome"
           error={errorOf("title")}
@@ -119,6 +126,7 @@ export function RecipeForm({
 
         <div className="grid grid-cols-2 gap-4">
           <NumberField
+            key={`servings-${attempt}`}
             {...fieldProps("servings")}
             label="Porzioni"
             error={errorOf("servings")}
@@ -126,6 +134,7 @@ export function RecipeForm({
             autoComplete="off"
           />
           <NumberField
+            key={`totalMinutes-${attempt}`}
             {...fieldProps("totalMinutes")}
             label="Minuti"
             error={errorOf("totalMinutes")}
@@ -135,6 +144,7 @@ export function RecipeForm({
         </div>
 
         <TextareaField
+          key={`instructions-${attempt}`}
           {...fieldProps("instructions")}
           label="Preparazione"
           error={errorOf("instructions")}
@@ -153,6 +163,7 @@ export function RecipeForm({
         </fieldset>
 
         <TextField
+          key={`sourceUrl-${attempt}`}
           {...fieldProps("sourceUrl")}
           label="Fonte"
           error={errorOf("sourceUrl")}

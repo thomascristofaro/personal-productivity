@@ -9,6 +9,7 @@ import { DetailBody } from "@/components/page/page-body"
 import { PageHeader } from "@/components/page/page-header"
 import { Button } from "@/components/ui/button"
 import { AISLE_ORDER } from "@/lib/aisles"
+import { decodeSegment } from "@/lib/route-params"
 import { getCatalogItem, listUsedUnits } from "@/lib/services/catalog"
 
 export const metadata = { title: "Modifica voce" }
@@ -18,8 +19,15 @@ export default async function EditCatalogItemPage({
 }: {
   params: Promise<{ name: string }>
 }) {
-  // Next decodes the segment, so this is the plain name again.
-  const { name } = await params
+  // Next hands the segment over still percent-encoded, so a name with a space
+  // arrives as "aceto%20balsamico" and matches no row. It reads the same way
+  // whether the page was loaded cold or reached by a client navigation.
+  const { name: raw } = await params
+  const name = decodeSegment(raw)
+
+  // A segment nobody could have produced is not an entry that exists.
+  if (name === null) notFound()
+
   const [item, units] = await Promise.all([
     getCatalogItem(name),
     listUsedUnits(),
