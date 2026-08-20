@@ -28,11 +28,24 @@ now.
 
 ## In flight
 
-**The import module.** `share_target` is declared nowhere yet because it points
-at `/import`, which does not exist — the only half-declared thing in the repo.
-Next up, and it starts with a brainstorm: what arrives from the Android share
-sheet, what the LLM does and what has to work without it, and what the
-confirmation screen looks like when the fetch behind it failed.
+**The recipe import**, on the branch `feat/recipe-import` —
+[design](superpowers/specs/2026-08-20-recipe-import-design.md),
+[plan](superpowers/plans/2026-08-20-recipe-import.md). `share_target` now points
+at a `/import` that exists: a link shared from Android, or pasted into the app,
+becomes the recipe form pre-filled. `lib/json-ld.ts` reads the broken JSON real
+sites publish, `lib/url-guard.ts` refuses the addresses a fetcher must not
+reach, and a save creates the catalogue entries the recipe names instead of
+refusing over them. No component was added to `components/`.
+
+**Deliberately without the LLM.** §6.1 of the menu design has JSON-LD first and
+an LLM fallback for pages without it; only the first half shipped, so there is
+still no `lib/services/llm.ts`, no SDK and no key to configure. Whether the
+fallback earns its cost is a question about real pages, and now there is a way
+to find out. Deferred with it: the LLM fallback for ingredient lines the Italian
+parser cannot read, and `guessAisles`.
+
+**Next up:** the finance module or the news reader — the first real test of
+whether the page primitives carry to a section that is not menu-and-shopping.
 
 **Merged on 2026-08-20**, all three:
 

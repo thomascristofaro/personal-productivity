@@ -5,13 +5,17 @@ import { RecipeIngredientRowSchema } from "@/lib/schemas/catalog"
 export const RECIPE_TITLE_MAX = 200
 export const RECIPE_NOTES_MAX = 2000
 export const RECIPE_SOURCE_URL_MAX = 2000
+// Read by lib/services/import.ts, which drops a value outside the range rather
+// than pre-filling a form with something this schema will then refuse.
+export const SERVINGS_MAX = 50
+export const TOTAL_MINUTES_MAX = 2880
 
 // A zero would reach the shopping-list aggregator as a divisor and produce
 // Infinity; a fraction cannot be a number of people.
 const servings = z
   .int("Le porzioni devono essere un numero intero.")
   .positive("Le porzioni devono essere maggiori di zero.")
-  .max(50, "Le porzioni non possono superare 50.")
+  .max(SERVINGS_MAX, `Le porzioni non possono superare ${SERVINGS_MAX}.`)
   .optional()
 
 // z.url() alone accepts any scheme, including javascript:.
@@ -44,7 +48,10 @@ export const RecipeInputSchema = z.object({
   totalMinutes: z
     .int("I minuti devono essere un numero intero.")
     .positive("I minuti devono essere maggiori di zero.")
-    .max(2880, "I minuti non possono superare 2880 (48 ore).")
+    .max(
+      TOTAL_MINUTES_MAX,
+      `I minuti non possono superare ${TOTAL_MINUTES_MAX} (48 ore).`
+    )
     .optional(),
   instructions: z
     .string()
