@@ -53,6 +53,9 @@ export function IngredientRows({
   const quantityRefs = useRef(new Map<string, HTMLInputElement | null>())
 
   const names = options.map((option) => option.name)
+  // The catalogue as a set, so marking a row is a lookup and not a scan of 113
+  // entries per row per render.
+  const known = new Set(names)
 
   function fill(key: string, name: string, defaultUnit: string | null) {
     setRows((current) =>
@@ -111,6 +114,15 @@ export function IngredientRows({
               name="ingredientName"
               value={row.ingredientName}
             />
+            {row.ingredientName !== "" && !known.has(row.ingredientName) ? (
+              // An import brings names the catalogue does not have — six of the
+              // nine on the page this was measured against. Saying so here is
+              // what lets a site's own typo be caught before the save creates
+              // it, since the save now creates whatever is missing.
+              <span className="mt-1 block text-xs text-muted-foreground">
+                nuovo
+              </span>
+            ) : null}
           </div>
 
           <div className="w-24 shrink-0">
