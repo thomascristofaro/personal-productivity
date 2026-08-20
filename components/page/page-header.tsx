@@ -4,6 +4,7 @@ import Link from "next/link"
 export function PageHeader({
   title,
   back,
+  subtitle,
   children,
 }: {
   title: string
@@ -11,6 +12,11 @@ export function PageHeader({
   // cannot drift apart: a back link naming the wrong destination is worse
   // than an unlabelled one.
   back?: { href: string; label: string }
+  // The muted line under the title — a date range, a total, a row of badges.
+  // A ReactNode because one of the four holds badges, and a prop rather than a
+  // `<p>` at the call site because four pages were each deciding its size and
+  // one of them had drifted to a smaller one that nobody chose.
+  subtitle?: React.ReactNode
   children?: React.ReactNode
 }) {
   return (
@@ -32,6 +38,13 @@ export function PageHeader({
           <div className="flex shrink-0 gap-2">{children}</div>
         )}
       </div>
+      {subtitle === undefined ? null : (
+        // Flex-wrap for the badge case; a plain sentence is one child and does
+        // not notice.
+        <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+          {subtitle}
+        </p>
+      )}
     </header>
   )
 }

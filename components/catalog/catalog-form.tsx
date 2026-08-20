@@ -1,10 +1,8 @@
 "use client"
 
 import { SelectField, TextField } from "@/components/page/fields"
-import { FormActions } from "@/components/page/form-actions"
 import { FormField } from "@/components/page/form-field"
-import { FormMessage } from "@/components/page/form-message"
-import { FieldGroup } from "@/components/ui/field"
+import { PageForm } from "@/components/page/page-form"
 import { Input } from "@/components/ui/input"
 import { useFormState } from "@/hooks/use-form-state"
 import type { FormAction } from "@/lib/form"
@@ -44,67 +42,65 @@ export function CatalogForm({
 }) {
   // An explicit object, not `values`: CatalogFormValues has an optional
   // `originalName`, which is not assignable to Record<string, string>.
-  const { state, formAction, isPending, attempt, errorOf, fieldProps } =
-    useFormState(action, FIELD_ORDER, {
-      name: values.name,
-      kind: values.kind,
-      defaultUnit: values.defaultUnit,
-      aisle: values.aisle,
-    })
+  const form = useFormState(action, FIELD_ORDER, {
+    name: values.name,
+    kind: values.kind,
+    defaultUnit: values.defaultUnit,
+    aisle: values.aisle,
+  })
 
   return (
-    <form action={formAction} className="flex flex-col gap-6">
+    <PageForm form={form} cancelHref="/catalogo">
       {values.originalName === undefined ? null : (
         <input type="hidden" name="originalName" value={values.originalName} />
       )}
 
-      <FieldGroup key={attempt}>
-        <TextField
-          {...fieldProps("name")}
-          label="Nome"
-          error={errorOf("name")}
+      <TextField
+        key={form.fieldKey("name")}
+        {...form.fieldProps("name")}
+        label="Nome"
+        error={form.errorOf("name")}
+        autoComplete="off"
+        required
+      />
+
+      <SelectField
+        key={form.fieldKey("kind")}
+        {...form.fieldProps("kind")}
+        label="Tipo"
+        error={form.errorOf("kind")}
+        description="Solo un ingrediente si può scegliere dentro una ricetta."
+        options={KIND_LABELS}
+      />
+
+      <FormField
+        name="defaultUnit"
+        label="Unità preferita"
+        error={form.errorOf("defaultUnit")}
+        description="Riempie la riga della ricetta. Lascia vuoto se si conta a pezzi."
+      >
+        <Input
+          key={form.fieldKey("defaultUnit")}
+          {...form.fieldProps("defaultUnit", { described: true })}
+          list="unit-suggestions"
           autoComplete="off"
-          required
+          spellCheck={false}
         />
+        <datalist id="unit-suggestions">
+          {units.map((unit) => (
+            <option key={unit} value={unit} />
+          ))}
+        </datalist>
+      </FormField>
 
-        <SelectField
-          {...fieldProps("kind")}
-          label="Tipo"
-          error={errorOf("kind")}
-          description="Solo un ingrediente si può scegliere dentro una ricetta."
-          options={KIND_LABELS}
-        />
-
-        <FormField
-          name="defaultUnit"
-          label="Unità preferita"
-          error={errorOf("defaultUnit")}
-          description="Riempie la riga della ricetta. Lascia vuoto se si conta a pezzi."
-        >
-          <Input
-            {...fieldProps("defaultUnit", { described: true })}
-            list="unit-suggestions"
-            autoComplete="off"
-            spellCheck={false}
-          />
-          <datalist id="unit-suggestions">
-            {units.map((unit) => (
-              <option key={unit} value={unit} />
-            ))}
-          </datalist>
-        </FormField>
-
-        <SelectField
-          {...fieldProps("aisle")}
-          label="Reparto"
-          error={errorOf("aisle")}
-          description="Decide dove finisce nella lista della spesa."
-          options={aisles}
-        />
-      </FieldGroup>
-
-      <FormMessage>{state.message}</FormMessage>
-      <FormActions cancelHref="/catalogo" isPending={isPending} />
-    </form>
+      <SelectField
+        key={form.fieldKey("aisle")}
+        {...form.fieldProps("aisle")}
+        label="Reparto"
+        error={form.errorOf("aisle")}
+        description="Decide dove finisce nella lista della spesa."
+        options={aisles}
+      />
+    </PageForm>
   )
 }

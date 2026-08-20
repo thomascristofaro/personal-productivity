@@ -38,28 +38,29 @@ Forms are built from `field` — `FieldGroup`, `Field`, `FieldLabel`,
 A screen is assembled from these, not rebuilt. In `components/page/` unless
 stated.
 
-| Primitive                                                     | Signature, in short                                                             |
-| ------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `ListBody` / `DetailBody`                                     | the `<main>` and its spacing — `gap-4` for a list, `gap-6` for a form or detail |
-| `PageHeader`                                                  | `title`, optional `back={{ href, label }}`, children as the action slot         |
-| `DataList`                                                    | `items`, `announcement`, `renderItem`, `empty` — includes the count live region |
-| `DataListRow`                                                 | `href`, `title`, children as the muted detail line                              |
-| `EmptyState`                                                  | `title`, optional `description`, children as the action                         |
-| `ListSection`                                                 | `title` + children — **one** section, not a list of them                        |
-| `SearchField`                                                 | `basePath`, `placeholder`, `label`, `param="q"` — debounced, replaces the URL   |
-| `FilterChips`                                                 | `basePath`, `param`, `chips`, `active`, `label`, `keep` — links, not buttons    |
-| `MessagePage`                                                 | `title` + children, for a page with no `PageHeader`                             |
-| `PageError`                                                   | the body of a route's `error.tsx`                                               |
-| `ListSkeleton` / `DetailSkeleton`                             | `label`, and `rows` for the list — the body of `loading.tsx`                    |
-| `TextField` / `NumberField` / `TextareaField` / `SelectField` | the four typed fields                                                           |
-| `FormField`                                                   | `name`, `label`, `description`, `error` + the control as children               |
-| `FormMessage`                                                 | the form-level `<p role="alert">`; renders nothing for `null`                   |
-| `FormActions`                                                 | `cancelHref`, `isPending` — submit with its pending label, plus Annulla         |
-| `FormDrawer`                                                  | `open`, `onOpenChange`, `form`, `title`, `submitLabel`, `pendingLabel`          |
-| `useFormState` (`hooks/`)                                     | everything a form needs from its action — see the contract below                |
-| `countLabel` (`lib/count-label`)                              | the «6 voci trovate.» sentence — none, one, many                                |
-| `firstOf` (`lib/search-params`)                               | a `searchParams` value Next may have resolved to an array                       |
-| `decodeSegment` (`lib/route-params`)                          | a dynamic segment, still percent-encoded as Next hands it over                  |
+| Primitive                                                     | Signature, in short                                                                    |
+| ------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `ListBody` / `DetailBody`                                     | the `<main>` and its spacing — `gap-4` for a list, `gap-6` for a form or detail        |
+| `PageHeader`                                                  | `title`, optional `back={{ href, label }}` and `subtitle`, children as the action slot |
+| `DataList`                                                    | `items`, `announcement`, `renderItem`, `empty` — includes the count live region        |
+| `DataListRow`                                                 | `href`, `title`, children as the muted detail line                                     |
+| `EmptyState`                                                  | `title`, optional `description`, children as the action                                |
+| `ListSection`                                                 | `title` + children — **one** section, not a list of them                               |
+| `SearchField`                                                 | `basePath`, `placeholder`, `label`, `param="q"` — debounced, replaces the URL          |
+| `FilterChips`                                                 | `basePath`, `param`, `chips`, `active`, `label`, `keep` — links, not buttons           |
+| `MessagePage`                                                 | `title` + children, for a page with no `PageHeader`                                    |
+| `PageError`                                                   | the body of a route's `error.tsx`                                                      |
+| `ListSkeleton` / `DetailSkeleton`                             | `label`, and `rows` for the list — the body of `loading.tsx`                           |
+| `TextField` / `NumberField` / `TextareaField` / `SelectField` | the four typed fields                                                                  |
+| `FormField`                                                   | `name`, `label`, `description`, `error` + the control as children                      |
+| `FormMessage`                                                 | the form-level `<p role="alert">`; renders nothing for `null`                          |
+| `FormActions`                                                 | `cancelHref`, `isPending` — submit with its pending label, plus Annulla                |
+| `PageForm`                                                    | `form`, `cancelHref` + the fields — the `<form>`, the group, the message, the footer   |
+| `FormDrawer`                                                  | the same for a drawer: `open`, `onOpenChange`, `form`, `title`, `submitLabel`          |
+| `useFormState` (`hooks/`)                                     | everything a form needs from its action — see the contract below                       |
+| `countLabel` (`lib/count-label`)                              | the «6 voci trovate.» sentence — none, one, many                                       |
+| `firstOf` (`lib/search-params`)                               | a `searchParams` value Next may have resolved to an array                              |
+| `decodeSegment` (`lib/route-params`)                          | a dynamic segment, still percent-encoded as Next hands it over                         |
 
 **If a new module needs one bent, bend the primitive rather than fork it.** A
 second copy of `DataListRow` with one prop changed is how this directory stops
@@ -162,9 +163,33 @@ export default async function NewCatalogItemPage() {
 }
 ```
 
-The page fetches and passes props; the form component is the client boundary and
-owns nothing else. Fetch in parallel with `Promise.all` — a sequential await is
-the waterfall the React skill ranks CRITICAL.
+The page fetches and passes props. Fetch in parallel with `Promise.all` — a
+sequential await is the waterfall the React skill ranks CRITICAL.
+
+The form component is the client boundary, and `PageForm` leaves it a hook call
+and a list of fields. It owns the `<form>`, the field group, the message and the
+footer, so nothing below writes those again:
+
+```tsx
+"use client"
+
+export function CatalogForm({ values, action, units }) {
+  const form = useFormState(action, FIELD_ORDER, { name: values.name, … })
+
+  return (
+    <PageForm form={form} cancelHref="/catalogo">
+      <TextField key={form.fieldKey("name")} {...form.fieldProps("name")}
+                 label="Nome" error={form.errorOf("name")} required />
+      <SelectField key={form.fieldKey("kind")} {...form.fieldProps("kind")}
+                   label="Tipo" error={form.errorOf("kind")} options={KIND_LABELS} />
+    </PageForm>
+  )
+}
+```
+
+`PageHeader` stays **outside**, in the server component above: a heading is not
+form content. Pass `actions` to replace the footer when the submit is not the
+standard pair — the till form has nowhere for an Annulla to go.
 
 An edit page reached through a dynamic segment **must** decode it:
 
@@ -265,11 +290,15 @@ the element as an unknown attribute; field components take it as a prop.
 
 Three rules that are easy to get wrong:
 
-- **The remount key.** An uncontrolled input whose `defaultValue` changed after
-  mount needs `key={\`name-${attempt}\`}`to pick it up. Key the`FieldGroup`
-  when it holds only flat fields; key **each field** when the group also holds
-  components with their own state — remounting those threw away eight typed
-  ingredients on a refused save. Sibling keys must differ, hence the field name.
+- **The remount key.** React re-reads `defaultValue` only on mount, so a field
+  whose echoed value moved after a refusal needs a new key: `form.fieldKey(name)`,
+  which carries the field's name because siblings may not share one.
+  **On a page, key the fields and never the group** — `PageForm` deliberately
+  does not key, because remounting the group threw away eight typed ingredients
+  on a refused save. **In a drawer the group is keyed**, by `FormDrawer`, and
+  that is not an inconsistency: a drawer closes on success, so remounting
+  everything it holds is what empties its pickers for the next item, while a page
+  form stays put and the only attempt it renders is a refusal.
 - **A controlled field asks `fieldProps` to drop `defaultValue`.** Adding `value`
   and `onChange` after the spread is not enough: React warns when a native input
   receives both. Call `fieldProps(field, { controlled: true })`.

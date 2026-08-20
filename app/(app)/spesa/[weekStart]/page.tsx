@@ -73,7 +73,11 @@ export default async function ShoppingWeekPage({
   // that has to know whether the bar is showing.
   return (
     <ListBody className="pb-24">
-      <PageHeader title="Spesa" back={{ href: `/menu/${week}`, label: "Menù" }}>
+      <PageHeader
+        title="Spesa"
+        back={{ href: `/menu/${week}`, label: "Menù" }}
+        subtitle={range}
+      >
         {/* Shown even on a week with no list: the history crosses the weeks, so
             it is never irrelevant. "Rigenera" is, and is not. */}
         <Button
@@ -92,8 +96,6 @@ export default async function ShoppingWeekPage({
           </form>
         )}
       </PageHeader>
-
-      <p className="text-sm text-muted-foreground">{range}</p>
 
       {list === null ? (
         <EmptyState

@@ -47,13 +47,12 @@ export default async function PurchasePage({
       <PageHeader
         title={dayFormat.format(purchase.purchasedAt)}
         back={{ href: "/spesa/storico", label: "Storico spesa" }}
+        subtitle={
+          purchase.totalCents === null
+            ? "Importo non ancora inserito."
+            : formatEuro(purchase.totalCents)
+        }
       />
-
-      <p className="text-sm text-muted-foreground">
-        {purchase.totalCents === null
-          ? "Importo non ancora inserito."
-          : formatEuro(purchase.totalCents)}
-      </p>
 
       <PurchaseTotalForm
         id={purchase.id}

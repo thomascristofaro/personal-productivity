@@ -43,19 +43,22 @@ export default async function RecipePage({
         <PageHeader
           title={recipe.title}
           back={{ href: "/recipes", label: "Ricettario" }}
+          subtitle={
+            <>
+              {recipe.servings === null ? null : (
+                <span>per {recipe.servings}</span>
+              )}
+              {recipe.totalMinutes === null ? null : (
+                <span>{recipe.totalMinutes} min</span>
+              )}
+              {recipe.tags.map((tag) => (
+                <Badge key={tag} variant="secondary">
+                  {tag}
+                </Badge>
+              ))}
+            </>
+          }
         />
-
-        <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          {recipe.servings === null ? null : <span>per {recipe.servings}</span>}
-          {recipe.totalMinutes === null ? null : (
-            <span>{recipe.totalMinutes} min</span>
-          )}
-          {recipe.tags.map((tag) => (
-            <Badge key={tag} variant="secondary">
-              {tag}
-            </Badge>
-          ))}
-        </p>
 
         {/* A toolbar below the header rather than in PageHeader's action
             slot: at 390px three buttons do not fit beside a recipe title. */}
