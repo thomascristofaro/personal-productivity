@@ -21,6 +21,8 @@ export function SearchField({
   const [value, setValue] = useState(searchParams.get(param) ?? "")
   const [isPending, startTransition] = useTransition()
 
+  // Typing should not push a history entry per keystroke, and should not fetch
+  // per keystroke either.
   useEffect(() => {
     const next = value.trim()
     // Landing on the page leaves `value` matching the URL already — without
