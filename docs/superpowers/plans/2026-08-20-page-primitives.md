@@ -18,7 +18,7 @@
 - **UI:** every base component comes from `components/ui/` (shadcn). Do not add a library, do not hand-write a base component, do not wrap one to avoid editing it.
 - **Tests:** Vitest, node environment, `*.test.ts` beside the code. No jsdom, no testing-library, no Playwright in `package.json`. UI wiring is not unit-tested — see `docs/conventions/testing.md`.
 - **Gate:** `pnpm verify` (typecheck + lint + tests) must pass before any task is called done.
-- **Comments:** explain only *why*. No section dividers, no commented-out code, no restating the code.
+- **Comments:** explain only _why_. No section dividers, no commented-out code, no restating the code.
 - **Type scale:** Tailwind's, unmodified. Sizes are decided per element at the call site. Do not introduce a theme-wide size change.
 - **Behaviour:** only the four changes listed in the spec's "Behaviour changes" section may be visible. Everything else must look and behave exactly as before.
 
@@ -26,7 +26,7 @@
 
 Apply these; they override the spec where they differ.
 
-1. **Typed fields take three of our props, not two:** `label`, `description`, `error`. `fieldProps` returns DOM attributes only, so the error *text* cannot travel in the spread — it would land on the element as an unknown attribute. Three props, and they never grow.
+1. **Typed fields take three of our props, not two:** `label`, `description`, `error`. `fieldProps` returns DOM attributes only, so the error _text_ cannot travel in the spread — it would land on the element as an unknown attribute. Three props, and they never grow.
 2. **`ListBody` and `DetailBody` accept `className`,** merged with `cn()`. `/spesa/[weekStart]` needs `pb-24` unconditionally, and the spec's idea of moving it into `CompletePurchaseBar` cannot work: that component returns `null` when nothing is ticked, and the padding has to survive that.
 3. **The Zod bundle argument is weaker than the spec states.** `fieldErrorsFrom` needs only `import type { ZodError }`, which is erased at build. The two files stay split by consumer — client-facing versus server-facing — so that the day someone adds a runtime Zod value to the helpers, it is already out of the browser's way.
 
@@ -34,24 +34,24 @@ Apply these; they override the spec where they differ.
 
 **Created**
 
-| File | Responsibility |
-| ---- | -------------- |
-| `lib/form.ts` | `FormState`, `FormAction`, `EMPTY_FORM_STATE`, `failure`, `success`. Zero imports. |
-| `lib/form-errors.ts` | `fieldErrorsFrom`, `valuesFrom`. Server-side only. |
-| `lib/form-errors.test.ts` | Their tests. |
-| `lib/search-params.ts` | `firstOf`. |
-| `hooks/use-form-state.ts` | `useFormState`. |
-| `components/page/page-body.tsx` | `ListBody`, `DetailBody`. |
-| `components/page/described-by.ts` | `mergeDescribedBy` — shared by the field components. |
-| `components/page/fields.tsx` | `TextField`, `NumberField`, `TextareaField`, `SelectField`. |
-| `components/page/form-field.tsx` | `FormField` — the escape hatch. |
-| `components/page/form-message.tsx` | `FormMessage`. |
-| `components/page/form-actions.tsx` | `FormActions`. |
-| `components/page/form-drawer.tsx` | `FormDrawer`. |
-| `components/page/search-field.tsx` | `SearchField`. |
-| `components/page/filter-chips.tsx` | `FilterChips`. |
-| `components/page/list-section.tsx` | `ListSection`. |
-| `components/page/message-page.tsx` | `MessagePage`. |
+| File                               | Responsibility                                                                     |
+| ---------------------------------- | ---------------------------------------------------------------------------------- |
+| `lib/form.ts`                      | `FormState`, `FormAction`, `EMPTY_FORM_STATE`, `failure`, `success`. Zero imports. |
+| `lib/form-errors.ts`               | `fieldErrorsFrom`, `valuesFrom`. Server-side only.                                 |
+| `lib/form-errors.test.ts`          | Their tests.                                                                       |
+| `lib/search-params.ts`             | `firstOf`.                                                                         |
+| `hooks/use-form-state.ts`          | `useFormState`.                                                                    |
+| `components/page/page-body.tsx`    | `ListBody`, `DetailBody`.                                                          |
+| `components/page/described-by.ts`  | `mergeDescribedBy` — shared by the field components.                               |
+| `components/page/fields.tsx`       | `TextField`, `NumberField`, `TextareaField`, `SelectField`.                        |
+| `components/page/form-field.tsx`   | `FormField` — the escape hatch.                                                    |
+| `components/page/form-message.tsx` | `FormMessage`.                                                                     |
+| `components/page/form-actions.tsx` | `FormActions`.                                                                     |
+| `components/page/form-drawer.tsx`  | `FormDrawer`.                                                                      |
+| `components/page/search-field.tsx` | `SearchField`.                                                                     |
+| `components/page/filter-chips.tsx` | `FilterChips`.                                                                     |
+| `components/page/list-section.tsx` | `ListSection`.                                                                     |
+| `components/page/message-page.tsx` | `MessagePage`.                                                                     |
 
 **Deleted:** `components/recipes/recipe-form-state.ts`, `components/recipes/recipe-search.tsx`, `components/catalog/kind-filter.tsx`, and the `emptySlot` action.
 
@@ -62,10 +62,12 @@ Apply these; they override the spec where they differ.
 ### Task 1: Page shells
 
 **Files:**
+
 - Create: `components/page/page-body.tsx`
 - Modify: all 13 pages listed in Step 2
 
 **Interfaces:**
+
 - Produces: `ListBody({ className?, children })` and `DetailBody({ className?, children })`, both rendering `<main>`.
 
 - [ ] **Step 1: Write the component**
@@ -84,7 +86,9 @@ export function ListBody({
   children: React.ReactNode
 }) {
   return (
-    <main className={cn("flex flex-col gap-4 pt-6", className)}>{children}</main>
+    <main className={cn("flex flex-col gap-4 pt-6", className)}>
+      {children}
+    </main>
   )
 }
 
@@ -96,7 +100,9 @@ export function DetailBody({
   children: React.ReactNode
 }) {
   return (
-    <main className={cn("flex flex-col gap-6 pt-6", className)}>{children}</main>
+    <main className={cn("flex flex-col gap-6 pt-6", className)}>
+      {children}
+    </main>
   )
 }
 ```
@@ -130,9 +136,11 @@ git commit -m "refactor: one page shell instead of thirteen copies of it"
 ### Task 2: The form contract
 
 **Files:**
+
 - Create: `lib/form.ts`, `lib/form-errors.ts`, `lib/form-errors.test.ts`
 
 **Interfaces:**
+
 - Produces: `FormState`, `FormAction`, `EMPTY_FORM_STATE`, `failure(message, parts?)`, `success(message?)`, `fieldErrorsFrom(error)`, `valuesFrom(formData, fields)`.
 
 - [ ] **Step 1: Write the failing tests**
@@ -361,9 +369,11 @@ git commit -m "feat: one form state, and the two helpers both actions had copied
 ### Task 3: The `useFormState` hook
 
 **Files:**
+
 - Create: `hooks/use-form-state.ts`
 
 **Interfaces:**
+
 - Consumes: `EMPTY_FORM_STATE`, `FormAction`, `FormState` from `@/lib/form`; `useAttempt` from `@/hooks/use-attempt`.
 - Produces: `useFormState(action, fieldOrder, initialValues?)` returning `{ state, formAction, isPending, attempt, errorOf, fieldProps }`, and the type `FieldProps`.
 
@@ -401,7 +411,10 @@ export function useFormState(
   fieldOrder: readonly string[],
   initialValues: Record<string, string> = {}
 ) {
-  const [state, formAction, isPending] = useActionState(action, EMPTY_FORM_STATE)
+  const [state, formAction, isPending] = useActionState(
+    action,
+    EMPTY_FORM_STATE
+  )
   const attempt = useAttempt(state)
 
   useEffect(() => {
@@ -456,9 +469,11 @@ git commit -m "feat: the four closures every form copied, written once"
 ### Task 4: The field layer
 
 **Files:**
+
 - Create: `components/page/described-by.ts`, `components/page/fields.tsx`, `components/page/form-field.tsx`, `components/page/form-message.tsx`, `components/page/form-actions.tsx`
 
 **Interfaces:**
+
 - Consumes: `FieldProps` from `@/hooks/use-form-state`.
 - Produces: `TextField`, `NumberField`, `TextareaField`, `SelectField`, `FormField`, `FormMessage`, `FormActions`. Every field component takes `label: string`, `description?: string`, `error?: string`, plus the spread from `fieldProps`. `SelectField` additionally takes `options`.
 
@@ -760,9 +775,11 @@ git commit -m "feat: four typed fields, one escape hatch, and the two paragraphs
 ### Task 5: `CatalogForm` on the new contract
 
 **Files:**
+
 - Modify: `components/catalog/catalog-form.tsx`, `app/(app)/catalogo/actions.ts`
 
 **Interfaces:**
+
 - Consumes: `useFormState`, `TextField`, `SelectField`, `FormField`, `FormMessage`, `FormActions`, `failure`, `fieldErrorsFrom`, `valuesFrom`.
 - Produces: `CatalogFormValues` unchanged. `CatalogFormState` and `SaveCatalogItemAction` are **deleted** — the action is now typed `FormAction`.
 
@@ -940,10 +957,12 @@ git commit -m "refactor: the catalogue form stops carrying its own scaffolding"
 ### Task 6: `RecipeForm` on the new contract
 
 **Files:**
+
 - Modify: `components/recipes/recipe-form.tsx`, `app/(app)/recipes/actions.ts`
 - Delete: `components/recipes/recipe-form-state.ts`
 
 **Interfaces:**
+
 - Consumes: the same set as Task 5, plus `TextareaField`.
 - Produces: `RecipeFormValues` unchanged. `RecipeFormState`, `EMPTY_FORM_STATE` (the local one) and `SaveRecipeAction` are deleted.
 
@@ -1068,9 +1087,11 @@ git commit -m "refactor: the recipe form keeps only what is about recipes"
 ### Task 7: `PurchaseTotalForm` on the new contract
 
 **Files:**
+
 - Modify: `components/shopping/purchase-total-form.tsx`, `app/(app)/spesa/storico/actions.ts`
 
 **Interfaces:**
+
 - Produces: `TotalState`, `SaveTotalAction` and `EMPTY_TOTAL_STATE` are deleted.
 
 - [ ] **Step 1: Rewrite the component**
@@ -1211,9 +1232,11 @@ If the checklist found nothing, record that in the task notes and move on. Do no
 ### Task 9: `FormDrawer`
 
 **Files:**
+
 - Create: `components/page/form-drawer.tsx`
 
 **Interfaces:**
+
 - Consumes: `useFormState`'s return value, passed whole as `form`.
 - Produces: `FormDrawer({ open, onOpenChange, form, title, description, submitLabel, pendingLabel, children })`.
 
@@ -1322,9 +1345,11 @@ git commit -m "feat: one drawer, and close-on-success written once instead of fo
 ### Task 10: The slot drawer, and the asymmetry behind «Svuota»
 
 **Files:**
+
 - Modify: `components/menu/recipe-picker.tsx`, `lib/services/menus.ts:128-156`, `app/(app)/menu/[weekStart]/actions.ts`, `components/menu/slot-drawer.tsx`, `components/menu/week-grid.tsx`
 
 **Interfaces:**
+
 - `RecipePicker`'s `onSelect` becomes `(recipe: RecipeOption | null) => void`.
 - `SlotDrawer` no longer takes `clearAction`; `WeekGrid` no longer takes or forwards it.
 - `emptySlot` is deleted from the actions file.
@@ -1359,16 +1384,16 @@ onSelect: (recipe: RecipeOption | null) => void
 In `lib/services/menus.ts`, at the top of `setSlot`:
 
 ```ts
-  // An empty slot and an absent slot must mean the same thing — see clearSlot's
-  // reasoning below. Writing a row with three nulls would break that, and the
-  // drawer now reaches this path every time somebody clears a slot by hand.
-  if (
-    input.recipeId === null &&
-    input.freeText === null &&
-    input.servings === null
-  ) {
-    return clearSlot(weekStart, day, meal)
-  }
+// An empty slot and an absent slot must mean the same thing — see clearSlot's
+// reasoning below. Writing a row with three nulls would break that, and the
+// drawer now reaches this path every time somebody clears a slot by hand.
+if (
+  input.recipeId === null &&
+  input.freeText === null &&
+  input.servings === null
+) {
+  return clearSlot(weekStart, day, meal)
+}
 ```
 
 `clearSlot` is declared later in the same module, so hoisting applies. Update `setSlot`'s TSDoc to say so.
@@ -1512,6 +1537,7 @@ git commit -m "feat: a recipe can be un-picked, so Svuota is not the only way ou
 ### Task 11: `AddItemDrawer`
 
 **Files:**
+
 - Modify: `components/shopping/add-item-drawer.tsx`, `app/(app)/spesa/[weekStart]/actions.ts`
 
 - [ ] **Step 1: Rewrite the component**
@@ -1600,6 +1626,7 @@ git commit -m "refactor: the add-item drawer on the shared drawer"
 ### Task 12: `CompletePurchaseBar`
 
 **Files:**
+
 - Modify: `components/shopping/complete-purchase-bar.tsx`, `app/(app)/spesa/[weekStart]/actions.ts`
 
 - [ ] **Step 1: Rewrite the component**
@@ -1694,6 +1721,7 @@ With the app installed to the home screen, confirm the round button and the fixe
 ### Task 14: `ListSection`
 
 **Files:**
+
 - Create: `components/page/list-section.tsx`
 - Modify: `components/shopping/shopping-list.tsx:80-98`, `app/(app)/spesa/storico/[id]/page.tsx:65-92`, `components/shopping/dismissed-list.tsx:26-62`
 
@@ -1750,6 +1778,7 @@ git commit -m "refactor: the third screen wanted the aisle section, so it became
 ### Task 15: Search, chips, and the catalogue's missing field
 
 **Files:**
+
 - Create: `components/page/search-field.tsx`, `components/page/filter-chips.tsx`, `lib/search-params.ts`
 - Delete: `components/recipes/recipe-search.tsx`, `components/catalog/kind-filter.tsx`
 - Modify: `app/(app)/recipes/page.tsx`, `app/(app)/catalogo/page.tsx`
@@ -1768,7 +1797,9 @@ git commit -m "refactor: the third screen wanted the aisle section, so it became
  * @param raw - what Next put in the resolved searchParams
  * @returns the first value, or undefined
  */
-export function firstOf(raw: string | string[] | undefined): string | undefined {
+export function firstOf(
+  raw: string | string[] | undefined
+): string | undefined {
   return Array.isArray(raw) ? raw[0] : raw
 }
 ```
@@ -1898,6 +1929,7 @@ git commit -m "feat: the catalogue gets the search field its query param already
 ### Task 16: Message pages and the five error boundaries
 
 **Files:**
+
 - Create: `components/page/message-page.tsx`
 - Modify: `components/page/page-error.tsx`, `app/not-found.tsx`, `app/(app)/not-found.tsx`, `app/(app)/recipes/[id]/not-found.tsx`, and the five `error.tsx` files
 

@@ -14,23 +14,23 @@ are in `CLAUDE.md` and `docs/conventions/ui.md`.
 
 ## The problem, with evidence
 
-| Duplication | Where |
-| ----------- | ----- |
-| `errorOf` / `invalid` / `valueOf` / `describedBy`, plus `FIELD_ORDER` and the focus-first-invalid effect | `components/catalog/catalog-form.tsx:86-111` and `components/recipes/recipe-form.tsx:78-105`, identical |
-| `valuesFrom` and `fieldErrorsFrom` | `app/(app)/catalogo/actions.ts:33-56` and `app/(app)/recipes/actions.ts:47-98`; the comment at `actions.ts:45` says so out loud |
-| Six form-state shapes for two ideas | `catalog-form.tsx:35`, `recipe-form-state.ts:1`, `slot-drawer.tsx:26`, `add-item-drawer.tsx:40`, `complete-purchase-bar.tsx:17`, `purchase-total-form.tsx:9` |
-| Close-on-success, in four implementations | `hooks/use-attempt.ts:17` (hook), `slot-drawer.tsx:83` (effect), `add-item-drawer.tsx:87`, `complete-purchase-bar.tsx:45`, `purchase-total-form.tsx:36` (inline) |
-| The drawer shell: header, form, error, footer, pending label | `slot-drawer.tsx:100-177`, `add-item-drawer.tsx:139-275`, `complete-purchase-bar.tsx:70-116` |
-| `<main className="flex flex-col gap-4 pt-6">` and its three variants | 13 pages |
-| The aisle-grouped `<section>` + `<h2>` + `<ul>` | `shopping-list.tsx:81`, `spesa/storico/[id]/page.tsx:67`, `dismissed-list.tsx:26` |
-| `<p role="alert" className="text-sm text-destructive">` | 6 files |
-| `{isPending ? "Salvo…" : "Salva"}` | 5 files |
-| Byte-identical `error.tsx` | 5 files |
+| Duplication                                                                                              | Where                                                                                                                                                            |
+| -------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `errorOf` / `invalid` / `valueOf` / `describedBy`, plus `FIELD_ORDER` and the focus-first-invalid effect | `components/catalog/catalog-form.tsx:86-111` and `components/recipes/recipe-form.tsx:78-105`, identical                                                          |
+| `valuesFrom` and `fieldErrorsFrom`                                                                       | `app/(app)/catalogo/actions.ts:33-56` and `app/(app)/recipes/actions.ts:47-98`; the comment at `actions.ts:45` says so out loud                                  |
+| Six form-state shapes for two ideas                                                                      | `catalog-form.tsx:35`, `recipe-form-state.ts:1`, `slot-drawer.tsx:26`, `add-item-drawer.tsx:40`, `complete-purchase-bar.tsx:17`, `purchase-total-form.tsx:9`     |
+| Close-on-success, in four implementations                                                                | `hooks/use-attempt.ts:17` (hook), `slot-drawer.tsx:83` (effect), `add-item-drawer.tsx:87`, `complete-purchase-bar.tsx:45`, `purchase-total-form.tsx:36` (inline) |
+| The drawer shell: header, form, error, footer, pending label                                             | `slot-drawer.tsx:100-177`, `add-item-drawer.tsx:139-275`, `complete-purchase-bar.tsx:70-116`                                                                     |
+| `<main className="flex flex-col gap-4 pt-6">` and its three variants                                     | 13 pages                                                                                                                                                         |
+| The aisle-grouped `<section>` + `<h2>` + `<ul>`                                                          | `shopping-list.tsx:81`, `spesa/storico/[id]/page.tsx:67`, `dismissed-list.tsx:26`                                                                                |
+| `<p role="alert" className="text-sm text-destructive">`                                                  | 6 files                                                                                                                                                          |
+| `{isPending ? "Salvo…" : "Salva"}`                                                                       | 5 files                                                                                                                                                          |
+| Byte-identical `error.tsx`                                                                               | 5 files                                                                                                                                                          |
 
 Two of these are not merely repetition:
 
-- **`spesa/storico/[id]/page.tsx:62` set its own trigger** — *"Two screens
-  sharing them is not yet a component; if a third wants them, extract then."*
+- **`spesa/storico/[id]/page.tsx:62` set its own trigger** — _"Two screens
+  sharing them is not yet a component; if a third wants them, extract then."_
   `DismissedList` is the third.
 - **Hand-wiring already failed once.** `Field` in `components/ui/field.tsx` is a
   plain `<div role="group">` with no automatic association, and
@@ -61,9 +61,17 @@ export type FormState = {
   values: Record<string, string>
 }
 
-export type FormAction = (state: FormState, formData: FormData) => Promise<FormState>
+export type FormAction = (
+  state: FormState,
+  formData: FormData
+) => Promise<FormState>
 
-export const EMPTY_FORM_STATE: FormState = { ok: false, message: null, errors: {}, values: {} }
+export const EMPTY_FORM_STATE: FormState = {
+  ok: false,
+  message: null,
+  errors: {},
+  values: {},
+}
 
 export function failure(message: string, parts?: Partial<FormState>): FormState
 export function success(message?: string | null): FormState
@@ -123,7 +131,7 @@ eighteen, all explicit.
 **Typed fields define `label`, `description` and `error` and nothing else.**
 `name`, `id` and `defaultValue` are not their props — those arrive inside the
 spread from `fieldProps`. The error is a prop and not part of the spread because
-`fieldProps` returns DOM attributes, and the error's *text* would land on the
+`fieldProps` returns DOM attributes, and the error's _text_ would land on the
 element as an unknown attribute. Everything else spreads onto the native
 control, so `min`, `step`, `rows`, `type`, `inputMode`, `placeholder` and
 `required` pass through because they are DOM attributes, not props anybody
@@ -310,12 +318,12 @@ today `KindFilter`'s `query` — because a chip must not throw away what was typ
 
 Approved in conversation on 2026-08-20. Nothing else may change.
 
-| Change | Visible where |
-| ------ | ------------- |
-| «Svuota» removed; the recipe clears with the combobox's clear button; saving an empty slot deletes it | slot drawer |
-| `/catalogo` gains the search field. `?q=` already works server-side; only the input was missing | catalogue list |
-| The «Tipo» description becomes reachable by screen readers (`add-item-drawer.tsx:248`) | screen readers only |
-| The three "does not exist" pages become one `MessagePage` at the same appearance | 404 |
+| Change                                                                                                | Visible where       |
+| ----------------------------------------------------------------------------------------------------- | ------------------- |
+| «Svuota» removed; the recipe clears with the combobox's clear button; saving an empty slot deletes it | slot drawer         |
+| `/catalogo` gains the search field. `?q=` already works server-side; only the input was missing       | catalogue list      |
+| The «Tipo» description becomes reachable by screen readers (`add-item-drawer.tsx:248`)                | screen readers only |
+| The three "does not exist" pages become one `MessagePage` at the same appearance                      | 404                 |
 
 **What must not change**, and what the checklists verify: the spacing of all 13
 pages; the text and behaviour of every error message; the echo of submitted
@@ -335,14 +343,14 @@ pages first, because it is mechanical and gets the churn out of the way. Then
 `PurchaseTotalForm` rewritten, and the three `actions.ts` with them. Unit tests
 for `fieldErrorsFrom` and `valuesFrom`.
 
-*Checklist:* every page opens with unchanged spacing; on the three forms — a
+_Checklist:_ every page opens with unchanged spacing; on the three forms — a
 valid save, a refusal that echoes the values, focus landing on the first invalid
 field, and Annulla.
 
 **Task 2 — the drawer.** `FormDrawer`, the three drawers rewritten, the clear
 button on `RecipePicker`, `setSlot` deleting on empty input, `emptySlot` removed.
 
-*Checklist:* each drawer opens, saves and closes itself; a slot holding a recipe
+_Checklist:_ each drawer opens, saves and closes itself; a slot holding a recipe
 empties with clear + save and leaves no row behind; the floating button and the
 fixed bar stay above the safe area.
 
@@ -350,7 +358,7 @@ fixed bar stay above the safe area.
 `MessagePage`, the five `error.tsx` reduced to a re-export, and the catalogue's
 search field.
 
-*Checklist:* search on the recipe book and the catalogue; chips that keep the
+_Checklist:_ search on the recipe book and the catalogue; chips that keep the
 query; the aisle sections on all three screens; the four designed states of every
 list; 404 and the error boundary.
 
