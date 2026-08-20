@@ -1,256 +1,391 @@
 # UI conventions
 
-Only what is specific to this project. General craft — accessibility, layout,
-interaction, performance — is not repeated here: it comes from the skills listed
-at the bottom, which are more complete and stay maintained.
+Two things: the decisions that are ours, and the recipes for building a screen
+out of them. General craft — accessibility, layout, performance — is not here.
+It comes from the skills listed at the bottom.
 
 ## shadcn/ui is the only component library
 
 Binding (design document §4.3).
 
-- The project is already initialised: `components.json`, style `base-maia`, base
-  colour `olive`, theme `lime`, `rsc: true`. **Do not re-run `init`.** The theme
-  is changed only by applying a preset the owner has chosen on
-  `ui.shadcn.com/create`, never by editing the CSS variables by hand — the
-  variables are the preset's output, and a hand edit is lost at the next one.
-- Applying a preset rewrites every component in `components/ui/`. That is safe
-  only while they stay stock; the rule below is what keeps it safe. On
-  2026-08-16, `apply b3RYqbJZY` replaced `base-mira`/`mist`/`teal` and cost
-  nothing, because `add --diff` reported no local change in any of the 19.
-- Add components one at a time: `pnpm dlx shadcn@latest add <component>`. They land
-  in `components/ui/` and become project source.
-- Need a behaviour change? Edit the file in `components/ui/` directly. Do not wrap
-  it in an adapter to avoid touching it — that leaves two places to look and one
-  of them lies.
-- Component missing from shadcn? Compose it from existing primitives inside
-  `components/`. Do not install another library, do not hand-write a base
-  component.
+- Already initialised — `components.json` holds the style, the base colour and
+  `rsc: true`. Read it rather than trusting this line, and **do not re-run
+  `init`**.
+- The theme changes only by applying a preset chosen on `ui.shadcn.com/create`.
+  Never edit the CSS variables by hand: they are the preset's output and a hand
+  edit is lost at the next one.
+- Applying a preset **rewrites every file in `components/ui/`**. That is safe only
+  while they stay stock, which is what the next rule protects.
+- Add one at a time: `pnpm dlx shadcn@latest add <component>`. They land in
+  `components/ui/` and become project source.
+- Need a behaviour change? Edit the file in `components/ui/` in place. Do not
+  wrap it in an adapter — that leaves two places to look and one of them lies.
+- Missing from shadcn? Compose it from existing primitives inside `components/`.
+  Do not install another library, do not hand-write a base component.
+- Screen-reader text that ships in English is not edited. Override it from the
+  call site — `aria-label="Apri il menu"` — so the file stays byte-identical.
 
-Expected set for the first module: `button`, `input`, `textarea`, `card`,
-`dialog`, `drawer`, `sheet`, `checkbox`, `select`, `command`, `field`,
-`tabs`, `badge`, `separator`, `skeleton`, `sonner`, `alert-dialog`.
+**This installation is Base UI, not Radix.** Most shadcn examples online are
+written against Radix and do not transfer verbatim. Read
+`.agents/skills/shadcn/rules/base-vs-radix.md` rather than adapting a blog post
+by guesswork.
 
 Forms are built from `field` — `FieldGroup`, `Field`, `FieldLabel`,
-`FieldDescription` — not from a `form` component and not from a `div` with
-`space-y-*`. An earlier revision of this list named `form` and `label`; that
-predates this installation's style, which has no `form` component.
+`FieldDescription`, `FieldError` — never from a `div` with `space-y-*`.
 
-**This installation is built on Base UI, not Radix.** Almost every shadcn example
-online is written against Radix, so prop names and composition patterns do not
-always transfer. Read `.agents/skills/shadcn/rules/base-vs-radix.md` rather
-than adapting a blog post by guesswork.
+## The primitives
 
-## Page primitives
+A screen is assembled from these, not rebuilt. In `components/page/` unless
+stated.
 
-A page is assembled from `components/page/`, not rebuilt. A new module gets its
-screens right by reusing these, and the states below stop being something each
-module has to remember.
+| Primitive                                                     | Signature, in short                                                             |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `ListBody` / `DetailBody`                                     | the `<main>` and its spacing — `gap-4` for a list, `gap-6` for a form or detail |
+| `PageHeader`                                                  | `title`, optional `back={{ href, label }}`, children as the action slot         |
+| `DataList`                                                    | `items`, `announcement`, `renderItem`, `empty` — includes the count live region |
+| `DataListRow`                                                 | `href`, `title`, children as the muted detail line                              |
+| `EmptyState`                                                  | `title`, optional `description`, children as the action                         |
+| `ListSection`                                                 | `title` + children — **one** section, not a list of them                        |
+| `SearchField`                                                 | `basePath`, `placeholder`, `label`, `param="q"` — debounced, replaces the URL   |
+| `FilterChips`                                                 | `basePath`, `param`, `chips`, `active`, `label`, `keep` — links, not buttons    |
+| `MessagePage`                                                 | `title` + children, for a page with no `PageHeader`                             |
+| `PageError`                                                   | the body of a route's `error.tsx`                                               |
+| `ListSkeleton` / `DetailSkeleton`                             | `label`, and `rows` for the list — the body of `loading.tsx`                    |
+| `TextField` / `NumberField` / `TextareaField` / `SelectField` | the four typed fields                                                           |
+| `FormField`                                                   | `name`, `label`, `description`, `error` + the control as children               |
+| `FormMessage`                                                 | the form-level `<p role="alert">`; renders nothing for `null`                   |
+| `FormActions`                                                 | `cancelHref`, `isPending` — submit with its pending label, plus Annulla         |
+| `FormDrawer`                                                  | `open`, `onOpenChange`, `form`, `title`, `submitLabel`, `pendingLabel`          |
+| `useFormState` (`hooks/`)                                     | everything a form needs from its action — see the contract below                |
+| `countLabel` (`lib/count-label`)                              | the «6 voci trovate.» sentence — none, one, many                                |
+| `firstOf` (`lib/search-params`)                               | a `searchParams` value Next may have resolved to an array                       |
+| `decodeSegment` (`lib/route-params`)                          | a dynamic segment, still percent-encoded as Next hands it over                  |
 
-| Primitive                                                     | Use                                                                                      |
-| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `PageHeader`                                                  | title, optional back link, optional action slot                                          |
-| `DataList` + `DataListRow`                                    | the card-row list, including the count live region                                       |
-| `EmptyState`                                                  | "there is nothing here", with an optional action                                         |
-| `PageError`                                                   | the body of a route's `error.tsx`                                                        |
-| `ListSkeleton` / `DetailSkeleton`                             | the body of a route's `loading.tsx`                                                      |
-| `ListBody` / `DetailBody`                                     | the page's `<main>` and its spacing — `gap-4` for a list, `gap-6` for a form or a detail |
-| `TextField` / `NumberField` / `TextareaField` / `SelectField` | the four typed fields, for the common case                                               |
-| `FormField`                                                   | the escape hatch — takes the control as `children`, for what the typed four cannot carry |
-| `FormMessage`                                                 | the form-level `<p role="alert">`, nothing when there is no message                      |
-| `FormActions`                                                 | the submit button with its pending label, and an optional cancel link                    |
-| `FormDrawer`                                                  | the drawer shell — header, form, message, footer — always controlled                     |
-| `ListSection`                                                 | one aisle-grouped `<section>` + `<h2>` + `<ul>`                                          |
-| `SearchField`                                                 | a debounced `?q=` input that replaces the URL, no history entry per keystroke            |
-| `FilterChips`                                                 | the chip row that reads and writes a query param, keeping what else was typed            |
-| `MessagePage`                                                 | the body of a page with no `PageHeader` — the "does not exist" screens                   |
+**If a new module needs one bent, bend the primitive rather than fork it.** A
+second copy of `DataListRow` with one prop changed is how this directory stops
+being worth having.
 
-**Every screen that fetches has four designed states, not three.** The design
-document says loading, empty and error; use showed a fourth that is easy to miss.
+## Building a page
+
+### A list
+
+`app/(app)/catalogo/page.tsx` is the full version — search, chips, three empty
+states. `/recipes` drops the chips, `/spesa/storico` drops both.
+
+```tsx
+export default async function CatalogPage({
+  searchParams,
+}: {
+  // Next resolves a repeated param to an array, not a string.
+  searchParams: Promise<{ q?: string | string[] }>
+}) {
+  const q = firstOf((await searchParams).q)
+  const isSearching = Boolean(q?.trim())
+  const items = await listCatalogItems(q)
+
+  return (
+    <ListBody>
+      <PageHeader title="Catalogo">
+        <Button render={<Link href="/catalogo/new" />} nativeButton={false}>
+          Nuova
+        </Button>
+      </PageHeader>
+
+      {/* SearchField reads useSearchParams, so it needs a boundary. */}
+      <Suspense>
+        <SearchField
+          basePath="/catalogo"
+          placeholder="Cerca…"
+          label="Cerca una voce"
+        />
+      </Suspense>
+
+      <DataList
+        items={items}
+        announcement={countLabel(items.length, FOUND)}
+        renderItem={(item) => (
+          <DataListRow
+            key={item.name}
+            href={`/catalogo/${encodeURIComponent(item.name)}/edit`}
+            title={item.name}
+          >
+            <Badge variant="secondary">{item.aisle}</Badge>
+          </DataListRow>
+        )}
+        empty={
+          isSearching ? (
+            <EmptyState title="Nessuna voce con questo nome." />
+          ) : (
+            <EmptyState
+              title="Il catalogo è vuoto."
+              description="Aggiungi la prima voce."
+            >
+              <Button
+                render={<Link href="/catalogo/new" />}
+                nativeButton={false}
+              >
+                Nuova voce
+              </Button>
+            </EmptyState>
+          )
+        }
+      />
+    </ListBody>
+  )
+}
+```
+
+`countLabel` (`lib/count-label`) builds the sentence a list announces. The words
+are the caller's, in a module-level constant, because Italian agrees them with
+the noun — «voci trovat**e**» but «articoli trovat**i**» — and because the zero
+case is not always a negation: `/spesa` says «Tutto preso.» there.
+
+**Write the row inline in `renderItem`.** All three lists do. If one ever grows
+enough to move out, it still renders `DataListRow` — never a second row
+component, and never a wrapper that only forwards.
+
+### A create/edit form
+
+Two pages sharing one form component. `catalogo/new` and `catalogo/[name]/edit`
+are the pair; the edit page adds `decodeSegment` and the delete button.
+
+```tsx
+export default async function NewCatalogItemPage() {
+  const units = await listUsedUnits()
+
+  return (
+    <DetailBody>
+      <PageHeader title="Nuova voce" back={{ href: "/catalogo", label: "Catalogo" }} />
+      <CatalogForm action={saveCatalogItem} units={units} values={{ name: "", … }} />
+    </DetailBody>
+  )
+}
+```
+
+The page fetches and passes props; the form component is the client boundary and
+owns nothing else. Fetch in parallel with `Promise.all` — a sequential await is
+the waterfall the React skill ranks CRITICAL.
+
+An edit page reached through a dynamic segment **must** decode it:
+
+```tsx
+const name = decodeSegment((await params).name)
+if (name === null) notFound() // a malformed escape means 404, not 500
+```
+
+### A quick drawer
+
+For a form that must not leave the page — a menu slot, a shopping line, the
+amount at the till.
+
+```tsx
+const form = useFormState(action, FIELD_ORDER, { kind: "PRODUCT" })
+
+<FormDrawer
+  open={open} onOpenChange={setOpen} form={form}
+  title="Aggiungi alla lista" submitLabel="Aggiungi" pendingLabel="Aggiungo…"
+>
+  <input type="hidden" name="weekStart" value={week} />
+  <NumberField {...form.fieldProps("quantity")} label="Quantità" error={form.errorOf("quantity")} min={0.01} />
+</FormDrawer>
+```
+
+**Always controlled**: `open` and `onOpenChange` come from the call site, and
+`FormDrawer` does not own the hook. The three triggers in this app — a floating
+button, a fixed bar, a parent holding the open slot — stay three things, which
+is what they are. It closes itself on success, from an effect keyed on
+`form.attempt`; closing during render would update the parent mid-render.
+
+State the drawer cannot see — a picker's chosen name — is reset by the call site,
+adjusting its own state when `form.attempt` moves. Legal for own state, never for
+a parent's.
+
+### Every route needs four files
+
+`page.tsx`, `loading.tsx`, `error.tsx`, and `not-found.tsx` where a thing can be
+missing. The last two are near-copies on purpose:
+
+```tsx
+// error.tsx — Next requires a client component per segment.
+"use client"
+export { PageError as default } from "@/components/page/page-error"
+
+// loading.tsx
+export default function Loading() {
+  return <ListSkeleton label="Caricamento del catalogo…" rows={6} />
+}
+```
+
+`pnpm verify` cannot prove an `error.tsx` re-export works — `tsc` and `eslint`
+do not resolve route conventions. `next build` does.
+
+## The form contract
+
+One shape, from `lib/form.ts`, for every server action a form calls.
+
+**The action** validates, authenticates, authorises, mutates — in that order,
+inside itself, because a server action is a public endpoint.
+
+```ts
+export const saveCatalogItem: FormAction = async (_state, formData) => {
+  // Every refusal echoes the same fields; `failure` cannot reach formData.
+  const refuse = (message: string, errors?: Record<string, string[]>) =>
+    failure(message, { errors, values: valuesFrom(formData, FORM_FIELDS) })
+
+  const parsed = Schema.safeParse({ name: formData.get("name"), … })
+  if (!parsed.success) return refuse("Controlla i campi segnalati.", fieldErrorsFrom(parsed.error))
+
+  await requireSession()
+  // …mutate…
+  return success()          // or redirect(…, RedirectType.replace)
+}
+```
+
+**Always echo the values on a refusal.** React 19 resets an uncontrolled form to
+its `defaultValue`s before the action runs, so anything not echoed is lost —
+including an amount typed at a till from a receipt already back in a pocket.
+
+**The client** calls `useFormState(action, FIELD_ORDER, initialValues)` and gets
+`{ state, formAction, isPending, attempt, errorOf, fieldProps }`. `FIELD_ORDER`
+is a module-level constant in DOM order, so the first invalid field takes focus;
+a fresh array each render would re-run that effect.
+
+```tsx
+<TextField
+  {...fieldProps("name")}
+  label="Nome"
+  error={errorOf("name")}
+  required
+/>
+```
+
+`fieldProps` emits DOM attributes only — `id`, `name`, `defaultValue`,
+`aria-invalid`, `aria-describedby`. **Never the error text**, which would land on
+the element as an unknown attribute; field components take it as a prop.
+
+Three rules that are easy to get wrong:
+
+- **The remount key.** An uncontrolled input whose `defaultValue` changed after
+  mount needs `key={\`name-${attempt}\`}`to pick it up. Key the`FieldGroup`
+  when it holds only flat fields; key **each field** when the group also holds
+  components with their own state — remounting those threw away eight typed
+  ingredients on a refused save. Sibling keys must differ, hence the field name.
+- **A controlled field asks `fieldProps` to drop `defaultValue`.** Adding `value`
+  and `onChange` after the spread is not enough: React warns when a native input
+  receives both. Call `fieldProps(field, { controlled: true })`.
+- **`FormField` points its own control at the description.** The typed four do it
+  themselves; when you write the control, pass `fieldProps(field, { described: true })`.
+
+**A typed field defines `label`, `description` and `error`, and nothing else.**
+`id`, `name` and `defaultValue` arrive in the spread. Everything past the three
+stays a DOM attribute and lands on the native control, so `min`, `step`, `rows`,
+`type`, `inputMode` and `placeholder` pass through as what they already are.
+`SelectField` carries one more and it is the only exception: `options`, a list
+when value equals label and a map when it does not — which is what stops Base
+UI's `Select.Value` rendering `INGREDIENT` instead of «Ingrediente».
+
+**Reaching for `FormField` is normal, not a failure.** Written down on purpose:
+otherwise the typed four read as the official ones, the hatch reads as a defeat,
+and the next person bends `TextField` to fit. A bare control with its own
+`aria-label` is fine too, where the control names itself.
+
+## The four states
+
+**Every screen that fetches has four**, not three. The design document names
+three; use showed the fourth.
 
 1. **Empty** — nothing exists yet. Say so and offer the action that creates one.
 2. **Filtered empty** — data exists, the filter matched nothing. Different copy,
-   and no "create" button: the user is looking for something, not authoring.
-3. **Error** — the fetch failed. `PageError`. Never a partial page.
-4. **Loading** — `ListSkeleton` or `DetailSkeleton` in the route's `loading.tsx`.
+   and **no create button**: the user is looking, not authoring.
+3. **Error** — `PageError`. Never a partial page over a failed fetch.
+4. **Loading** — `ListSkeleton` or `DetailSkeleton` in `loading.tsx`.
 
-States 1 and 2 are two call sites passing different strings to `EmptyState`, not
-one component with a boolean. Adding an `isSearching`-style prop to a primitive
-is the thing this directory exists to prevent.
+States 1 and 2 are **two call sites passing different strings to `EmptyState`**,
+not one component with a boolean. Adding an `isSearching`-style prop to a
+primitive is the thing `components/page/` exists to prevent.
 
-`DataList` takes a `renderItem` callback. That is a render prop and it is the
-right one: the parent supplies the data the child renders, the case
-`vercel-composition-patterns` names as appropriate for them.
-
-The catalogue screens under `app/(app)/catalogo/` are the second module built
-on these, and they added no primitive and changed none. That is the bar: if a
-third module needs one bent, bend the primitive rather than forking it.
-
-**A typed field defines `label`, `description` and `error`, and nothing else.**
-`name`, `id` and `defaultValue` are not their props — those arrive already in
-the spread from `useFormState`'s `fieldProps`. Everything past the three stays a
-DOM attribute and spreads straight onto the native control, so `min`, `step`,
-`rows`, `type`, `inputMode` and `placeholder` pass through as the attributes
-they already are, not as something anybody designed. `SelectField` carries one
-more, and it is the single exception: `options`, because a select with no
-options is nothing and no DOM attribute carries them. It takes a list — value
-equals label, the aisles — or a map — value differs from label, `INGREDIENT` to
-"Ingrediente" — as the one prop that covers both, and it is exactly what Base
-UI's `items` needs to stop `Select.Value` rendering the raw value.
-
-**A controlled field asks `fieldProps` to drop `defaultValue`.** Adding `value`
-and `onChange` after the spread is not enough on its own: `fieldProps` still
-carries `defaultValue`, and a native input warns when it gets both. Call
-`fieldProps(field, { controlled: true })` — `add-item-drawer.tsx`'s `unit` and
-`aisle` are the two call sites that need it.
-
-**Reaching for the escape hatch is normal, not a failure.** Written down on
-purpose: without it the typed four read as the official components, the escape
-hatch reads as a defeat, and the next person bends `TextField` to fit rather
-than dropping a level — which is the disease this directory treats. Most of the
-app's fields go through the typed four. Of the ones that do not, only three
-actually reach for `FormField` — `defaultUnit` with its `datalist`, the
-`RecipePicker` in the menu slot drawer, and the `IngredientPicker` in the
-add-item drawer. Two more skip `FormField` too: the `IngredientPicker` inside
-`IngredientRows` and the `skipCatalog` checkbox reach past it for a bare
-`aria-label` or a bare `<Field>`, with no `FormField` and no automatic id
-association at all. That range — typed, `FormField`, or a bare control — is
-healthy, not a smell.
-
-**`MessagePage` is not `EmptyState` with different copy.** `EmptyState` renders
-a `<p>`, which is correct inside a page whose `<h1>` already comes from
-`PageHeader`. The "does not exist" screens have no `PageHeader` — folding them
-into `EmptyState` would leave three pages with no heading at all.
-
-**`ListSection` is the section, not the list of sections.** Two callers map
-over aisle groups; the dismissed-lines block on `/spesa` is a single section
-with a fixed title. A component that took an array of groups would force that
-third caller to pass an array of one for no reason.
-
-**«Svuota» is gone from the menu slot drawer.** A note could already be cleared
-by hand — empty the field, save, done. A recipe could not: the picker discarded
-a cleared selection, and the combobox's own clear button sat behind a
-`showClear` prop that defaulted to `false` and nobody passed. So «Svuota» was
-not a redundant button — it was the only way out of a slot holding a recipe,
-and one of the app's two users never noticed it was there. `RecipePicker` now
-shows the clear button and accepts the `null`, and saving a slot whose recipe,
-note and servings are all empty deletes the row instead of writing one that
-means nothing.
-
-**The catalogue gained a search field.** `/catalogo` already read `?q=` and
-filtered server-side; only the input was missing. `SearchField` supplies it.
-
-## The app shell
-
-`app/(app)/layout.tsx` mounts `components/app-nav.tsx`: a sticky bar carrying
-the hamburger, the word "Menu" and the theme toggle, and behind it a `sheet`
-that opens to the full screen. The layout stays a server component — `AppNav` is
-a client component, but it sits beside `children` rather than around it, so
-pages below keep rendering on the server.
-
-**One navigation, every width.** The desktop rail was removed on 2026-08-16: the
-owner's use is phone and tablet, and two behaviours to maintain bought nothing.
-`components/ui/sidebar.tsx` and `hooks/use-mobile.ts` went with it.
-
-Adding a module to the navigation is one entry in `NAV_ITEMS` in
-`components/app-nav.tsx`. Only routes that exist are listed; a nav entry that
-404s is worse than a short menu.
-
-Generated shadcn code that ships English screen-reader text is not edited.
-Override it from the call site instead — `aria-label="Apri il menu"` on the
-trigger — so the file stays byte-identical to the registry.
-
-The theme is switched from the bar and nowhere else. A keyboard shortcut existed
-until 2026-08-16 and was removed with the toggle's arrival: one way in is enough,
-and a bare letter key is a trap on a page with fields.
+`MessagePage` is not `EmptyState` with other copy: `EmptyState` renders a `<p>`,
+correct under a `PageHeader`'s `<h1>`. The "does not exist" screens have no
+`PageHeader`, so folding them in would leave three pages with no heading.
 
 ## Server and client
 
-Server component by default. Add `"use client"` only for state, effects, event
-handlers or browser APIs, and push it as far down the tree as possible.
+Server component by default. `"use client"` only for state, effects, event
+handlers or browser APIs, and as far down the tree as possible.
 
 A client component never imports from `lib/services/`. Data arrives as props from
-a server component, or through a server action.
+a server component, or through a server action. ESLint enforces it.
 
-This decision constrains how components compose: prefer passing `children` from a
-server component over a Context provider, because a provider is itself a client
-component and pulls the boundary upward. Use Context only for genuinely shared
-interactive state.
+This constrains composition: prefer passing `children` from a server component
+over a Context provider, because a provider is itself a client component and
+pulls the boundary upward. Use Context only for genuinely shared interactive
+state.
 
-## Product decisions
+## The app shell
 
-- **Phone first, desktop tolerable.** Design at 390px wide and let it grow. On
-  small viewports prefer `drawer` (bottom sheet) over `dialog`: thumbs reach the
-  bottom of the screen, not a centred modal's corner.
-- **Touch targets: the shadcn scale, unmodified.** The design document asked for
-  44px, reasoning about shopping-list checkboxes tapped one-handed while holding
-  a basket (§4.3). The style generates a 28px scale instead, and we
-  take it as it comes: staying stock keeps every component upgradeable and keeps
-  the diff against the registry empty. This is a deliberate trade-off, made
-  before real use rather than after it. Revisit it the first time someone
-  mis-taps something on a phone — the fix is then to edit the size variants in
-  `components/ui/` in place, which is what owning the source is for.
-- **Every screen that fetches has four designed states**, enumerated under "Page
-  primitives" above. The menu and the shopping list start empty every week, so
-  empty is a normal state, not an edge case.
-- **User-visible text is Italian**, written the way the two users speak. "Fuori a
-  cena", not "Pasto consumato fuori sede". Error messages say what happened and
-  what to do next.
+`app/(app)/layout.tsx` mounts `components/app-nav.tsx` — a sticky bar with the
+hamburger, the word "Menu" and the theme toggle, and behind it a `sheet`. The
+layout stays a server component: `AppNav` sits beside `children`, not around it.
+
+**One navigation at every width.** The desktop rail was removed on 2026-08-16;
+the owner's use is phone and tablet, and two behaviours bought nothing.
+
+Adding a module is one entry in `NAV_ITEMS`. Only routes that exist are listed —
+a nav entry that 404s is worse than a short menu. The theme is switched from the
+bar and nowhere else.
 
 ## Styling
 
 Tailwind utilities in the markup. No CSS modules, no styled-components, no inline
-`style` objects except for genuinely dynamic values.
+`style` except for genuinely dynamic values.
 
 Use the theme tokens — `bg-background`, `text-muted-foreground`, `border`. **No
-hardcoded hex colours and no raw palette classes** like `bg-slate-800`: they break
-the dark theme silently. Compose class names with `cn()` from `lib/utils`;
-Prettier's Tailwind plugin sorts them, so do not reorder by hand.
+hex colours and no raw palette classes** like `bg-slate-800`: they break the dark
+theme silently. Compose with `cn()` from `lib/utils`; Prettier's Tailwind plugin
+sorts the classes, so do not reorder by hand.
 
-### The type scale is Tailwind's, unmodified
+**The type scale is Tailwind's, unmodified.** Nothing overrides `--text-*`, and
+there is no `font-size` on `html`. The app reads small on a phone; two
+theme-wide fixes were built and both rejected on 2026-08-19 — the owner's call,
+and the reason is worth keeping: a scale whose names stop matching their values
+costs more, later, than the class names it saves.
 
-`text-xs` is 12px, `text-sm` is 14px, `text-base` is 16px, `text-xl` is 20px.
-Nothing overrides `--text-*` in `app/globals.css`, and there is no `font-size` on
-`html`. Six of the thirteen steps are used: `xs`, `sm`, `base`, `lg`, `xl`, `3xl`.
+**Size is therefore decided per element, at the call site.** One trap:
+`Button` has **no size that raises its text** — `size` governs height and padding
+so buttons line up with inputs. Pass `className="text-base"`; `cn()` is
+tailwind-merge, so the call site beats the variant. Same for `Badge`, `Label`,
+`Card` and the `Field` parts.
 
-Raised on 2026-08-19: the app reads small on a phone, because content sits at
-`text-sm` and its details at `text-xs`, so the browser's own reading size is used
-almost nowhere. Two theme-wide fixes were built and both were rejected — the
-owner's call, and the reason is worth keeping: a scale whose names stop matching
-their values costs more, later, than the forty class names it saves.
+## Product decisions
 
-**The size is therefore decided per element, at the call site.** When a screen
-reads too small, change its classes rather than the scale. Two things to know
-before doing it:
-
-- **`Button` has no size that raises its text.** `size` governs height and
-  padding, so a `lg` button is taller with the same 14px label — upstream
-  shadcn's design, so that buttons and inputs line up at a shared height. The
-  only size that touches the font is `xs`, and it goes down. To make a button's
-  text larger, pass `className="text-base"`: `cn()` is tailwind-merge, so the
-  class from the call site beats the variant's. `components/app-nav.tsx:33`
-  already does exactly this on the "Menu" trigger.
-- The same holds for `Badge`, `Label`, `Card` and the `Field` parts: they carry
-  `text-sm` or `text-xs` from the registry, and the call site overrides them.
+- **Phone first, desktop tolerable.** Design at 390px and let it grow. Prefer
+  `drawer` over `dialog`: thumbs reach the bottom of the screen.
+- **Touch targets: the shadcn scale, unmodified.** The design document asked for
+  44px (§4.3); the style generates 28px and we take it as it comes, because
+  staying stock keeps every component upgradeable. A deliberate trade-off, made
+  before real use. Revisit it the first time someone mis-taps on a phone — the
+  fix is then to edit the size variants in `components/ui/` in place, which is
+  what owning the source is for.
+- **User-visible text is Italian**, written the way the two users speak. «Fuori a
+  cena», not «Pasto consumato fuori sede». Error messages say what happened and
+  what to do next.
+- Empty is a normal state here, not an edge case: the menu and the shopping list
+  start empty every week.
 
 ## PWA
 
 The app is installed to the home screen and receives shared links through the
-Android share sheet (design document §6.1). Two consequences for the UI:
-
-- The manifest is a real deliverable: icons, name, theme colour,
-  `display: standalone`, and the `share_target` declaration.
-- The import confirmation screen is the first thing a user sees after sharing a
-  link, sometimes with a failed fetch behind it. It must work as a plain manual
-  entry form, with no dead end.
+Android share sheet (design document §6.1).
 
 `app/manifest.ts` is the manifest; `app/icons/[icon]/route.tsx` draws the icons
 with `ImageResponse` at build time, so no binary lives in the repository. Icons
-are the one place a colour is written as hex: a PNG cannot read a CSS variable,
-so the two values there must be updated by hand when the theme changes.
+are the one place a colour is written as hex — a PNG cannot read a CSS variable,
+so those two values are updated by hand when the theme changes.
 
-`share_target` is **not** declared yet. It points at `/import`, which does not
-exist; declaring it would put the app in the share sheet only to land on a 404.
-It goes in with the import module.
+`share_target` is **not** declared yet: it points at `/import`, which does not
+exist. It goes in with the import module. Whatever that screen becomes, it must
+work as a plain manual entry form — every LLM-assisted path has a working manual
+equivalent, and this one is the first thing a user sees after sharing a link.
 
 ## What is deliberately not in this file
 
@@ -258,5 +393,6 @@ It goes in with the import module.
 | ----------------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | Accessibility, layout, interaction, UX review                     | `.agents/skills/web-design-guidelines/` — run it before calling UI work done |
 | Component API design, compound components, avoiding boolean props | `.agents/skills/vercel-composition-patterns/`                                |
-| Rendering and re-render performance, bundle size                  | `.agents/skills/vercel-react-best-practices/`                                |
+| Rendering performance, bundle size                                | `.agents/skills/vercel-react-best-practices/`                                |
 | shadcn CLI, registry, styling, composition                        | `.agents/skills/shadcn/`                                                     |
+| What shipped and what is next                                     | [`../roadmap.md`](../roadmap.md)                                             |
