@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef } from "react"
 
 import { FormMessage } from "@/components/page/form-message"
 import { Button } from "@/components/ui/button"
@@ -45,16 +45,19 @@ export function FormDrawer({
   submitDisabled?: boolean
   children: React.ReactNode
 }) {
-  // Adjusting state during render rather than in an effect: React re-runs the
-  // component before committing, so the drawer never paints open after a
-  // successful save. An effect here would be a cascading render, which is what
-  // react-hooks/set-state-in-effect objects to.
-  const [seen, setSeen] = useState(form.attempt)
+  // Always controlled means `onOpenChange` belongs to the parent, not to this
+  // component — calling it during this component's own render would update a
+  // different component mid-render, which React forbids. Hence an effect,
+  // guarded by `attempt` so a re-render that leaves it unchanged (a parent
+  // handing in a new `onOpenChange` identity, for instance) does not close
+  // the drawer a second time.
+  const handledAttempt = useRef(form.attempt)
 
-  if (seen !== form.attempt) {
-    setSeen(form.attempt)
+  useEffect(() => {
+    if (form.attempt === handledAttempt.current) return
+    handledAttempt.current = form.attempt
     if (form.state.ok) onOpenChange(false)
-  }
+  }, [form.attempt, form.state.ok, onOpenChange])
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
