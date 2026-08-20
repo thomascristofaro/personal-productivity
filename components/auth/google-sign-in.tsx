@@ -6,7 +6,7 @@ import { authClient } from "@/components/auth/client"
 import { FormMessage } from "@/components/page/form-message"
 import { Button } from "@/components/ui/button"
 
-export function GoogleSignIn() {
+export function GoogleSignIn({ callbackURL }: { callbackURL: string }) {
   const [pending, setPending] = useState(false)
   const [failed, setFailed] = useState(false)
 
@@ -20,7 +20,9 @@ export function GoogleSignIn() {
 
           const { error } = await authClient.signIn.social({
             provider: "google",
-            callbackURL: "/menu",
+            // Where the session gate wanted to send us, already checked by
+            // `safeNext` — a shared recipe survives an expired session.
+            callbackURL,
             // Where a refused account lands. Sign-up is disabled, so an address
             // that is not seeded gets here — without this it would meet a raw
             // error page instead of being told, in Italian, what happened.

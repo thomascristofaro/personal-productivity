@@ -21,7 +21,16 @@ export function proxy(request: NextRequest) {
 
   if (getSessionCookie(request) !== null) return NextResponse.next()
 
-  return NextResponse.redirect(new URL("/login", request.url))
+  // Carrying the address through: without it a shared recipe dies at the login
+  // screen — you sign in, land on /menu, and the link you were importing is
+  // gone. /login checks it before using it, because an unchecked `next` is an
+  // open redirect.
+  const login = new URL("/login", request.url)
+  login.searchParams.set(
+    "next",
+    request.nextUrl.pathname + request.nextUrl.search
+  )
+  return NextResponse.redirect(login)
 }
 
 export const config = {

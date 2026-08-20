@@ -2,19 +2,20 @@ import { redirect } from "next/navigation"
 
 import { GoogleSignIn } from "@/components/auth/google-sign-in"
 import { getVerifiedSession } from "@/lib/auth"
+import { safeNext } from "@/lib/safe-next"
 
 export const metadata = { title: "Accedi" }
 
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ negato?: string }>
+  searchParams: Promise<{ negato?: string; next?: string }>
 }) {
   // Verified, not getSession(): in development the fallback would send every
   // visit straight back to the app, and signing in locally would be impossible.
   if ((await getVerifiedSession()) !== null) redirect("/menu")
 
-  const { negato } = await searchParams
+  const { negato, next } = await searchParams
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-sm flex-col justify-center gap-6 px-6 text-center">
@@ -31,7 +32,7 @@ export default async function LoginPage({
         </p>
       )}
 
-      <GoogleSignIn />
+      <GoogleSignIn callbackURL={safeNext(next)} />
     </main>
   )
 }
