@@ -3,6 +3,7 @@
 import { useState } from "react"
 
 import { authClient } from "@/components/auth/client"
+import { FormMessage } from "@/components/page/form-message"
 import { Button } from "@/components/ui/button"
 
 export function GoogleSignIn() {
@@ -37,11 +38,14 @@ export function GoogleSignIn() {
         {pending ? "Apro Google…" : "Accedi con Google"}
       </Button>
 
-      {failed ? (
-        <p role="alert" className="text-sm text-destructive">
-          Non è stato possibile aprire l’accesso Google. Riprova.
-        </p>
-      ) : null}
+      {/* No FormState here — this is a client call, not a server action — but
+          the message a failed one shows is the same message, so it is the same
+          component rather than a sixth hand-written role="alert". */}
+      <FormMessage>
+        {failed
+          ? "Non è stato possibile aprire l’accesso Google. Riprova."
+          : null}
+      </FormMessage>
     </div>
   )
 }
