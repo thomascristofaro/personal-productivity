@@ -4,6 +4,7 @@ import { KindFilter } from "@/components/catalog/kind-filter"
 import { DataList } from "@/components/page/data-list"
 import { DataListRow } from "@/components/page/data-list-row"
 import { EmptyState } from "@/components/page/empty-state"
+import { ListBody } from "@/components/page/page-body"
 import { PageHeader } from "@/components/page/page-header"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -29,7 +30,7 @@ export default async function CatalogPage({
   const items = await listCatalogItems(q, kindFilterFor(tipo))
 
   return (
-    <main className="flex flex-col gap-4 pt-6">
+    <ListBody>
       <PageHeader title="Catalogo">
         <Button render={<Link href="/catalogo/new" />} nativeButton={false}>
           Nuova
@@ -84,6 +85,6 @@ export default async function CatalogPage({
           )
         }
       />
-    </main>
+    </ListBody>
   )
 }

@@ -5,6 +5,7 @@ import {
   saveCatalogItem,
 } from "@/app/(app)/catalogo/actions"
 import { CatalogForm } from "@/components/catalog/catalog-form"
+import { DetailBody } from "@/components/page/page-body"
 import { PageHeader } from "@/components/page/page-header"
 import { Button } from "@/components/ui/button"
 import { AISLE_ORDER } from "@/lib/aisles"
@@ -27,7 +28,7 @@ export default async function EditCatalogItemPage({
   if (item === null) notFound()
 
   return (
-    <main className="flex flex-col gap-6 pt-6">
+    <DetailBody>
       <PageHeader
         title="Modifica voce"
         back={{ href: "/catalogo", label: "Catalogo" }}
@@ -58,6 +59,6 @@ export default async function EditCatalogItemPage({
           {item.usedIn === 1 ? "1 ricetta" : `${item.usedIn} ricette`}.
         </p>
       )}
-    </main>
+    </DetailBody>
   )
 }

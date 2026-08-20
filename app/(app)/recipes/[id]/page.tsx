@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 import { cache } from "react"
 
 import { removeRecipe } from "@/app/(app)/recipes/actions"
+import { DetailBody } from "@/components/page/page-body"
 import { PageHeader } from "@/components/page/page-header"
 import { DeleteRecipeDialog } from "@/components/recipes/delete-recipe-dialog"
 import { Badge } from "@/components/ui/badge"
@@ -37,7 +38,7 @@ export default async function RecipePage({
   if (recipe === null) notFound()
 
   return (
-    <main className="flex flex-col gap-6 pt-6">
+    <DetailBody>
       <div className="flex flex-col gap-3">
         <PageHeader
           title={recipe.title}
@@ -117,6 +118,6 @@ export default async function RecipePage({
           </p>
         </section>
       )}
-    </main>
+    </DetailBody>
   )
 }

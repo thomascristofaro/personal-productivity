@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation"
 
 import { saveTotal } from "@/app/(app)/spesa/storico/actions"
+import { DetailBody } from "@/components/page/page-body"
 import { PageHeader } from "@/components/page/page-header"
 import { PurchaseTotalForm } from "@/components/shopping/purchase-total-form"
 import { APP_TIMEZONE } from "@/lib/config"
@@ -41,7 +42,7 @@ export default async function PurchasePage({
   const groups = groupByAisle(purchase.lines)
 
   return (
-    <main className="flex flex-col gap-6 pt-6">
+    <DetailBody>
       <PageHeader
         title={dayFormat.format(purchase.purchasedAt)}
         back={{ href: "/spesa/storico", label: "Storico spesa" }}
@@ -90,6 +91,6 @@ export default async function PurchasePage({
           </section>
         ))}
       </div>
-    </main>
+    </DetailBody>
   )
 }

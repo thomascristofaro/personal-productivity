@@ -4,6 +4,7 @@ import { notFound } from "next/navigation"
 
 import { emptySlot, saveSlot } from "@/app/(app)/menu/[weekStart]/actions"
 import { WeekGrid } from "@/components/menu/week-grid"
+import { ListBody } from "@/components/page/page-body"
 import { PageHeader } from "@/components/page/page-header"
 import { Button } from "@/components/ui/button"
 import { APP_TIMEZONE, DAYS_IN_WEEK } from "@/lib/config"
@@ -60,7 +61,7 @@ export default async function MenuWeekPage({
   )}`
 
   return (
-    <main className="flex flex-col gap-4 pt-6">
+    <ListBody>
       <PageHeader title="Menù">
         <Button
           variant="outline"
@@ -100,6 +101,6 @@ export default async function MenuWeekPage({
         saveAction={saveSlot}
         clearAction={emptySlot}
       />
-    </main>
+    </ListBody>
   )
 }

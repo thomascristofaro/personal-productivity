@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation"
 
 import { addIngredient, saveRecipe } from "@/app/(app)/recipes/actions"
+import { DetailBody } from "@/components/page/page-body"
 import { PageHeader } from "@/components/page/page-header"
 import { RecipeForm } from "@/components/recipes/recipe-form"
 import { listIngredientOptions, listUsedUnits } from "@/lib/services/catalog"
@@ -26,7 +27,7 @@ export default async function EditRecipePage({
   if (recipe === null) notFound()
 
   return (
-    <main className="flex flex-col gap-6 pt-6">
+    <DetailBody>
       {/* Labelled with the recipe's own title, so the link names where it goes. */}
       <PageHeader
         title="Modifica ricetta"
@@ -55,6 +56,6 @@ export default async function EditRecipePage({
           })),
         }}
       />
-    </main>
+    </DetailBody>
   )
 }

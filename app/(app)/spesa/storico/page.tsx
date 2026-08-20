@@ -1,6 +1,7 @@
 import { DataList } from "@/components/page/data-list"
 import { DataListRow } from "@/components/page/data-list-row"
 import { EmptyState } from "@/components/page/empty-state"
+import { ListBody } from "@/components/page/page-body"
 import { PageHeader } from "@/components/page/page-header"
 import { Badge } from "@/components/ui/badge"
 import { APP_TIMEZONE } from "@/lib/config"
@@ -31,7 +32,7 @@ export default async function PurchaseHistoryPage() {
   const purchases = await listPurchases()
 
   return (
-    <main className="flex flex-col gap-4 pt-6">
+    <ListBody>
       <PageHeader title="Storico spesa" />
 
       <DataList
@@ -66,6 +67,6 @@ export default async function PurchaseHistoryPage() {
           />
         }
       />
-    </main>
+    </ListBody>
   )
 }

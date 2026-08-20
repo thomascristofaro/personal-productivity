@@ -3,6 +3,7 @@ import { Suspense } from "react"
 
 import { DataList } from "@/components/page/data-list"
 import { EmptyState } from "@/components/page/empty-state"
+import { ListBody } from "@/components/page/page-body"
 import { PageHeader } from "@/components/page/page-header"
 import { RecipeRow } from "@/components/recipes/recipe-row"
 import { RecipeSearch } from "@/components/recipes/recipe-search"
@@ -29,7 +30,7 @@ export default async function RecipesPage({
   const recipes = await listRecipes(q)
 
   return (
-    <main className="flex flex-col gap-4 pt-6">
+    <ListBody>
       <PageHeader title="Ricettario">
         <Button render={<Link href="/recipes/new" />} nativeButton={false}>
           Nuova
@@ -62,6 +63,6 @@ export default async function RecipesPage({
           )
         }
       />
-    </main>
+    </ListBody>
   )
 }
