@@ -54,10 +54,11 @@ export function AddItemDrawer({
 
   // FormDrawer closes itself on a successful save, but it knows nothing of
   // `name`, `aisle` and `unit` — they live here. Adjusting them during render
-  // rather than in an effect matches FormDrawer's own guard: React re-runs the
-  // component before committing, so a fresh `attempt` never paints with stale
-  // local state. An effect here would be a cascading render, which is what
-  // react-hooks/set-state-in-effect objects to.
+  // is legal because every setter below belongs to this component: React
+  // reruns a component that updates its own state mid-render, so a fresh
+  // `attempt` never paints with stale local state. It would not be legal to
+  // reach into a different component's state this way — that produces
+  // "Cannot update a component while rendering a different component".
   const [seen, setSeen] = useState(form.attempt)
   if (seen !== form.attempt) {
     setSeen(form.attempt)
