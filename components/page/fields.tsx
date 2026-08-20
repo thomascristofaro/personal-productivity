@@ -1,12 +1,7 @@
 "use client"
 
 import { mergeDescribedBy } from "@/components/page/described-by"
-import {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldLabel,
-} from "@/components/ui/field"
+import { FormField } from "@/components/page/form-field"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -22,7 +17,12 @@ import { Textarea } from "@/components/ui/textarea"
 // `type`, `inputMode`, `placeholder` and `required` pass through as the DOM
 // attributes they already are. Without that rule NumberField grows a `min` in
 // week one and an `allowDecimals` in week two.
-type Ours = { label: string; description?: string; error?: string }
+//
+// `id` is required rather than inherited as optional: the label's `htmlFor` and
+// the description's and error's ids are all built from it, so a field without
+// one is a field nothing points at. Every call site spreads `fieldProps`, which
+// always supplies it — this makes that a compile error instead of a convention.
+type Ours = { id: string; label: string; description?: string; error?: string }
 
 // `Array.isArray` narrows the positive branch fine, but leaves `readonly
 // string[]` in the union on the negative branch — TypeScript cannot subtract a
@@ -41,23 +41,21 @@ export function TextField({
   ...control
 }: React.ComponentProps<typeof Input> & Ours) {
   return (
-    <Field data-invalid={error ? "true" : undefined}>
-      <FieldLabel htmlFor={control.id}>{label}</FieldLabel>
+    <FormField
+      name={control.id}
+      label={label}
+      description={description}
+      error={error}
+    >
       <Input
         {...control}
         aria-describedby={mergeDescribedBy(
-          String(control.id),
+          control.id,
           description !== undefined,
           control["aria-describedby"]
         )}
       />
-      {description === undefined ? null : (
-        <FieldDescription id={`${control.id}-description`}>
-          {description}
-        </FieldDescription>
-      )}
-      <FieldError id={`${control.id}-error`}>{error}</FieldError>
-    </Field>
+    </FormField>
   )
 }
 
@@ -72,23 +70,21 @@ export function TextareaField({
   ...control
 }: React.ComponentProps<typeof Textarea> & Ours) {
   return (
-    <Field data-invalid={error ? "true" : undefined}>
-      <FieldLabel htmlFor={control.id}>{label}</FieldLabel>
+    <FormField
+      name={control.id}
+      label={label}
+      description={description}
+      error={error}
+    >
       <Textarea
         {...control}
         aria-describedby={mergeDescribedBy(
-          String(control.id),
+          control.id,
           description !== undefined,
           control["aria-describedby"]
         )}
       />
-      {description === undefined ? null : (
-        <FieldDescription id={`${control.id}-description`}>
-          {description}
-        </FieldDescription>
-      )}
-      <FieldError id={`${control.id}-error`}>{error}</FieldError>
-    </Field>
+    </FormField>
   )
 }
 
@@ -104,7 +100,6 @@ export function SelectField({
   "aria-describedby": describedBy,
   ...rest
 }: Ours & {
-  id: string
   name: string
   defaultValue?: string
   "aria-invalid"?: true
@@ -124,8 +119,7 @@ export function SelectField({
   const items = isList ? undefined : options
 
   return (
-    <Field data-invalid={error ? "true" : undefined}>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+    <FormField name={id} label={label} description={description} error={error}>
       <Select name={name} defaultValue={defaultValue} items={items} {...rest}>
         <SelectTrigger
           id={id}
@@ -146,12 +140,6 @@ export function SelectField({
           ))}
         </SelectContent>
       </Select>
-      {description === undefined ? null : (
-        <FieldDescription id={`${id}-description`}>
-          {description}
-        </FieldDescription>
-      )}
-      <FieldError id={`${id}-error`}>{error}</FieldError>
-    </Field>
+    </FormField>
   )
 }
