@@ -31,8 +31,8 @@ export function WeekGrid({
   saveAction: FormAction
 }) {
   const [openKey, setOpenKey] = useState<string | null>(null)
-  // Stable across renders, so the drawer's close-on-success effect does not
-  // refire and shut the drawer the moment it is reopened.
+  // Stable across renders, so SlotDrawer does not receive a new onClose
+  // identity on every keystroke elsewhere in this tree.
   const close = useCallback(() => setOpenKey(null), [])
 
   const open = slots.find((slot) => keyOf(slot) === openKey) ?? null
