@@ -47,7 +47,11 @@ export function AddItemDrawer({
   aboveBar: boolean
 }) {
   const [open, setOpen] = useState(false)
-  const form = useFormState(action, FIELD_ORDER)
+  // «Prodotto» as the initial value rather than a `defaultValue` on the field:
+  // fieldProps already emits one, and whichever is spread second wins. Written
+  // as a prop it either sat after the spread and made the echo inert, or sat
+  // before it and lost to the empty string fieldProps falls back to.
+  const form = useFormState(action, FIELD_ORDER, { kind: "PRODUCT" })
   const [name, setName] = useState("")
   const [aisle, setAisle] = useState(AISLE_UNKNOWN)
   const [unit, setUnit] = useState("")
@@ -186,7 +190,6 @@ export function AddItemDrawer({
               error={form.errorOf("kind")}
               description="Prodotto di default: quello che si cucina di solito nasce dalla ricetta."
               options={KIND_LABELS}
-              defaultValue="PRODUCT"
             />
             <Field orientation="horizontal">
               <Checkbox id="skipCatalog" name="skipCatalog" value="1" />

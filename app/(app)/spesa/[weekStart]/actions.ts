@@ -172,9 +172,14 @@ export const complete: FormAction = async (_state, formData) => {
   const weekStart = WeekStartSchema.safeParse(formData.get("weekStart"))
   const total = EuroCentsSchema.safeParse(formData.get("total") ?? "")
 
-  if (!weekStart.success) return failure("Settimana non valida.")
+  // The drawer remounts its field group on every attempt, so a refusal that
+  // does not echo empties the amount. This one is typed at the till, from a
+  // receipt already back in a pocket.
+  const values = valuesFrom(formData, ["total"])
+
+  if (!weekStart.success) return failure("Settimana non valida.", { values })
   if (!total.success) {
-    return failure(total.error.issues[0].message)
+    return failure(total.error.issues[0].message, { values })
   }
 
   await requireSession()
@@ -183,12 +188,12 @@ export const complete: FormAction = async (_state, formData) => {
     await completePurchase(weekStart.data, total.data)
   } catch (error) {
     if (error instanceof NoListError) {
-      return failure("Questa settimana non ha una lista.")
+      return failure("Questa settimana non ha una lista.", { values })
     }
     // The other phone closed the shop first, or unticked everything between the
     // render and the tap. Saying so beats a silent no-op.
     if (error instanceof NothingCheckedError) {
-      return failure("Non c’è niente di spuntato.")
+      return failure("Non c’è niente di spuntato.", { values })
     }
     throw error
   }

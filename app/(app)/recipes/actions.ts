@@ -26,7 +26,8 @@ import {
 const RecipeIdSchema = z.cuid()
 
 // Only the flat fields. Ingredients and tags are held in React state by their
-// components, so they survive React 19's form reset without being echoed.
+// components, so they survive React 19's form reset without being echoed, and
+// the hidden id comes from the form's props rather than from the state.
 const FORM_FIELDS = [
   "title",
   "sourceUrl",
@@ -34,7 +35,6 @@ const FORM_FIELDS = [
   "totalMinutes",
   "instructions",
   "notes",
-  "id",
 ] as const
 
 // An empty numeric field arrives as "", which is not an absent value to Zod.
@@ -70,6 +70,11 @@ function tagsFrom(formData: FormData): string[] {
 }
 
 export const saveRecipe: FormAction = async (_state, formData) => {
+  // Every refusal below echoes the same fields. The shared `failure` cannot
+  // reach `formData`, so the alternative is spelling the echo out five times.
+  const refuse = (message: string, errors?: Record<string, string[]>) =>
+    failure(message, { errors, values: valuesFrom(formData, FORM_FIELDS) })
+
   const parsed = RecipeInputSchema.safeParse({
     title: formData.get("title"),
     sourceUrl: formData.get("sourceUrl") ?? "",
@@ -82,10 +87,7 @@ export const saveRecipe: FormAction = async (_state, formData) => {
   })
 
   if (!parsed.success) {
-    return failure("Controlla i campi segnalati.", {
-      errors: fieldErrorsFrom(parsed.error),
-      values: valuesFrom(formData, FORM_FIELDS),
-    })
+    return refuse("Controlla i campi segnalati.", fieldErrorsFrom(parsed.error))
   }
 
   await requireSession()
@@ -96,9 +98,8 @@ export const saveRecipe: FormAction = async (_state, formData) => {
       ? RecipeIdSchema.safeParse(rawId)
       : null
 
-  const missingIngredient = failure(
-    "Uno degli ingredienti non esiste più. Ricarica la pagina.",
-    { values: valuesFrom(formData, FORM_FIELDS) }
+  const missingIngredient = refuse(
+    "Uno degli ingredienti non esiste più. Ricarica la pagina."
   )
 
   let target: string
@@ -115,18 +116,14 @@ export const saveRecipe: FormAction = async (_state, formData) => {
       await updateRecipe(existing.data, parsed.data)
     } catch (error) {
       if (error instanceof RecipeNotFoundError) {
-        return failure("Questa ricetta non esiste più.", {
-          values: valuesFrom(formData, FORM_FIELDS),
-        })
+        return refuse("Questa ricetta non esiste più.")
       }
       if (error instanceof UnknownIngredientError) return missingIngredient
       throw error
     }
     target = existing.data
   } else {
-    return failure("Questa ricetta non esiste più.", {
-      values: valuesFrom(formData, FORM_FIELDS),
-    })
+    return refuse("Questa ricetta non esiste più.")
   }
 
   revalidatePath("/recipes")

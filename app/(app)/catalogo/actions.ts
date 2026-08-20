@@ -29,6 +29,11 @@ const FORM_FIELDS = [
 ] as const
 
 export const saveCatalogItem: FormAction = async (_state, formData) => {
+  // Every refusal below echoes the same fields. The shared `failure` cannot
+  // reach `formData`, so the alternative is spelling the echo out five times.
+  const refuse = (message: string, errors?: Record<string, string[]>) =>
+    failure(message, { errors, values: valuesFrom(formData, FORM_FIELDS) })
+
   const parsed = CatalogItemInputSchema.safeParse({
     name: formData.get("name"),
     // `?? undefined` and not `?? ""`: the schema defaults a missing kind to
@@ -40,10 +45,7 @@ export const saveCatalogItem: FormAction = async (_state, formData) => {
   })
 
   if (!parsed.success) {
-    return failure("Controlla i campi segnalati.", {
-      errors: fieldErrorsFrom(parsed.error),
-      values: valuesFrom(formData, FORM_FIELDS),
-    })
+    return refuse("Controlla i campi segnalati.", fieldErrorsFrom(parsed.error))
   }
 
   await requireSession()
@@ -60,28 +62,21 @@ export const saveCatalogItem: FormAction = async (_state, formData) => {
     } else if (original.success) {
       await updateCatalogItem(original.data, parsed.data)
     } else {
-      return failure("Questa voce non esiste più.", {
-        values: valuesFrom(formData, FORM_FIELDS),
-      })
+      return refuse("Questa voce non esiste più.")
     }
   } catch (error) {
     if (error instanceof CatalogItemExistsError) {
-      return failure("Controlla i campi segnalati.", {
-        errors: { name: ["Esiste già una voce con questo nome."] },
-        values: valuesFrom(formData, FORM_FIELDS),
+      return refuse("Controlla i campi segnalati.", {
+        name: ["Esiste già una voce con questo nome."],
       })
     }
     if (error instanceof CatalogItemNotFoundError) {
-      return failure("Questa voce non esiste più.", {
-        values: valuesFrom(formData, FORM_FIELDS),
-      })
+      return refuse("Questa voce non esiste più.")
     }
     // The form only offers the known aisles, so reaching this means the action
     // was called directly — a server action is a public endpoint.
     if (error instanceof UnknownAisleError) {
-      return failure("Reparto non valido.", {
-        values: valuesFrom(formData, FORM_FIELDS),
-      })
+      return refuse("Reparto non valido.")
     }
     throw error
   }

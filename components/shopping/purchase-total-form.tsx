@@ -3,6 +3,7 @@
 import { TextField } from "@/components/page/fields"
 import { FormMessage } from "@/components/page/form-message"
 import { Button } from "@/components/ui/button"
+import { FieldGroup } from "@/components/ui/field"
 import { useFormState } from "@/hooks/use-form-state"
 import type { FormAction } from "@/lib/form"
 
@@ -26,7 +27,7 @@ export function PurchaseTotalForm({
     <form action={formAction} className="flex flex-col gap-3">
       <input type="hidden" name="id" value={id} />
 
-      <div key={attempt}>
+      <FieldGroup key={attempt}>
         <TextField
           {...fieldProps("total")}
           label="Quanto hai pagato"
@@ -40,7 +41,7 @@ export function PurchaseTotalForm({
           placeholder="12,34"
           autoComplete="off"
         />
-      </div>
+      </FieldGroup>
 
       <FormMessage>{state.message}</FormMessage>
 

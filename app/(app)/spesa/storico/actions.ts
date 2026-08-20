@@ -3,9 +3,8 @@
 import { revalidatePath } from "next/cache"
 
 import { requireSession } from "@/lib/auth"
-import { failure, success } from "@/lib/form"
+import { failure, success, type FormAction } from "@/lib/form"
 import { valuesFrom } from "@/lib/form-errors"
-import type { FormAction } from "@/lib/form"
 import { EuroCentsSchema, PurchaseIdSchema } from "@/lib/schemas/shopping"
 import { setPurchaseTotal } from "@/lib/services/purchases"
 
