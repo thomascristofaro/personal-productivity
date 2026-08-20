@@ -10,7 +10,9 @@ export function ListBody({
   children: React.ReactNode
 }) {
   return (
-    <main className={cn("flex flex-col gap-4 pt-6", className)}>{children}</main>
+    <main className={cn("flex flex-col gap-4 pt-6", className)}>
+      {children}
+    </main>
   )
 }
 
@@ -22,6 +24,8 @@ export function DetailBody({
   children: React.ReactNode
 }) {
   return (
-    <main className={cn("flex flex-col gap-6 pt-6", className)}>{children}</main>
+    <main className={cn("flex flex-col gap-6 pt-6", className)}>
+      {children}
+    </main>
   )
 }

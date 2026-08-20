@@ -1,4 +1,3 @@
-// lib/form-errors.test.ts
 import { describe, expect, it } from "vitest"
 
 import { fieldErrorsFrom, valuesFrom } from "@/lib/form-errors"
