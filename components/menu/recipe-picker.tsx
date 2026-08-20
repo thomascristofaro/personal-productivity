@@ -24,7 +24,7 @@ export function RecipePicker({
   id: string
   recipes: RecipeOption[]
   value: RecipeOption | null
-  onSelect: (recipe: RecipeOption) => void
+  onSelect: (recipe: RecipeOption | null) => void
   "aria-describedby"?: string
 }) {
   return (
@@ -36,9 +36,9 @@ export function RecipePicker({
       itemToStringLabel={(recipe: RecipeOption) => recipe.title}
       isItemEqualToValue={(a: RecipeOption, b: RecipeOption) => a.id === b.id}
       value={value}
-      onValueChange={(recipe: RecipeOption | null) => {
-        if (recipe !== null) onSelect(recipe)
-      }}
+      // The null is no longer discarded: clearing the field is how a slot holding a
+      // recipe is emptied, now that «Svuota» is gone.
+      onValueChange={onSelect}
       // The input is left uncontrolled on purpose. Driving it from a query
       // state that starts empty is what made a slot holding a recipe reopen
       // with a blank field: Base UI derives the text from `value` itself.
@@ -47,6 +47,7 @@ export function RecipePicker({
         id={id}
         aria-describedby={describedBy}
         placeholder="Cerca una ricetta…"
+        showClear
       />
       <ComboboxContent>
         <ComboboxEmpty>Nessuna ricetta con questo nome.</ComboboxEmpty>

@@ -2,15 +2,16 @@
 
 import { revalidatePath } from "next/cache"
 
-import type { SlotFormState } from "@/components/menu/slot-drawer"
 import { requireSession } from "@/lib/auth"
+import { failure, success, type FormAction } from "@/lib/form"
+import { valuesFrom } from "@/lib/form-errors"
 import {
   DaySchema,
   MealSchema,
   SlotInputSchema,
   WeekStartSchema,
 } from "@/lib/schemas/menu"
-import { clearSlot, setSlot, UnknownRecipeError } from "@/lib/services/menus"
+import { setSlot, UnknownRecipeError } from "@/lib/services/menus"
 
 const iso = (date: Date) => date.toISOString().slice(0, 10)
 
@@ -36,10 +37,7 @@ function addressFrom(formData: FormData) {
   }
 }
 
-export async function saveSlot(
-  _state: SlotFormState,
-  formData: FormData
-): Promise<SlotFormState> {
+export const saveSlot: FormAction = async (_state, formData) => {
   const address = addressFrom(formData)
   const input = SlotInputSchema.safeParse({
     recipeId: optionalText(formData.get("recipeId")),
@@ -47,24 +45,18 @@ export async function saveSlot(
     servings: optionalNumber(formData.get("servings")),
   })
 
-  // Echoed back on every refusal. React 19 resets the drawer to its
-  // defaultValues before the action runs, so a note the user typed is gone by
-  // the time the message about it renders unless it comes back with the state.
-  const values = {
-    freeText: String(formData.get("freeText") ?? ""),
-    servings: String(formData.get("servings") ?? ""),
-  }
+  const values = valuesFrom(formData, ["freeText", "servings"])
 
   if (
     !address.weekStart.success ||
     !address.day.success ||
     !address.meal.success
   ) {
-    return { message: "Questo slot non esiste.", ok: false, values }
+    return failure("Questo slot non esiste.", { values })
   }
 
   if (!input.success) {
-    return { message: input.error.issues[0].message, ok: false, values }
+    return failure(input.error.issues[0].message, { values })
   }
 
   await requireSession()
@@ -78,7 +70,7 @@ export async function saveSlot(
     )
   } catch (error) {
     if (error instanceof UnknownRecipeError) {
-      return { message: "Questa ricetta non esiste più.", ok: false, values }
+      return failure("Questa ricetta non esiste più.", { values })
     }
     throw error
   }
@@ -88,23 +80,5 @@ export async function saveSlot(
   // a half screens tall. The path is built from the validated date, never from
   // the raw field — that string reaches the cache key.
   revalidatePath(`/menu/${iso(address.weekStart.data)}`)
-  return { message: null, ok: true }
-}
-
-export async function emptySlot(formData: FormData): Promise<void> {
-  const address = addressFrom(formData)
-
-  if (
-    !address.weekStart.success ||
-    !address.day.success ||
-    !address.meal.success
-  ) {
-    return
-  }
-
-  await requireSession()
-
-  await clearSlot(address.weekStart.data, address.day.data, address.meal.data)
-
-  revalidatePath(`/menu/${iso(address.weekStart.data)}`)
+  return success()
 }

@@ -3,9 +3,9 @@
 import { revalidatePath } from "next/cache"
 
 import { requireSession } from "@/lib/auth"
+import { failure, success, type FormAction } from "@/lib/form"
+import { valuesFrom } from "@/lib/form-errors"
 import { WeekStartSchema } from "@/lib/schemas/menu"
-import type { AddItemState } from "@/components/shopping/add-item-drawer"
-import type { CompleteState } from "@/components/shopping/complete-purchase-bar"
 import {
   AddShoppingItemSchema,
   EuroCentsSchema,
@@ -79,10 +79,7 @@ export async function toggle(formData: FormData): Promise<void> {
   revalidatePath(`/spesa/${iso(weekStart.data)}`)
 }
 
-export async function addItem(
-  _state: AddItemState,
-  formData: FormData
-): Promise<AddItemState> {
+export const addItem: FormAction = async (_state, formData) => {
   const weekStart = WeekStartSchema.safeParse(formData.get("weekStart"))
   const input = AddShoppingItemSchema.safeParse({
     name: formData.get("name"),
@@ -95,12 +92,15 @@ export async function addItem(
     kind: formData.get("kind") ?? "PRODUCT",
   })
 
-  if (!weekStart.success) return { ok: false, message: "Settimana non valida." }
+  const values = valuesFrom(formData, ["quantity", "unit", "aisle", "kind"])
+
+  if (!weekStart.success) {
+    return failure("Settimana non valida.", { values })
+  }
   if (!input.success) {
-    return {
-      ok: false,
-      message: input.error.issues[0]?.message ?? "Controlla i campi.",
-    }
+    return failure(input.error.issues[0]?.message ?? "Controlla i campi.", {
+      values,
+    })
   }
 
   await requireSession()
@@ -112,13 +112,13 @@ export async function addItem(
     // nothing had happened, which is how a line can fail to appear without a
     // word being said about it.
     if (error instanceof NoListError) {
-      return { ok: false, message: "Questa settimana non ha una lista." }
+      return failure("Questa settimana non ha una lista.", { values })
     }
     throw error
   }
 
   revalidatePath(`/spesa/${iso(weekStart.data)}`)
-  return { ok: true, message: null }
+  return success()
 }
 
 export async function removeItem(formData: FormData): Promise<void> {
@@ -168,16 +168,18 @@ export async function setTaken(formData: FormData): Promise<void> {
   revalidatePath(`/spesa/${iso(weekStart.data)}`)
 }
 
-export async function complete(
-  _state: CompleteState,
-  formData: FormData
-): Promise<CompleteState> {
+export const complete: FormAction = async (_state, formData) => {
   const weekStart = WeekStartSchema.safeParse(formData.get("weekStart"))
   const total = EuroCentsSchema.safeParse(formData.get("total") ?? "")
 
-  if (!weekStart.success) return { ok: false, message: "Settimana non valida." }
+  // The drawer remounts its field group on every attempt, so a refusal that
+  // does not echo empties the amount. This one is typed at the till, from a
+  // receipt already back in a pocket.
+  const values = valuesFrom(formData, ["total"])
+
+  if (!weekStart.success) return failure("Settimana non valida.", { values })
   if (!total.success) {
-    return { ok: false, message: total.error.issues[0].message }
+    return failure(total.error.issues[0].message, { values })
   }
 
   await requireSession()
@@ -186,17 +188,17 @@ export async function complete(
     await completePurchase(weekStart.data, total.data)
   } catch (error) {
     if (error instanceof NoListError) {
-      return { ok: false, message: "Questa settimana non ha una lista." }
+      return failure("Questa settimana non ha una lista.", { values })
     }
     // The other phone closed the shop first, or unticked everything between the
     // render and the tap. Saying so beats a silent no-op.
     if (error instanceof NothingCheckedError) {
-      return { ok: false, message: "Non c’è niente di spuntato." }
+      return failure("Non c’è niente di spuntato.", { values })
     }
     throw error
   }
 
   revalidatePath(`/spesa/${iso(weekStart.data)}`)
   revalidatePath("/spesa/storico")
-  return { ok: true, message: null }
+  return success()
 }

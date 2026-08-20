@@ -2,47 +2,53 @@ import Link from "next/link"
 
 import { cn } from "@/lib/utils"
 
-const CHIPS = [
-  { tipo: undefined, label: "Tutti" },
-  { tipo: "ingredienti", label: "Ingredienti" },
-  { tipo: "prodotti", label: "Prodotti" },
-] as const
-
-export function KindFilter({
-  // The raw `?tipo=`, not the kind it maps to: a value nobody offered should
+export function FilterChips({
+  basePath,
+  param,
+  chips,
+  active,
+  label,
+  keep = {},
+}: {
+  basePath: string
+  param: string
+  chips: readonly { value: string | undefined; label: string }[]
+  // The raw param, not the value it maps to: a value nobody offered should
   // highlight nothing, rather than highlight "Tutti" and imply the filter was
   // understood.
-  active,
-  query,
-}: {
   active: string | undefined
-  query: string | undefined
+  // The nav's own accessible name. Required rather than optional: a landmark
+  // with a wrong name is worse than one the compiler made you name.
+  label: string
+  keep?: Record<string, string | undefined>
 }) {
-  const hrefFor = (tipo: string | undefined) => {
+  const hrefFor = (value: string | undefined) => {
     const params = new URLSearchParams()
-    if (tipo !== undefined) params.set("tipo", tipo)
+    if (value !== undefined) params.set(param, value)
     // The search survives the chip. Losing what you had typed because you
     // narrowed the type is the kind of small betrayal that stops people
     // filtering at all.
-    if (query) params.set("q", query)
+    for (const [key, kept] of Object.entries(keep)) {
+      if (kept) params.set(key, kept)
+    }
     const search = params.toString()
-    return search === "" ? "/catalogo" : `/catalogo?${search}`
+    return search === "" ? basePath : `${basePath}?${search}`
   }
 
   return (
-    <nav aria-label="Filtra per tipo">
+    <nav aria-label={label}>
       {/* Links and not buttons, and therefore no "use client": the choice
           belongs in the address bar, so it survives a refresh and can be sent
           to the other phone. A client component here would buy nothing and
           pull the boundary up the tree. */}
       <ul className="flex gap-2">
-        {CHIPS.map((chip) => {
-          const current = chip.tipo === active
+        {chips.map((chip) => {
+          const current = chip.value === active
 
           return (
             <li key={chip.label}>
               <Link
-                href={hrefFor(chip.tipo)}
+                href={hrefFor(chip.value)}
                 aria-current={current ? "page" : undefined}
                 className={cn(
                   "inline-flex h-9 items-center rounded-4xl border px-3 text-sm transition-colors outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",

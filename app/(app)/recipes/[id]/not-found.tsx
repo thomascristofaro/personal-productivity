@@ -1,5 +1,6 @@
 import Link from "next/link"
 
+import { MessagePage } from "@/components/page/message-page"
 import { Button } from "@/components/ui/button"
 
 // This screen ships with a 200, not a 404: app/(app)/recipes/loading.tsx puts
@@ -9,8 +10,7 @@ import { Button } from "@/components/ui/button"
 // crawls it.
 export default function NotFound() {
   return (
-    <main className="flex flex-col items-center gap-4 pt-24 text-center">
-      <h1 className="text-sm">Questa ricetta non esiste più.</h1>
+    <MessagePage title="Questa ricetta non esiste più.">
       <Button
         variant="outline"
         render={<Link href="/recipes" />}
@@ -18,6 +18,6 @@ export default function NotFound() {
       >
         Torna al ricettario
       </Button>
-    </main>
+    </MessagePage>
   )
 }

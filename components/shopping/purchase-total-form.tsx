@@ -1,19 +1,13 @@
 "use client"
 
-import { useActionState, useState } from "react"
-
+import { TextField } from "@/components/page/fields"
+import { FormMessage } from "@/components/page/form-message"
 import { Button } from "@/components/ui/button"
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
+import { FieldGroup } from "@/components/ui/field"
+import { useFormState } from "@/hooks/use-form-state"
+import type { FormAction } from "@/lib/form"
 
-export type TotalState = { message: string | null }
-
-export type SaveTotalAction = (
-  state: TotalState,
-  formData: FormData
-) => Promise<TotalState>
-
-export const EMPTY_TOTAL_STATE: TotalState = { message: null }
+const FIELD_ORDER = ["total"] as const
 
 export function PurchaseTotalForm({
   id,
@@ -24,49 +18,32 @@ export function PurchaseTotalForm({
 }: {
   id: string
   total: string
-  action: SaveTotalAction
+  action: FormAction
 }) {
-  const [state, formAction, isPending] = useActionState(
-    action,
-    EMPTY_TOTAL_STATE
-  )
-
-  // Remounts the field after every result, so React 19's form reset cannot
-  // fight the value the server sent back. During render, not in an effect.
-  const [seen, setSeen] = useState(state)
-  const [attempt, setAttempt] = useState(0)
-
-  if (seen !== state) {
-    setSeen(state)
-    setAttempt((count) => count + 1)
-  }
+  const { state, formAction, isPending, attempt, errorOf, fieldProps } =
+    useFormState(action, FIELD_ORDER, { total })
 
   return (
     <form action={formAction} className="flex flex-col gap-3">
       <input type="hidden" name="id" value={id} />
 
-      <Field key={attempt}>
-        <FieldLabel htmlFor="total">Quanto hai pagato</FieldLabel>
-        <Input
-          id="total"
-          name="total"
+      <FieldGroup key={attempt}>
+        <TextField
+          {...fieldProps("total")}
+          label="Quanto hai pagato"
+          error={errorOf("total")}
+          description="Svuota il campo per togliere l’importo."
+          // Text and not number: a number input refuses a comma in some locales
+          // and silently empties itself, and the parsing this field needs is
+          // already in EuroCentsSchema.
           type="text"
           inputMode="decimal"
           placeholder="12,34"
-          defaultValue={total}
           autoComplete="off"
-          aria-describedby="total-description"
         />
-        <FieldDescription id="total-description">
-          Svuota il campo per togliere l’importo.
-        </FieldDescription>
-      </Field>
+      </FieldGroup>
 
-      {state.message === null ? null : (
-        <p role="alert" className="text-sm text-destructive">
-          {state.message}
-        </p>
-      )}
+      <FormMessage>{state.message}</FormMessage>
 
       <Button type="submit" variant="outline" disabled={isPending}>
         {isPending ? "Salvo…" : "Salva l’importo"}

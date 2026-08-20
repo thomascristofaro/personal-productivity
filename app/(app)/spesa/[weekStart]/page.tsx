@@ -11,6 +11,7 @@ import {
   toggle,
 } from "@/app/(app)/spesa/[weekStart]/actions"
 import { EmptyState } from "@/components/page/empty-state"
+import { ListBody } from "@/components/page/page-body"
 import { PageHeader } from "@/components/page/page-header"
 import { AddItemDrawer } from "@/components/shopping/add-item-drawer"
 import { CompletePurchaseBar } from "@/components/shopping/complete-purchase-bar"
@@ -71,7 +72,7 @@ export default async function ShoppingWeekPage({
   // page, and an empty strip nobody scrolls to is cheaper than a conditional
   // that has to know whether the bar is showing.
   return (
-    <main className="flex flex-col gap-4 pt-6 pb-24">
+    <ListBody className="pb-24">
       <PageHeader title="Spesa" back={{ href: `/menu/${week}`, label: "Menù" }}>
         {/* Shown even on a week with no list: the history crosses the weeks, so
             it is never irrelevant. "Rigenera" is, and is not. */}
@@ -172,6 +173,6 @@ export default async function ShoppingWeekPage({
           />
         </>
       )}
-    </main>
+    </ListBody>
   )
 }

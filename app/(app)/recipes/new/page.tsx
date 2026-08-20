@@ -1,4 +1,5 @@
 import { addIngredient, saveRecipe } from "@/app/(app)/recipes/actions"
+import { DetailBody } from "@/components/page/page-body"
 import { PageHeader } from "@/components/page/page-header"
 import { RecipeForm } from "@/components/recipes/recipe-form"
 import { listIngredientOptions, listUsedUnits } from "@/lib/services/catalog"
@@ -16,7 +17,7 @@ export default async function NewRecipePage() {
   ])
 
   return (
-    <main className="flex flex-col gap-6 pt-6">
+    <DetailBody>
       <PageHeader
         title="Nuova ricetta"
         back={{ href: "/recipes", label: "Ricettario" }}
@@ -38,6 +39,6 @@ export default async function NewRecipePage() {
           ingredients: [],
         }}
       />
-    </main>
+    </DetailBody>
   )
 }

@@ -46,13 +46,23 @@ A page is assembled from `components/page/`, not rebuilt. A new module gets its
 screens right by reusing these, and the states below stop being something each
 module has to remember.
 
-| Primitive                         | Use                                                |
-| --------------------------------- | -------------------------------------------------- |
-| `PageHeader`                      | title, optional back link, optional action slot    |
-| `DataList` + `DataListRow`        | the card-row list, including the count live region |
-| `EmptyState`                      | "there is nothing here", with an optional action   |
-| `PageError`                       | the body of a route's `error.tsx`                  |
-| `ListSkeleton` / `DetailSkeleton` | the body of a route's `loading.tsx`                |
+| Primitive                                                     | Use                                                                                      |
+| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `PageHeader`                                                  | title, optional back link, optional action slot                                          |
+| `DataList` + `DataListRow`                                    | the card-row list, including the count live region                                       |
+| `EmptyState`                                                  | "there is nothing here", with an optional action                                         |
+| `PageError`                                                   | the body of a route's `error.tsx`                                                        |
+| `ListSkeleton` / `DetailSkeleton`                             | the body of a route's `loading.tsx`                                                      |
+| `ListBody` / `DetailBody`                                     | the page's `<main>` and its spacing — `gap-4` for a list, `gap-6` for a form or a detail |
+| `TextField` / `NumberField` / `TextareaField` / `SelectField` | the four typed fields, for the common case                                               |
+| `FormField`                                                   | the escape hatch — takes the control as `children`, for what the typed four cannot carry |
+| `FormMessage`                                                 | the form-level `<p role="alert">`, nothing when there is no message                      |
+| `FormActions`                                                 | the submit button with its pending label, and an optional cancel link                    |
+| `FormDrawer`                                                  | the drawer shell — header, form, message, footer — always controlled                     |
+| `ListSection`                                                 | one aisle-grouped `<section>` + `<h2>` + `<ul>`                                          |
+| `SearchField`                                                 | a debounced `?q=` input that replaces the URL, no history entry per keystroke            |
+| `FilterChips`                                                 | the chip row that reads and writes a query param, keeping what else was typed            |
+| `MessagePage`                                                 | the body of a page with no `PageHeader` — the "does not exist" screens                   |
 
 **Every screen that fetches has four designed states, not three.** The design
 document says loading, empty and error; use showed a fourth that is easy to miss.
@@ -71,9 +81,63 @@ is the thing this directory exists to prevent.
 right one: the parent supplies the data the child renders, the case
 `vercel-composition-patterns` names as appropriate for them.
 
-The catalogue screens under `app/(app)/ingredients/` are the second module built
+The catalogue screens under `app/(app)/catalogo/` are the second module built
 on these, and they added no primitive and changed none. That is the bar: if a
 third module needs one bent, bend the primitive rather than forking it.
+
+**A typed field defines `label`, `description` and `error`, and nothing else.**
+`name`, `id` and `defaultValue` are not their props — those arrive already in
+the spread from `useFormState`'s `fieldProps`. Everything past the three stays a
+DOM attribute and spreads straight onto the native control, so `min`, `step`,
+`rows`, `type`, `inputMode` and `placeholder` pass through as the attributes
+they already are, not as something anybody designed. `SelectField` carries one
+more, and it is the single exception: `options`, because a select with no
+options is nothing and no DOM attribute carries them. It takes a list — value
+equals label, the aisles — or a map — value differs from label, `INGREDIENT` to
+"Ingrediente" — as the one prop that covers both, and it is exactly what Base
+UI's `items` needs to stop `Select.Value` rendering the raw value.
+
+**A controlled field asks `fieldProps` to drop `defaultValue`.** Adding `value`
+and `onChange` after the spread is not enough on its own: `fieldProps` still
+carries `defaultValue`, and a native input warns when it gets both. Call
+`fieldProps(field, { controlled: true })` — `add-item-drawer.tsx`'s `unit` and
+`aisle` are the two call sites that need it.
+
+**Reaching for the escape hatch is normal, not a failure.** Written down on
+purpose: without it the typed four read as the official components, the escape
+hatch reads as a defeat, and the next person bends `TextField` to fit rather
+than dropping a level — which is the disease this directory treats. Most of the
+app's fields go through the typed four. Of the ones that do not, only three
+actually reach for `FormField` — `defaultUnit` with its `datalist`, the
+`RecipePicker` in the menu slot drawer, and the `IngredientPicker` in the
+add-item drawer. Two more skip `FormField` too: the `IngredientPicker` inside
+`IngredientRows` and the `skipCatalog` checkbox reach past it for a bare
+`aria-label` or a bare `<Field>`, with no `FormField` and no automatic id
+association at all. That range — typed, `FormField`, or a bare control — is
+healthy, not a smell.
+
+**`MessagePage` is not `EmptyState` with different copy.** `EmptyState` renders
+a `<p>`, which is correct inside a page whose `<h1>` already comes from
+`PageHeader`. The "does not exist" screens have no `PageHeader` — folding them
+into `EmptyState` would leave three pages with no heading at all.
+
+**`ListSection` is the section, not the list of sections.** Two callers map
+over aisle groups; the dismissed-lines block on `/spesa` is a single section
+with a fixed title. A component that took an array of groups would force that
+third caller to pass an array of one for no reason.
+
+**«Svuota» is gone from the menu slot drawer.** A note could already be cleared
+by hand — empty the field, save, done. A recipe could not: the picker discarded
+a cleared selection, and the combobox's own clear button sat behind a
+`showClear` prop that defaulted to `false` and nobody passed. So «Svuota» was
+not a redundant button — it was the only way out of a slot holding a recipe,
+and one of the app's two users never noticed it was there. `RecipePicker` now
+shows the clear button and accepts the `null`, and saving a slot whose recipe,
+note and servings are all empty deletes the row instead of writing one that
+means nothing.
+
+**The catalogue gained a search field.** `/catalogo` already read `?q=` and
+filtered server-side; only the input was missing. `SearchField` supplies it.
 
 ## The app shell
 

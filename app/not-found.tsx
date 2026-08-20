@@ -1,5 +1,6 @@
 import Link from "next/link"
 
+import { MessagePage } from "@/components/page/message-page"
 import { Button } from "@/components/ui/button"
 
 // A URL that matches no route at all never reaches the app segment, so it never
@@ -8,8 +9,7 @@ import { Button } from "@/components/ui/button"
 // others it does answer a real 404.
 export default function NotFound() {
   return (
-    <main className="flex flex-col items-center gap-4 px-6 pt-24 text-center">
-      <h1 className="text-sm">Questa pagina non esiste.</h1>
+    <MessagePage title="Questa pagina non esiste." className="px-6">
       <Button
         variant="outline"
         render={<Link href="/menu" />}
@@ -17,6 +17,6 @@ export default function NotFound() {
       >
         Torna al menù
       </Button>
-    </main>
+    </MessagePage>
   )
 }

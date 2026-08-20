@@ -1,30 +1,18 @@
 "use client"
 
-import Link from "next/link"
-import { useActionState, useEffect } from "react"
-
-import { Button } from "@/components/ui/button"
-import {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field"
+import { SelectField, TextField } from "@/components/page/fields"
+import { FormActions } from "@/components/page/form-actions"
+import { FormField } from "@/components/page/form-field"
+import { FormMessage } from "@/components/page/form-message"
+import { FieldGroup } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { useAttempt } from "@/hooks/use-attempt"
+import { useFormState } from "@/hooks/use-form-state"
+import type { FormAction } from "@/lib/form"
 
 export type CatalogFormValues = {
-  // Absent when creating. Carried as a hidden field so a rename knows which
-  // row to update: the name is the primary key, so the new value cannot
-  // identify the old row.
+  // Absent when creating. Carried as a hidden field so a rename knows which row
+  // to update: the name is the primary key, so the new value cannot identify
+  // the old row.
   originalName?: string
   name: string
   kind: string
@@ -32,35 +20,12 @@ export type CatalogFormValues = {
   aisle: string
 }
 
-export type CatalogFormState = {
-  errors: Record<string, string[]>
-  message: string | null
-  values?: Record<string, string>
-}
+// DOM order, so the first invalid field takes focus. Module-level: a fresh
+// array on every render would re-run the hook's focus effect.
+const FIELD_ORDER = ["name", "kind", "defaultUnit", "aisle"] as const
 
-export type SaveCatalogItemAction = (
-  state: CatalogFormState,
-  formData: FormData
-) => Promise<CatalogFormState>
-
-export const EMPTY_CATALOG_FORM_STATE: CatalogFormState = {
-  errors: {},
-  message: null,
-  values: undefined,
-}
-
-const FIELD_ORDER: (keyof CatalogFormValues)[] = [
-  "name",
-  "kind",
-  "defaultUnit",
-  "aisle",
-]
-
-// The stored values are English because they are database values that happen to
-// be enum members; the labels are Italian because they are what the user reads.
-// Base UI's Select.Value renders the raw value unless the root is given this
-// map — without it the trigger read "INGREDIENT". The aisle select needs none,
-// because there the value and the label are the same string.
+// The stored values are English because they are database values; the labels
+// are Italian because they are what the user reads.
 const KIND_LABELS: Record<string, string> = {
   INGREDIENT: "Ingrediente",
   PRODUCT: "Prodotto",
@@ -73,164 +38,73 @@ export function CatalogForm({
   units,
 }: {
   values: CatalogFormValues
-  action: SaveCatalogItemAction
+  action: FormAction
   aisles: readonly string[]
   units: string[]
 }) {
-  const [state, formAction, isPending] = useActionState(
-    action,
-    EMPTY_CATALOG_FORM_STATE
-  )
-  const attempt = useAttempt(state)
-
-  const errorOf = (field: keyof CatalogFormValues) => state.errors[field]?.[0]
-  const invalid = (field: keyof CatalogFormValues) =>
-    errorOf(field) ? "true" : undefined
-  // React 19 resets the form to its defaultValues before an action-driven
-  // submit runs. Reading the echoed value first keeps what the user typed.
-  const valueOf = (field: keyof CatalogFormValues) =>
-    state.values?.[field] ?? values[field] ?? ""
-  const describedBy = (
-    field: keyof CatalogFormValues,
-    hasDescription = false
-  ) =>
-    [
-      hasDescription ? `${field}-description` : null,
-      errorOf(field) ? `${field}-error` : null,
-    ]
-      .filter((id) => id !== null)
-      .join(" ") || undefined
-
-  useEffect(() => {
-    const firstInvalid = FIELD_ORDER.find(
-      (field) => state.errors[field]?.length
-    )
-    if (firstInvalid !== undefined) {
-      document.getElementById(firstInvalid)?.focus()
-    }
-  }, [state])
+  // An explicit object, not `values`: CatalogFormValues has an optional
+  // `originalName`, which is not assignable to Record<string, string>.
+  const { state, formAction, isPending, attempt, errorOf, fieldProps } =
+    useFormState(action, FIELD_ORDER, {
+      name: values.name,
+      kind: values.kind,
+      defaultUnit: values.defaultUnit,
+      aisle: values.aisle,
+    })
 
   return (
     <form action={formAction} className="flex flex-col gap-6">
       {values.originalName === undefined ? null : (
-        <input
-          type="hidden"
-          name="originalName"
-          value={valueOf("originalName")}
-        />
+        <input type="hidden" name="originalName" value={values.originalName} />
       )}
 
       <FieldGroup key={attempt}>
-        <Field data-invalid={invalid("name")}>
-          <FieldLabel htmlFor="name">Nome</FieldLabel>
-          <Input
-            id="name"
-            name="name"
-            defaultValue={valueOf("name")}
-            autoComplete="off"
-            aria-invalid={errorOf("name") ? true : undefined}
-            aria-describedby={describedBy("name")}
-            required
-          />
-          <FieldError id="name-error">{errorOf("name")}</FieldError>
-        </Field>
+        <TextField
+          {...fieldProps("name")}
+          label="Nome"
+          error={errorOf("name")}
+          autoComplete="off"
+          required
+        />
 
-        <Field data-invalid={invalid("kind")}>
-          <FieldLabel htmlFor="kind">Tipo</FieldLabel>
-          <Select
-            name="kind"
-            defaultValue={valueOf("kind")}
-            items={KIND_LABELS}
-          >
-            <SelectTrigger
-              id="kind"
-              aria-invalid={errorOf("kind") ? true : undefined}
-              aria-describedby={describedBy("kind", true)}
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(KIND_LABELS).map(([value, label]) => (
-                <SelectItem key={value} value={value}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <FieldDescription id="kind-description">
-            Solo un ingrediente si può scegliere dentro una ricetta.
-          </FieldDescription>
-          <FieldError id="kind-error">{errorOf("kind")}</FieldError>
-        </Field>
+        <SelectField
+          {...fieldProps("kind")}
+          label="Tipo"
+          error={errorOf("kind")}
+          description="Solo un ingrediente si può scegliere dentro una ricetta."
+          options={KIND_LABELS}
+        />
 
-        <Field data-invalid={invalid("defaultUnit")}>
-          <FieldLabel htmlFor="defaultUnit">Unità preferita</FieldLabel>
+        <FormField
+          name="defaultUnit"
+          label="Unità preferita"
+          error={errorOf("defaultUnit")}
+          description="Riempie la riga della ricetta. Lascia vuoto se si conta a pezzi."
+        >
           <Input
-            id="defaultUnit"
-            name="defaultUnit"
-            defaultValue={valueOf("defaultUnit")}
+            {...fieldProps("defaultUnit", { described: true })}
             list="unit-suggestions"
             autoComplete="off"
             spellCheck={false}
-            aria-invalid={errorOf("defaultUnit") ? true : undefined}
-            aria-describedby={describedBy("defaultUnit", true)}
           />
           <datalist id="unit-suggestions">
             {units.map((unit) => (
               <option key={unit} value={unit} />
             ))}
           </datalist>
-          <FieldDescription id="defaultUnit-description">
-            Riempie la riga della ricetta. Lascia vuoto se si conta a pezzi.
-          </FieldDescription>
-          <FieldError id="defaultUnit-error">
-            {errorOf("defaultUnit")}
-          </FieldError>
-        </Field>
+        </FormField>
 
-        <Field data-invalid={invalid("aisle")}>
-          <FieldLabel htmlFor="aisle">Reparto</FieldLabel>
-          <Select name="aisle" defaultValue={valueOf("aisle")}>
-            <SelectTrigger
-              id="aisle"
-              aria-invalid={errorOf("aisle") ? true : undefined}
-              aria-describedby={describedBy("aisle", true)}
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {aisles.map((aisle) => (
-                <SelectItem key={aisle} value={aisle}>
-                  {aisle}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <FieldDescription id="aisle-description">
-            Decide dove finisce nella lista della spesa.
-          </FieldDescription>
-          <FieldError id="aisle-error">{errorOf("aisle")}</FieldError>
-        </Field>
+        <SelectField
+          {...fieldProps("aisle")}
+          label="Reparto"
+          error={errorOf("aisle")}
+          description="Decide dove finisce nella lista della spesa."
+          options={aisles}
+        />
       </FieldGroup>
 
-      {state.message === null ? null : (
-        <p role="alert" className="text-sm text-destructive">
-          {state.message}
-        </p>
-      )}
-
-      <div className="flex gap-2">
-        <Button type="submit" disabled={isPending}>
-          {isPending ? "Salvo…" : "Salva"}
-        </Button>
-        <Button
-          variant="ghost"
-          render={<Link href="/catalogo" />}
-          nativeButton={false}
-        >
-          Annulla
-        </Button>
-      </div>
+      <FormMessage>{state.message}</FormMessage>
+      <FormActions cancelHref="/catalogo" isPending={isPending} />
     </form>
   )
 }

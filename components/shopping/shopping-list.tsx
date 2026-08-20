@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
 
+import { ListSection } from "@/components/page/list-section"
 import {
   ShoppingItemRow,
   type ShoppingRow,
@@ -78,23 +79,18 @@ export function ShoppingList({
       </span>
 
       {groups.map((group) => (
-        <section key={group.aisle} className="flex flex-col gap-1">
-          <h2 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-            {group.aisle}
-          </h2>
-          <ul className="flex flex-col">
-            {group.lines.map((line) => (
-              <ShoppingItemRow
-                key={line.key}
-                line={line}
-                dayLabels={dayLabels}
-                toggleAction={withWeek(toggleAction)}
-                removeAction={withWeek(removeAction)}
-                takeAction={withWeek(takeAction)}
-              />
-            ))}
-          </ul>
-        </section>
+        <ListSection key={group.aisle} title={group.aisle}>
+          {group.lines.map((line) => (
+            <ShoppingItemRow
+              key={line.key}
+              line={line}
+              dayLabels={dayLabels}
+              toggleAction={withWeek(toggleAction)}
+              removeAction={withWeek(removeAction)}
+              takeAction={withWeek(takeAction)}
+            />
+          ))}
+        </ListSection>
       ))}
     </div>
   )

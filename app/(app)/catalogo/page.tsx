@@ -1,15 +1,25 @@
 import Link from "next/link"
+import { Suspense } from "react"
 
-import { KindFilter } from "@/components/catalog/kind-filter"
 import { DataList } from "@/components/page/data-list"
 import { DataListRow } from "@/components/page/data-list-row"
 import { EmptyState } from "@/components/page/empty-state"
+import { FilterChips } from "@/components/page/filter-chips"
+import { ListBody } from "@/components/page/page-body"
 import { PageHeader } from "@/components/page/page-header"
+import { SearchField } from "@/components/page/search-field"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { firstOf } from "@/lib/search-params"
 import { kindFilterFor, listCatalogItems } from "@/lib/services/catalog"
 
 export const metadata = { title: "Catalogo" }
+
+const KIND_CHIPS = [
+  { value: undefined, label: "Tutti" },
+  { value: "ingredienti", label: "Ingredienti" },
+  { value: "prodotti", label: "Prodotti" },
+] as const
 
 function announce(count: number) {
   if (count === 0) return "Nessuna voce trovata."
@@ -23,20 +33,35 @@ export default async function CatalogPage({
   searchParams: Promise<{ q?: string | string[]; tipo?: string | string[] }>
 }) {
   const { q: rawQuery, tipo: rawTipo } = await searchParams
-  const q = Array.isArray(rawQuery) ? rawQuery[0] : rawQuery
-  const tipo = Array.isArray(rawTipo) ? rawTipo[0] : rawTipo
+  const q = firstOf(rawQuery)
+  const tipo = firstOf(rawTipo)
   const isSearching = Boolean(q?.trim())
   const items = await listCatalogItems(q, kindFilterFor(tipo))
 
   return (
-    <main className="flex flex-col gap-4 pt-6">
+    <ListBody>
       <PageHeader title="Catalogo">
         <Button render={<Link href="/catalogo/new" />} nativeButton={false}>
           Nuova
         </Button>
       </PageHeader>
 
-      <KindFilter active={tipo} query={q} />
+      <Suspense>
+        <SearchField
+          basePath="/catalogo"
+          placeholder="Cerca una voce…"
+          label="Cerca una voce"
+        />
+      </Suspense>
+
+      <FilterChips
+        basePath="/catalogo"
+        param="tipo"
+        chips={KIND_CHIPS}
+        active={tipo}
+        label="Filtra per tipo"
+        keep={{ q }}
+      />
 
       <DataList
         items={items}
@@ -84,6 +109,6 @@ export default async function CatalogPage({
           )
         }
       />
-    </main>
+    </ListBody>
   )
 }

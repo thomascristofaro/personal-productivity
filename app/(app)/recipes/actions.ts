@@ -4,8 +4,9 @@ import { revalidatePath } from "next/cache"
 import { redirect, RedirectType } from "next/navigation"
 import { z } from "zod"
 
-import type { RecipeFormState } from "@/components/recipes/recipe-form-state"
 import { requireSession } from "@/lib/auth"
+import { failure, type FormAction } from "@/lib/form"
+import { fieldErrorsFrom, valuesFrom } from "@/lib/form-errors"
 import { CatalogItemNameSchema } from "@/lib/schemas/catalog"
 import { RecipeInputSchema } from "@/lib/schemas/recipe"
 import {
@@ -25,7 +26,8 @@ import {
 const RecipeIdSchema = z.cuid()
 
 // Only the flat fields. Ingredients and tags are held in React state by their
-// components, so they survive React 19's form reset without being echoed.
+// components, so they survive React 19's form reset without being echoed, and
+// the hidden id comes from the form's props rather than from the state.
 const FORM_FIELDS = [
   "title",
   "sourceUrl",
@@ -39,23 +41,6 @@ const FORM_FIELDS = [
 function optionalNumber(value: FormDataEntryValue | null) {
   const text = typeof value === "string" ? value.trim() : ""
   return text === "" ? undefined : Number(text)
-}
-
-// Echoes exactly what was submitted, so a failed save can re-render the form
-// from these values instead of losing them to React's form reset — see
-// components/recipes/recipe-form-state.ts.
-function valuesFrom(formData: FormData): Record<string, string> {
-  const values: Record<string, string> = {}
-
-  for (const field of FORM_FIELDS) {
-    const value = formData.get(field)
-    values[field] = typeof value === "string" ? value : ""
-  }
-
-  const id = formData.get("id")
-  if (typeof id === "string") values.id = id
-
-  return values
 }
 
 // The form renders one set of identically-named inputs per row, so the three
@@ -84,23 +69,12 @@ function tagsFrom(formData: FormData): string[] {
     .filter((value) => value.length > 0)
 }
 
-// Built from `issues` rather than a version-specific flatten helper.
-function fieldErrorsFrom(error: z.ZodError): Record<string, string[]> {
-  const errors: Record<string, string[]> = {}
+export const saveRecipe: FormAction = async (_state, formData) => {
+  // Every refusal below echoes the same fields. The shared `failure` cannot
+  // reach `formData`, so the alternative is spelling the echo out five times.
+  const refuse = (message: string, errors?: Record<string, string[]>) =>
+    failure(message, { errors, values: valuesFrom(formData, FORM_FIELDS) })
 
-  for (const issue of error.issues) {
-    const field = issue.path[0]
-    if (typeof field !== "string") continue
-    errors[field] = [...(errors[field] ?? []), issue.message]
-  }
-
-  return errors
-}
-
-export async function saveRecipe(
-  _state: RecipeFormState,
-  formData: FormData
-): Promise<RecipeFormState> {
   const parsed = RecipeInputSchema.safeParse({
     title: formData.get("title"),
     sourceUrl: formData.get("sourceUrl") ?? "",
@@ -113,11 +87,7 @@ export async function saveRecipe(
   })
 
   if (!parsed.success) {
-    return {
-      errors: fieldErrorsFrom(parsed.error),
-      message: "Controlla i campi segnalati.",
-      values: valuesFrom(formData),
-    }
+    return refuse("Controlla i campi segnalati.", fieldErrorsFrom(parsed.error))
   }
 
   await requireSession()
@@ -128,11 +98,9 @@ export async function saveRecipe(
       ? RecipeIdSchema.safeParse(rawId)
       : null
 
-  const missingIngredient = {
-    errors: {},
-    message: "Uno degli ingredienti non esiste più. Ricarica la pagina.",
-    values: valuesFrom(formData),
-  }
+  const missingIngredient = refuse(
+    "Uno degli ingredienti non esiste più. Ricarica la pagina."
+  )
 
   let target: string
 
@@ -148,22 +116,14 @@ export async function saveRecipe(
       await updateRecipe(existing.data, parsed.data)
     } catch (error) {
       if (error instanceof RecipeNotFoundError) {
-        return {
-          errors: {},
-          message: "Questa ricetta non esiste più.",
-          values: valuesFrom(formData),
-        }
+        return refuse("Questa ricetta non esiste più.")
       }
       if (error instanceof UnknownIngredientError) return missingIngredient
       throw error
     }
     target = existing.data
   } else {
-    return {
-      errors: {},
-      message: "Questa ricetta non esiste più.",
-      values: valuesFrom(formData),
-    }
+    return refuse("Questa ricetta non esiste più.")
   }
 
   revalidatePath("/recipes")

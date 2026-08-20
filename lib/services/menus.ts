@@ -118,6 +118,9 @@ export async function getMenuWeek(weekStart: Date): Promise<MenuSlotView[]> {
  * The `Menu` row is upserted with an empty update: browsing forward must not
  * leave a trail of empty weeks, so the row appears only when it earns one.
  *
+ * An input with all three fields empty deletes the row instead, delegating to
+ * `clearSlot`: an empty slot and an absent slot must mean the same thing.
+ *
  * @param weekStart The Monday naming the week, at UTC midnight.
  * @param day 0 for Monday through 6 for Sunday.
  * @param meal Which of the day's two meals.
@@ -131,6 +134,17 @@ export async function setSlot(
   meal: Meal,
   input: SlotInput
 ): Promise<void> {
+  // An empty slot and an absent slot must mean the same thing — see clearSlot's
+  // reasoning below. Writing a row with three nulls would break that, and the
+  // drawer now reaches this path every time somebody clears a slot by hand.
+  if (
+    input.recipeId === null &&
+    input.freeText === null &&
+    input.servings === null
+  ) {
+    return clearSlot(weekStart, day, meal)
+  }
+
   const menu = await db.menu.upsert({
     where: { weekStart },
     create: { weekStart },

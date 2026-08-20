@@ -1,5 +1,6 @@
 import { saveCatalogItem } from "@/app/(app)/catalogo/actions"
 import { CatalogForm } from "@/components/catalog/catalog-form"
+import { DetailBody } from "@/components/page/page-body"
 import { PageHeader } from "@/components/page/page-header"
 import { AISLE_ORDER, AISLE_UNKNOWN } from "@/lib/aisles"
 import { listUsedUnits } from "@/lib/services/catalog"
@@ -10,7 +11,7 @@ export default async function NewCatalogItemPage() {
   const units = await listUsedUnits()
 
   return (
-    <main className="flex flex-col gap-6 pt-6">
+    <DetailBody>
       <PageHeader
         title="Nuova voce"
         back={{ href: "/catalogo", label: "Catalogo" }}
@@ -26,6 +27,6 @@ export default async function NewCatalogItemPage() {
           aisle: AISLE_UNKNOWN,
         }}
       />
-    </main>
+    </DetailBody>
   )
 }

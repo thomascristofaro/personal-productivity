@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation"
 
 import { saveTotal } from "@/app/(app)/spesa/storico/actions"
+import { ListSection } from "@/components/page/list-section"
+import { DetailBody } from "@/components/page/page-body"
 import { PageHeader } from "@/components/page/page-header"
 import { PurchaseTotalForm } from "@/components/shopping/purchase-total-form"
 import { APP_TIMEZONE } from "@/lib/config"
@@ -41,7 +43,7 @@ export default async function PurchasePage({
   const groups = groupByAisle(purchase.lines)
 
   return (
-    <main className="flex flex-col gap-6 pt-6">
+    <DetailBody>
       <PageHeader
         title={dayFormat.format(purchase.purchasedAt)}
         back={{ href: "/spesa/storico", label: "Storico spesa" }}
@@ -59,37 +61,29 @@ export default async function PurchasePage({
         action={saveTotal}
       />
 
-      {/* The same five lines of markup as the shopping list's aisle sections.
-          Two screens sharing them is not yet a component; if a third wants
-          them, extract then. */}
       <div className="flex flex-col gap-6">
         {groups.map((group) => (
-          <section key={group.aisle} className="flex flex-col gap-1">
-            <h2 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-              {group.aisle}
-            </h2>
-            <ul className="flex flex-col">
-              {group.lines.map((line) => {
-                const amount = amountOf(line.quantity, line.unit)
+          <ListSection key={group.aisle} title={group.aisle}>
+            {group.lines.map((line) => {
+              const amount = amountOf(line.quantity, line.unit)
 
-                return (
-                  <li
-                    key={line.id}
-                    className="flex flex-wrap items-baseline gap-x-2 py-1 text-sm"
-                  >
-                    <span className="break-words">{line.name}</span>
-                    {amount === null ? null : (
-                      <span className="text-xs text-muted-foreground tabular-nums">
-                        {amount}
-                      </span>
-                    )}
-                  </li>
-                )
-              })}
-            </ul>
-          </section>
+              return (
+                <li
+                  key={line.id}
+                  className="flex flex-wrap items-baseline gap-x-2 py-1 text-sm"
+                >
+                  <span className="break-words">{line.name}</span>
+                  {amount === null ? null : (
+                    <span className="text-xs text-muted-foreground tabular-nums">
+                      {amount}
+                    </span>
+                  )}
+                </li>
+              )
+            })}
+          </ListSection>
         ))}
       </div>
-    </main>
+    </DetailBody>
   )
 }

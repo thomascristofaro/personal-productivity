@@ -1,34 +1,18 @@
 "use client"
 
 import { Plus } from "lucide-react"
-import { useActionState, useState } from "react"
+import { useState } from "react"
 
 import { IngredientPicker } from "@/components/ingredients/ingredient-picker"
+import { NumberField, SelectField, TextField } from "@/components/page/fields"
+import { FormDrawer } from "@/components/page/form-drawer"
+import { FormField } from "@/components/page/form-field"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer"
-import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Field, FieldLabel } from "@/components/ui/field"
+import { useFormState } from "@/hooks/use-form-state"
 import { AISLE_UNKNOWN } from "@/lib/aisles"
+import type { FormAction } from "@/lib/form"
 import { cn } from "@/lib/utils"
 
 export type CatalogEntry = {
@@ -37,15 +21,6 @@ export type CatalogEntry = {
   aisle: string
 }
 
-export type AddItemState = { ok: boolean; message: string | null }
-
-export type AddItemAction = (
-  state: AddItemState,
-  formData: FormData
-) => Promise<AddItemState>
-
-export const EMPTY_ADD_ITEM_STATE: AddItemState = { ok: false, message: null }
-
 // Base UI's Select.Value renders the raw value unless the root is given this
 // map. English values because they are what the database holds, Italian labels
 // because they are what the user reads.
@@ -53,6 +28,8 @@ const KIND_LABELS: Record<string, string> = {
   INGREDIENT: "Ingrediente",
   PRODUCT: "Prodotto",
 }
+
+const FIELD_ORDER = ["quantity", "unit", "aisle", "kind"] as const
 
 export function AddItemDrawer({
   weekStart,
@@ -64,34 +41,32 @@ export function AddItemDrawer({
   weekStart: string
   catalog: CatalogEntry[]
   aisles: readonly string[]
-  action: AddItemAction
+  action: FormAction
   // The completion bar is fixed across the same corner. When it is showing the
   // button lifts above it rather than sitting on top of it.
   aboveBar: boolean
 }) {
   const [open, setOpen] = useState(false)
-  const [state, formAction, isPending] = useActionState(
-    action,
-    EMPTY_ADD_ITEM_STATE
-  )
+  // «Prodotto» as the initial value rather than a `defaultValue` on the field:
+  // fieldProps already emits one, and whichever is spread second wins. Written
+  // as a prop it either sat after the spread and made the echo inert, or sat
+  // before it and lost to the empty string fieldProps falls back to.
+  const form = useFormState(action, FIELD_ORDER, { kind: "PRODUCT" })
   const [name, setName] = useState("")
   const [aisle, setAisle] = useState(AISLE_UNKNOWN)
   const [unit, setUnit] = useState("")
 
-  // The same trick as hooks/use-attempt.ts, for the same two reasons. Bumping
-  // `attempt` remounts the uncontrolled fields, so React 19's form reset cannot
-  // fight a value put back by hand. And this runs during render rather than in
-  // an effect: React re-runs the component before committing, so the drawer
-  // never paints open after a successful add. An effect here would be a
-  // cascading render, which is what react-hooks/set-state-in-effect objects to.
-  const [seen, setSeen] = useState(state)
-  const [attempt, setAttempt] = useState(0)
-
-  if (seen !== state) {
-    setSeen(state)
-    setAttempt((count) => count + 1)
-    if (state.ok) {
-      setOpen(false)
+  // FormDrawer closes itself on a successful save, but it knows nothing of
+  // `name`, `aisle` and `unit` — they live here. Adjusting them during render
+  // is legal because every setter below belongs to this component: React
+  // reruns a component that updates its own state mid-render, so a fresh
+  // `attempt` never paints with stale local state. It would not be legal to
+  // reach into a different component's state this way — that produces
+  // "Cannot update a component while rendering a different component".
+  const [seen, setSeen] = useState(form.attempt)
+  if (seen !== form.attempt) {
+    setSeen(form.attempt)
+    if (form.state.ok) {
       setName("")
       setAisle(AISLE_UNKNOWN)
       setUnit("")
@@ -117,7 +92,7 @@ export function AddItemDrawer({
   }
 
   return (
-    <Drawer open={open} onOpenChange={setOpen}>
+    <>
       {/* Floating, bottom right, over the list rather than in the header: it is
           the thing you reach for most while walking the shop, and the thumb is
           already down there. The inset keeps it off the home indicator once the
@@ -136,144 +111,95 @@ export function AddItemDrawer({
         <Plus aria-hidden="true" className="size-6" />
       </Button>
 
-      <DrawerContent>
-        <DrawerHeader>
-          <DrawerTitle>Aggiungi alla lista</DrawerTitle>
-          <DrawerDescription>
-            Qualsiasi cosa: un ingrediente, lo shampoo, i sacchetti.
-          </DrawerDescription>
-        </DrawerHeader>
+      <FormDrawer
+        open={open}
+        onOpenChange={setOpen}
+        form={form}
+        title="Aggiungi alla lista"
+        description="Qualsiasi cosa: un ingrediente, lo shampoo, i sacchetti."
+        submitLabel="Aggiungi"
+        pendingLabel="Aggiungo…"
+        submitDisabled={name.trim() === ""}
+      >
+        <input type="hidden" name="weekStart" value={weekStart} />
+        <input type="hidden" name="name" value={name} />
 
-        <form action={formAction} className="flex flex-col gap-6 px-4">
-          <input type="hidden" name="weekStart" value={weekStart} />
-          <input type="hidden" name="name" value={name} />
+        {/* The visible text and the picker's aria-label say the same thing on
+            purpose: the combobox names itself, so a label reading something
+            else would leave sighted and screen-reader users with two
+            different names for one control. */}
+        <FormField name="item-name" label="Che cosa serve">
+          {/* The picker keeps the typed query in its own state, which no prop
+              can reach. It empties because FormDrawer keys the field group on
+              `form.attempt` and remounts the whole group. */}
+          <IngredientPicker
+            id="item-name"
+            names={catalog.map((entry) => entry.name)}
+            value={name === "" ? null : name}
+            onSelect={choose}
+            onCreate={setName}
+            aria-label="Che cosa serve"
+          />
+        </FormField>
 
-          <FieldGroup key={attempt}>
-            <Field>
-              {/* The visible text and the picker's aria-label say the same
-                  thing on purpose: the combobox names itself, so a label
-                  reading something else would leave sighted and screen-reader
-                  users with two different names for one control. */}
-              <FieldLabel htmlFor="item-name">Che cosa serve</FieldLabel>
-              {/* The picker keeps the typed query in its own state, which no
-                  prop can reach. It empties because the FieldGroup above is
-                  keyed on `attempt` and remounts the whole group. */}
-              <IngredientPicker
-                id="item-name"
-                names={catalog.map((entry) => entry.name)}
-                value={name === "" ? null : name}
-                onSelect={choose}
-                onCreate={setName}
-                aria-label="Che cosa serve"
-              />
+        <div className="flex gap-2">
+          <NumberField
+            {...form.fieldProps("quantity")}
+            label="Quantità"
+            error={form.errorOf("quantity")}
+            // Not min={0}: the schema rejects a quantity of zero, and the
+            // browser can refuse it before the drawer has to explain it.
+            min={0.01}
+            step="any"
+            inputMode="decimal"
+            autoComplete="off"
+          />
+          <TextField
+            {...form.fieldProps("unit", { controlled: true })}
+            label="Unità"
+            error={form.errorOf("unit")}
+            value={unit}
+            onChange={(event) => setUnit(event.target.value)}
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </div>
+
+        <SelectField
+          {...form.fieldProps("aisle", { controlled: true })}
+          label="Reparto"
+          error={form.errorOf("aisle")}
+          options={aisles}
+          value={aisle}
+          // Base UI reports a cleared selection as null. There is no "no
+          // aisle" state here — the list sorts by it — so a clear falls back
+          // to the catch-all.
+          onValueChange={(next: string | null) =>
+            setAisle(next ?? AISLE_UNKNOWN)
+          }
+        />
+
+        {/* Only for a name the catalogue does not hold. On one it already has
+            there is nothing to decide, and two fields asking anyway is how a
+            drawer stops being quick. */}
+        {isNew ? (
+          <>
+            <SelectField
+              {...form.fieldProps("kind")}
+              label="Tipo"
+              error={form.errorOf("kind")}
+              description="Prodotto di default: quello che si cucina di solito nasce dalla ricetta."
+              options={KIND_LABELS}
+            />
+            <Field orientation="horizontal">
+              <Checkbox id="skipCatalog" name="skipCatalog" value="1" />
+              <FieldLabel htmlFor="skipCatalog">
+                Non salvare nel catalogo
+              </FieldLabel>
             </Field>
-
-            <div className="flex gap-2">
-              <Field className="flex-1">
-                <FieldLabel htmlFor="quantity">Quantità</FieldLabel>
-                <Input
-                  id="quantity"
-                  name="quantity"
-                  type="number"
-                  inputMode="decimal"
-                  // Not min={0}: the schema rejects a quantity of zero, and the
-                  // browser can refuse it before the drawer has to explain it.
-                  min={0.01}
-                  step="any"
-                  autoComplete="off"
-                />
-              </Field>
-
-              <Field className="flex-1">
-                <FieldLabel htmlFor="unit">Unità</FieldLabel>
-                <Input
-                  id="unit"
-                  name="unit"
-                  value={unit}
-                  onChange={(event) => setUnit(event.target.value)}
-                  autoComplete="off"
-                  spellCheck={false}
-                />
-              </Field>
-            </div>
-
-            <Field>
-              <FieldLabel htmlFor="aisle">Reparto</FieldLabel>
-              {/* Base UI reports a cleared selection as null. There is no "no
-                  aisle" state here — the list sorts by it — so a clear falls
-                  back to the catch-all rather than leaving the field empty. */}
-              <Select
-                name="aisle"
-                value={aisle}
-                onValueChange={(next: string | null) =>
-                  setAisle(next ?? AISLE_UNKNOWN)
-                }
-              >
-                <SelectTrigger id="aisle">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {aisles.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-
-            {/* Only for a name the catalogue does not hold. On one it already
-                has there is nothing to decide, and two fields asking anyway is
-                how a drawer stops being quick. */}
-            {isNew ? (
-              <>
-                <Field>
-                  <FieldLabel htmlFor="kind">Tipo</FieldLabel>
-                  <Select
-                    name="kind"
-                    defaultValue="PRODUCT"
-                    items={KIND_LABELS}
-                  >
-                    <SelectTrigger id="kind">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(KIND_LABELS).map(([value, label]) => (
-                        <SelectItem key={value} value={value}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FieldDescription id="kind-description">
-                    Prodotto di default: quello che si cucina di solito nasce
-                    dalla ricetta.
-                  </FieldDescription>
-                </Field>
-
-                <Field orientation="horizontal">
-                  <Checkbox id="skipCatalog" name="skipCatalog" value="1" />
-                  <FieldLabel htmlFor="skipCatalog">
-                    Non salvare nel catalogo
-                  </FieldLabel>
-                </Field>
-              </>
-            ) : null}
-          </FieldGroup>
-
-          {state.message === null ? null : (
-            <p role="alert" className="text-sm text-destructive">
-              {state.message}
-            </p>
-          )}
-
-          <DrawerFooter className="px-0">
-            <Button type="submit" disabled={isPending || name.trim() === ""}>
-              {isPending ? "Aggiungo…" : "Aggiungi"}
-            </Button>
-          </DrawerFooter>
-        </form>
-      </DrawerContent>
-    </Drawer>
+          </>
+        ) : null}
+      </FormDrawer>
+    </>
   )
 }
