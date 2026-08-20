@@ -36,6 +36,13 @@ export default async function RecipesPage({
   return (
     <ListBody>
       <PageHeader title="Ricettario">
+        <Button
+          variant="outline"
+          render={<Link href="/import" />}
+          nativeButton={false}
+        >
+          Importa
+        </Button>
         <Button render={<Link href="/recipes/new" />} nativeButton={false}>
           Nuova
         </Button>
