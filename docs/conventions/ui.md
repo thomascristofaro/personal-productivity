@@ -57,6 +57,7 @@ stated.
 | `FormActions`                                                 | `cancelHref`, `isPending` — submit with its pending label, plus Annulla         |
 | `FormDrawer`                                                  | `open`, `onOpenChange`, `form`, `title`, `submitLabel`, `pendingLabel`          |
 | `useFormState` (`hooks/`)                                     | everything a form needs from its action — see the contract below                |
+| `countLabel` (`lib/count-label`)                              | the «6 voci trovate.» sentence — none, one, many                                |
 | `firstOf` (`lib/search-params`)                               | a `searchParams` value Next may have resolved to an array                       |
 | `decodeSegment` (`lib/route-params`)                          | a dynamic segment, still percent-encoded as Next hands it over                  |
 
@@ -101,7 +102,7 @@ export default async function CatalogPage({
 
       <DataList
         items={items}
-        announcement={announce(items.length)}
+        announcement={countLabel(items.length, FOUND)}
         renderItem={(item) => (
           <DataListRow
             key={item.name}
@@ -134,12 +135,14 @@ export default async function CatalogPage({
 }
 ```
 
-`announce` is a local function returning the count sentence — zero, one, many.
-It is written per page because Italian agrees the participle with the noun's
-gender: «voci trovat**e**», «articoli trovat**i**».
+`countLabel` (`lib/count-label`) builds the sentence a list announces. The words
+are the caller's, in a module-level constant, because Italian agrees them with
+the noun — «voci trovat**e**» but «articoli trovat**i**» — and because the zero
+case is not always a negation: `/spesa` says «Tutto preso.» there.
 
-A row whose detail line is more than a couple of nodes may live in its own
-component, but it still renders `DataListRow`. Do not build a second row.
+**Write the row inline in `renderItem`.** All three lists do. If one ever grows
+enough to move out, it still renders `DataListRow` — never a second row
+component, and never a wrapper that only forwards.
 
 ### A create/edit form
 

@@ -2,20 +2,23 @@ import Link from "next/link"
 import { Suspense } from "react"
 
 import { DataList } from "@/components/page/data-list"
+import { DataListRow } from "@/components/page/data-list-row"
 import { EmptyState } from "@/components/page/empty-state"
 import { ListBody } from "@/components/page/page-body"
 import { PageHeader } from "@/components/page/page-header"
 import { SearchField } from "@/components/page/search-field"
-import { RecipeRow } from "@/components/recipes/recipe-row"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { countLabel } from "@/lib/count-label"
 import { firstOf } from "@/lib/search-params"
 import { listRecipes } from "@/lib/services/recipes"
 
 export const metadata = { title: "Ricettario" }
 
-function announce(count: number) {
-  if (count === 0) return "Nessuna ricetta trovata."
-  return count === 1 ? "1 ricetta trovata." : `${count} ricette trovate.`
+const FOUND = {
+  none: "Nessuna ricetta trovata.",
+  one: "ricetta trovata",
+  many: "ricette trovate",
 }
 
 export default async function RecipesPage({
@@ -48,8 +51,23 @@ export default async function RecipesPage({
 
       <DataList
         items={recipes}
-        announcement={announce(recipes.length)}
-        renderItem={(recipe) => <RecipeRow key={recipe.id} recipe={recipe} />}
+        announcement={countLabel(recipes.length, FOUND)}
+        renderItem={(recipe) => (
+          <DataListRow
+            key={recipe.id}
+            href={`/recipes/${recipe.id}`}
+            title={recipe.title}
+          >
+            {recipe.totalMinutes === null ? null : (
+              <span>{recipe.totalMinutes} min</span>
+            )}
+            {recipe.tags.map((tag) => (
+              <Badge key={tag} variant="secondary">
+                {tag}
+              </Badge>
+            ))}
+          </DataListRow>
+        )}
         empty={
           isSearching ? (
             <EmptyState title="Nessuna ricetta con questo nome." />

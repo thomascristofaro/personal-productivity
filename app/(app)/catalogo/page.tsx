@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/page/page-header"
 import { SearchField } from "@/components/page/search-field"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { countLabel } from "@/lib/count-label"
 import { firstOf } from "@/lib/search-params"
 import { kindFilterFor, listCatalogItems } from "@/lib/services/catalog"
 
@@ -21,9 +22,10 @@ const KIND_CHIPS = [
   { value: "prodotti", label: "Prodotti" },
 ] as const
 
-function announce(count: number) {
-  if (count === 0) return "Nessuna voce trovata."
-  return count === 1 ? "1 voce trovata." : `${count} voci trovate.`
+const FOUND = {
+  none: "Nessuna voce trovata.",
+  one: "voce trovata",
+  many: "voci trovate",
 }
 
 export default async function CatalogPage({
@@ -65,7 +67,7 @@ export default async function CatalogPage({
 
       <DataList
         items={items}
-        announcement={announce(items.length)}
+        announcement={countLabel(items.length, FOUND)}
         renderItem={(item) => (
           <DataListRow
             key={item.name}

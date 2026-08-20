@@ -10,6 +10,7 @@ import {
 import { UnitInput } from "@/components/ingredients/unit-input"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { countLabel } from "@/lib/count-label"
 
 export type IngredientRowValue = {
   key: string
@@ -19,6 +20,14 @@ export type IngredientRowValue = {
 }
 
 const UNIT_LIST_ID = "unit-suggestions"
+
+// Zero never renders: the last row's bin is disabled. Spelled out anyway, so
+// this count has the same shape as every other one in the app.
+const ROW_COUNT = {
+  none: "Nessun ingrediente.",
+  one: "ingrediente",
+  many: "ingredienti",
+}
 
 export function emptyIngredientRow(key: string): IngredientRowValue {
   return { key, ingredientName: "", unit: "", quantity: "" }
@@ -154,7 +163,7 @@ export function IngredientRows({
       ))}
 
       <span role="status" aria-live="polite" className="sr-only">
-        {rows.length === 1 ? "1 ingrediente." : `${rows.length} ingredienti.`}
+        {countLabel(rows.length, ROW_COUNT)}
       </span>
 
       {/* An explicit button rather than a ghost row that appears on typing: on

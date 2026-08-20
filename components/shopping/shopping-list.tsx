@@ -8,8 +8,17 @@ import {
   ShoppingItemRow,
   type ShoppingRow,
 } from "@/components/shopping/shopping-item-row"
+import { countLabel } from "@/lib/count-label"
 
 export type ShoppingGroup = { aisle: string; lines: ShoppingRow[] }
+
+// The zero case is not «Nessun articolo»: an empty list here is the good
+// outcome, and it should read like one.
+const LEFT_TO_TAKE = {
+  none: "Tutto preso.",
+  one: "articolo da prendere",
+  many: "articoli da prendere",
+}
 
 // The other phone may be ticking items off at the same time. §6.3 settles the
 // mechanism: refresh the server component, no JSON endpoint and no fetching
@@ -71,11 +80,7 @@ export function ShoppingList({
           queue the whole list every thirty seconds. Identical text is not
           re-announced, so a quiet refresh stays quiet. */}
       <span role="status" aria-live="polite" className="sr-only">
-        {left === 0
-          ? "Tutto preso."
-          : left === 1
-            ? "1 articolo da prendere."
-            : `${left} articoli da prendere.`}
+        {countLabel(left, LEFT_TO_TAKE)}
       </span>
 
       {groups.map((group) => (

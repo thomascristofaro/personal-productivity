@@ -5,6 +5,7 @@ import { ListBody } from "@/components/page/page-body"
 import { PageHeader } from "@/components/page/page-header"
 import { Badge } from "@/components/ui/badge"
 import { APP_TIMEZONE } from "@/lib/config"
+import { countLabel } from "@/lib/count-label"
 import { formatEuro } from "@/lib/money"
 import { listPurchases } from "@/lib/services/purchases"
 
@@ -23,9 +24,10 @@ const weekFormat = new Intl.DateTimeFormat("it-IT", {
   month: "long",
 })
 
-function announce(count: number) {
-  if (count === 0) return "Nessuna spesa registrata."
-  return count === 1 ? "1 spesa registrata." : `${count} spese registrate.`
+const RECORDED = {
+  none: "Nessuna spesa registrata.",
+  one: "spesa registrata",
+  many: "spese registrate",
 }
 
 export default async function PurchaseHistoryPage() {
@@ -37,7 +39,7 @@ export default async function PurchaseHistoryPage() {
 
       <DataList
         items={purchases}
-        announcement={announce(purchases.length)}
+        announcement={countLabel(purchases.length, RECORDED)}
         renderItem={(purchase) => (
           <DataListRow
             key={purchase.id}
