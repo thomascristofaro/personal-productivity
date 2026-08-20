@@ -82,10 +82,13 @@ screens that stay open. That is not a reason to make it optional.
 
 ### Two files, because of one import
 
-`lib/form.ts` imports nothing. `lib/form-errors.ts` imports Zod and holds
+`lib/form.ts` imports nothing. `lib/form-errors.ts` holds
 `fieldErrorsFrom(ZodError)` and `valuesFrom(FormData, fields)`, which only server
-actions call. Together in one file, the first `TextField` importing the type
-would pull Zod into the browser bundle. Both are leaf modules under
+actions call. The split is by consumer — client-facing against server-facing.
+The bundle risk is latent rather than present: `fieldErrorsFrom` needs only
+`import type { ZodError }`, which is erased at build, so nothing reaches the
+browser today. The split is what keeps it that way the day somebody adds a
+runtime Zod value to these helpers. Both are leaf modules under
 `architecture.md`: constants and pure computation, no database, no network, no
 framework.
 
@@ -117,13 +120,15 @@ eighteen, all explicit.
 `TextField`, `NumberField`, `TextareaField`, `SelectField` cover the common case.
 `FormField` takes the control as `children` and covers the rest.
 
-**Typed fields define `label` and `description` and nothing else.** `name`, `id`
-and `defaultValue` are not their props either — those arrive inside the spread
-from `fieldProps`. Everything else spreads onto the native control, so `min`,
-`step`, `rows`, `type`, `inputMode`, `placeholder` and `required` pass through
-because they are DOM attributes, not props anybody designed. Our own surface
-stays at two props forever. Without this rule `NumberField` grows a `min` in week
-one and an `allowDecimals` in week two.
+**Typed fields define `label`, `description` and `error` and nothing else.**
+`name`, `id` and `defaultValue` are not their props — those arrive inside the
+spread from `fieldProps`. The error is a prop and not part of the spread because
+`fieldProps` returns DOM attributes, and the error's *text* would land on the
+element as an unknown attribute. Everything else spreads onto the native
+control, so `min`, `step`, `rows`, `type`, `inputMode`, `placeholder` and
+`required` pass through because they are DOM attributes, not props anybody
+designed. Our own surface stays at three props forever. Without this rule
+`NumberField` grows a `min` in week one and an `allowDecimals` in week two.
 
 **`SelectField` has one more, and it is the only exception.** A select with no
 options is nothing, and no DOM attribute carries them:
