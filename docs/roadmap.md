@@ -28,8 +28,19 @@ now.
 
 ## In flight
 
-**Two tidy-ups**, on the branch `feat/readable-type`: the `prodotto` badge
-dropped from the catalogue list, and `middleware.ts` renamed `proxy.ts` for Next 16.
+**The page primitives**, on the branch `feat/page-primitives` — pull request #16,
+open. The row in the table above says what it leaves behind. Waiting on a merge;
+nothing else should start on top of it, because it touches every form in the app.
+Its deferred polish became
+[`2026-08-20-page-primitives-polish`](superpowers/plans/2026-08-20-page-primitives-polish.md)
+and shipped on the same branch: the typed fields now render through `FormField`,
+`id` is required rather than conventional, and two things a user meets are
+fixed — the amount typed at the till survives a refusal, and Back on a filtered
+list stops re-applying the search it just left.
+
+**Merged on 2026-08-20:** the two tidy-ups from `feat/readable-type` — the
+`prodotto` badge dropped from the catalogue list, and `middleware.ts` renamed
+`proxy.ts` for Next 16.
 
 **The type scale stays Tailwind's.** The app reads small on a phone — content at
 14px, details at 12px — and two theme-wide fixes were built and tried at 390px:
