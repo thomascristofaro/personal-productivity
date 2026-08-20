@@ -62,7 +62,7 @@ export default async function MenuWeekPage({
 
   return (
     <ListBody>
-      <PageHeader title="Menù">
+      <PageHeader title="Menù" subtitle={range}>
         <Button
           variant="outline"
           render={<Link href={`/spesa/${iso(weekStart)}`} />}
@@ -89,8 +89,6 @@ export default async function MenuWeekPage({
           <ChevronRight aria-hidden="true" />
         </Button>
       </PageHeader>
-
-      <p className="text-sm text-muted-foreground">{range}</p>
 
       <WeekGrid
         weekStart={iso(weekStart)}

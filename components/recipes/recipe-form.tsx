@@ -8,10 +8,8 @@ import {
   type IngredientRowValue,
 } from "@/components/ingredients/ingredient-rows"
 import { NumberField, TextareaField, TextField } from "@/components/page/fields"
-import { FormActions } from "@/components/page/form-actions"
-import { FormMessage } from "@/components/page/form-message"
+import { PageForm } from "@/components/page/page-form"
 import { TagPicker } from "@/components/recipes/tag-picker"
-import { FieldGroup } from "@/components/ui/field"
 import { useFormState } from "@/hooks/use-form-state"
 import { useUnsavedChanges } from "@/hooks/use-unsaved-changes"
 import type { FormAction } from "@/lib/form"
@@ -54,15 +52,14 @@ export function RecipeForm({
   tagSuggestions: string[]
   onCreateIngredient: (name: string) => Promise<IngredientOption | null>
 }) {
-  const { state, formAction, isPending, attempt, errorOf, fieldProps } =
-    useFormState(action, FIELD_ORDER, {
-      title: values.title,
-      sourceUrl: values.sourceUrl,
-      servings: values.servings,
-      totalMinutes: values.totalMinutes,
-      instructions: values.instructions,
-      notes: values.notes,
-    })
+  const form = useFormState(action, FIELD_ORDER, {
+    title: values.title,
+    sourceUrl: values.sourceUrl,
+    servings: values.servings,
+    totalMinutes: values.totalMinutes,
+    instructions: values.instructions,
+    notes: values.notes,
+  })
 
   // Armed by real input events, so a change made only by clicking — pulling a
   // row out, say — does not arm it. A guard that fires when nothing was typed
@@ -72,10 +69,10 @@ export function RecipeForm({
   useUnsavedChanges(dirty)
 
   return (
-    <form
-      action={formAction}
+    <PageForm
+      form={form}
+      cancelHref={values.id ? `/recipes/${values.id}` : "/recipes"}
       onInput={() => setDirty(true)}
-      className="flex flex-col gap-6"
     >
       {values.id === undefined ? null : (
         <input type="hidden" name="id" value={values.id} />
@@ -86,99 +83,87 @@ export function RecipeForm({
       <input
         type="hidden"
         name="notes"
-        value={state.values.notes ?? values.notes}
+        value={form.state.values.notes ?? values.notes}
       />
 
-      {/* The attempt key sits on each flat field rather than on the group. Its
-          job is to remount an uncontrolled input whose defaultValue changed
-          after mount; the two fieldsets below hold components with their own
-          state, and remounting those threw away the ingredients and tags the
-          user had entered whenever a save was refused. The field name is part
-          of each key because siblings may not share one. */}
-      <FieldGroup>
-        <TextField
-          key={`title-${attempt}`}
-          {...fieldProps("title")}
-          label="Nome"
-          error={errorOf("title")}
-          // Not a field a password manager or an address autofill has any business
-          // completing. Without it "Nome" gets offered a saved identity.
-          autoComplete="off"
-          required
-        />
-
-        {/* A fieldset rather than a Field: the rows are a group of controls,
-            each already carrying its own label, not one labelled input. */}
-        <fieldset>
-          <legend className="mb-2 text-xs font-medium">Ingredienti</legend>
-          <IngredientRows
-            options={options}
-            units={units}
-            defaultRows={values.ingredients}
-            onCreateIngredient={onCreateIngredient}
-          />
-          {errorOf("ingredients") === undefined ? null : (
-            <p role="alert" className="text-xs text-destructive">
-              {errorOf("ingredients")}
-            </p>
-          )}
-        </fieldset>
-
-        <div className="grid grid-cols-2 gap-4">
-          <NumberField
-            key={`servings-${attempt}`}
-            {...fieldProps("servings")}
-            label="Porzioni"
-            error={errorOf("servings")}
-            min={1}
-            autoComplete="off"
-          />
-          <NumberField
-            key={`totalMinutes-${attempt}`}
-            {...fieldProps("totalMinutes")}
-            label="Minuti"
-            error={errorOf("totalMinutes")}
-            min={1}
-            autoComplete="off"
-          />
-        </div>
-
-        <TextareaField
-          key={`instructions-${attempt}`}
-          {...fieldProps("instructions")}
-          label="Preparazione"
-          error={errorOf("instructions")}
-          rows={14}
-          autoComplete="off"
-        />
-
-        <fieldset>
-          <legend className="mb-2 text-xs font-medium">Etichette</legend>
-          <TagPicker suggestions={tagSuggestions} defaultTags={values.tags} />
-          {errorOf("tags") === undefined ? null : (
-            <p role="alert" className="text-xs text-destructive">
-              {errorOf("tags")}
-            </p>
-          )}
-        </fieldset>
-
-        <TextField
-          key={`sourceUrl-${attempt}`}
-          {...fieldProps("sourceUrl")}
-          label="Fonte"
-          error={errorOf("sourceUrl")}
-          type="url"
-          inputMode="url"
-          spellCheck={false}
-          autoComplete="off"
-        />
-      </FieldGroup>
-
-      <FormMessage>{state.message}</FormMessage>
-      <FormActions
-        cancelHref={values.id ? `/recipes/${values.id}` : "/recipes"}
-        isPending={isPending}
+      <TextField
+        key={form.fieldKey("title")}
+        {...form.fieldProps("title")}
+        label="Nome"
+        error={form.errorOf("title")}
+        // Not a field a password manager or an address autofill has any business
+        // completing. Without it "Nome" gets offered a saved identity.
+        autoComplete="off"
+        required
       />
-    </form>
+
+      {/* A fieldset rather than a Field: the rows are a group of controls,
+          each already carrying its own label, not one labelled input. It
+          carries no attempt key — remounting it is what threw the typed
+          ingredients away on a refused save. */}
+      <fieldset>
+        <legend className="mb-2 text-xs font-medium">Ingredienti</legend>
+        <IngredientRows
+          options={options}
+          units={units}
+          defaultRows={values.ingredients}
+          onCreateIngredient={onCreateIngredient}
+        />
+        {form.errorOf("ingredients") === undefined ? null : (
+          <p role="alert" className="text-xs text-destructive">
+            {form.errorOf("ingredients")}
+          </p>
+        )}
+      </fieldset>
+
+      <div className="grid grid-cols-2 gap-4">
+        <NumberField
+          key={form.fieldKey("servings")}
+          {...form.fieldProps("servings")}
+          label="Porzioni"
+          error={form.errorOf("servings")}
+          min={1}
+          autoComplete="off"
+        />
+        <NumberField
+          key={form.fieldKey("totalMinutes")}
+          {...form.fieldProps("totalMinutes")}
+          label="Minuti"
+          error={form.errorOf("totalMinutes")}
+          min={1}
+          autoComplete="off"
+        />
+      </div>
+
+      <TextareaField
+        key={form.fieldKey("instructions")}
+        {...form.fieldProps("instructions")}
+        label="Preparazione"
+        error={form.errorOf("instructions")}
+        rows={14}
+        autoComplete="off"
+      />
+
+      <fieldset>
+        <legend className="mb-2 text-xs font-medium">Etichette</legend>
+        <TagPicker suggestions={tagSuggestions} defaultTags={values.tags} />
+        {form.errorOf("tags") === undefined ? null : (
+          <p role="alert" className="text-xs text-destructive">
+            {form.errorOf("tags")}
+          </p>
+        )}
+      </fieldset>
+
+      <TextField
+        key={form.fieldKey("sourceUrl")}
+        {...form.fieldProps("sourceUrl")}
+        label="Fonte"
+        error={form.errorOf("sourceUrl")}
+        type="url"
+        inputMode="url"
+        spellCheck={false}
+        autoComplete="off"
+      />
+    </PageForm>
   )
 }

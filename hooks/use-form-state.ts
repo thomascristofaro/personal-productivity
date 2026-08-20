@@ -22,7 +22,7 @@ export type FieldProps = {
  *   would re-run the focus effect.
  * @param initialValues - what the server sent, used when the state carries nothing
  * @returns the action state, the pending flag, the remount counter, and the
- *   per-field helpers
+ *   per-field helpers — `errorOf`, `fieldKey` and `fieldProps`
  */
 export function useFormState(
   action: FormAction,
@@ -43,6 +43,13 @@ export function useFormState(
   }, [state, fieldOrder])
 
   const errorOf = (field: string) => state.errors[field]?.[0]
+
+  // React only re-reads `defaultValue` on mount, so an uncontrolled field whose
+  // echoed value changed after a refusal needs a new key to pick it up. The
+  // field's name is part of it because siblings may not share a key — and
+  // keying the group instead would remount everything inside it, which is how
+  // a refused recipe save threw away eight typed ingredients.
+  const fieldKey = (field: string) => `${field}-${attempt}`
 
   // DOM attributes only. The error *text* is not here on purpose: it would land
   // on the element as an unknown attribute. Field components take it as a prop.
@@ -71,5 +78,13 @@ export function useFormState(
     }
   }
 
-  return { state, formAction, isPending, attempt, errorOf, fieldProps }
+  return {
+    state,
+    formAction,
+    isPending,
+    attempt,
+    errorOf,
+    fieldKey,
+    fieldProps,
+  }
 }
