@@ -6,7 +6,6 @@ import { requireSession } from "@/lib/auth"
 import { failure, success, type FormAction } from "@/lib/form"
 import { valuesFrom } from "@/lib/form-errors"
 import { WeekStartSchema } from "@/lib/schemas/menu"
-import type { CompleteState } from "@/components/shopping/complete-purchase-bar"
 import {
   AddShoppingItemSchema,
   EuroCentsSchema,
@@ -169,16 +168,13 @@ export async function setTaken(formData: FormData): Promise<void> {
   revalidatePath(`/spesa/${iso(weekStart.data)}`)
 }
 
-export async function complete(
-  _state: CompleteState,
-  formData: FormData
-): Promise<CompleteState> {
+export const complete: FormAction = async (_state, formData) => {
   const weekStart = WeekStartSchema.safeParse(formData.get("weekStart"))
   const total = EuroCentsSchema.safeParse(formData.get("total") ?? "")
 
-  if (!weekStart.success) return { ok: false, message: "Settimana non valida." }
+  if (!weekStart.success) return failure("Settimana non valida.")
   if (!total.success) {
-    return { ok: false, message: total.error.issues[0].message }
+    return failure(total.error.issues[0].message)
   }
 
   await requireSession()
@@ -187,17 +183,17 @@ export async function complete(
     await completePurchase(weekStart.data, total.data)
   } catch (error) {
     if (error instanceof NoListError) {
-      return { ok: false, message: "Questa settimana non ha una lista." }
+      return failure("Questa settimana non ha una lista.")
     }
     // The other phone closed the shop first, or unticked everything between the
     // render and the tap. Saying so beats a silent no-op.
     if (error instanceof NothingCheckedError) {
-      return { ok: false, message: "Non c’è niente di spuntato." }
+      return failure("Non c’è niente di spuntato.")
     }
     throw error
   }
 
   revalidatePath(`/spesa/${iso(weekStart.data)}`)
   revalidatePath("/spesa/storico")
-  return { ok: true, message: null }
+  return success()
 }
