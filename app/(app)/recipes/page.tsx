@@ -5,9 +5,10 @@ import { DataList } from "@/components/page/data-list"
 import { EmptyState } from "@/components/page/empty-state"
 import { ListBody } from "@/components/page/page-body"
 import { PageHeader } from "@/components/page/page-header"
+import { SearchField } from "@/components/page/search-field"
 import { RecipeRow } from "@/components/recipes/recipe-row"
-import { RecipeSearch } from "@/components/recipes/recipe-search"
 import { Button } from "@/components/ui/button"
+import { firstOf } from "@/lib/search-params"
 import { listRecipes } from "@/lib/services/recipes"
 
 export const metadata = { title: "Ricettario" }
@@ -25,7 +26,7 @@ export default async function RecipesPage({
   searchParams: Promise<{ q?: string | string[] }>
 }) {
   const { q: rawQuery } = await searchParams
-  const q = Array.isArray(rawQuery) ? rawQuery[0] : rawQuery
+  const q = firstOf(rawQuery)
   const isSearching = Boolean(q?.trim())
   const recipes = await listRecipes(q)
 
@@ -38,7 +39,11 @@ export default async function RecipesPage({
       </PageHeader>
 
       <Suspense>
-        <RecipeSearch />
+        <SearchField
+          basePath="/recipes"
+          placeholder="Cerca una ricetta…"
+          label="Cerca una ricetta"
+        />
       </Suspense>
 
       <DataList
