@@ -19,7 +19,6 @@ import {
   createRecipe,
   deleteRecipe,
   RecipeNotFoundError,
-  UnknownIngredientError,
   updateRecipe,
 } from "@/lib/services/recipes"
 
@@ -98,19 +97,10 @@ export const saveRecipe: FormAction = async (_state, formData) => {
       ? RecipeIdSchema.safeParse(rawId)
       : null
 
-  const missingIngredient = refuse(
-    "Uno degli ingredienti non esiste più. Ricarica la pagina."
-  )
-
   let target: string
 
   if (existing === null) {
-    try {
-      target = await createRecipe(parsed.data)
-    } catch (error) {
-      if (error instanceof UnknownIngredientError) return missingIngredient
-      throw error
-    }
+    target = await createRecipe(parsed.data)
   } else if (existing.success) {
     try {
       await updateRecipe(existing.data, parsed.data)
@@ -118,7 +108,6 @@ export const saveRecipe: FormAction = async (_state, formData) => {
       if (error instanceof RecipeNotFoundError) {
         return refuse("Questa ricetta non esiste più.")
       }
-      if (error instanceof UnknownIngredientError) return missingIngredient
       throw error
     }
     target = existing.data

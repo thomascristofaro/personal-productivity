@@ -12,17 +12,8 @@ export class RecipeNotFoundError extends Error {
   }
 }
 
-/** Thrown when a recipe line names an ingredient the catalogue does not have. */
-export class UnknownIngredientError extends Error {
-  constructor() {
-    super("A recipe line references an ingredient that does not exist.")
-    this.name = "UnknownIngredientError"
-  }
-}
-
 // Prisma failure codes, read structurally so this module never imports a Prisma
-// type outside lib/db.ts. P2025 is "record to update/delete not found"; P2003 is
-// a foreign-key violation, which here means an unknown ingredient.
+// type outside lib/db.ts. P2025 is "record to update/delete not found".
 function hasPrismaCode(error: unknown, code: string): boolean {
   return (
     typeof error === "object" &&
@@ -33,7 +24,24 @@ function hasPrismaCode(error: unknown, code: string): boolean {
 }
 
 const isRecordNotFoundError = (error: unknown) => hasPrismaCode(error, "P2025")
-const isForeignKeyError = (error: unknown) => hasPrismaCode(error, "P2003")
+
+// Creates whatever the recipe names and the catalogue lacks, so a save is never
+// refused over a name the user has already decided to use — an imported recipe
+// brings six new names out of nine. `altro` and no unit is what every new entry
+// starts as; /catalogo is where it gets corrected, and the recipe form marks the
+// new ones before the save so a site's own typo can be caught first.
+//
+// createMany with skipDuplicates rather than read-then-write: two saves landing
+// together must not race each other into a unique violation.
+async function ensureIngredients(input: RecipeInput): Promise<void> {
+  const names = [...new Set(input.ingredients.map((row) => row.ingredientName))]
+  if (names.length === 0) return
+
+  await db.catalogItem.createMany({
+    data: names.map((name) => ({ name, kind: "INGREDIENT" as const })),
+    skipDuplicates: true,
+  })
+}
 
 export type RecipeSummary = {
   id: string
@@ -156,24 +164,19 @@ export async function getRecipe(id: string): Promise<RecipeDetail | null> {
  *
  * @param input The validated recipe as the form supplied it.
  * @returns The id of the recipe that was created.
- * @throws UnknownIngredientError when a line names an ingredient the catalogue
- *   does not have.
  */
 export async function createRecipe(input: RecipeInput): Promise<string> {
-  try {
-    const recipe = await db.recipe.create({
-      data: {
-        ...toColumns(input),
-        ingredients: { create: toIngredientRows(input) },
-      },
-      select: { id: true },
-    })
+  await ensureIngredients(input)
 
-    return recipe.id
-  } catch (error) {
-    if (isForeignKeyError(error)) throw new UnknownIngredientError()
-    throw error
-  }
+  const recipe = await db.recipe.create({
+    data: {
+      ...toColumns(input),
+      ingredients: { create: toIngredientRows(input) },
+    },
+    select: { id: true },
+  })
+
+  return recipe.id
 }
 
 /**
@@ -187,13 +190,16 @@ export async function createRecipe(input: RecipeInput): Promise<string> {
  * @param input The validated recipe as the form supplied it.
  * @returns Nothing.
  * @throws RecipeNotFoundError when no recipe has that id.
- * @throws UnknownIngredientError when a line names an ingredient the catalogue
- *   does not have.
  */
 export async function updateRecipe(
   id: string,
   input: RecipeInput
 ): Promise<void> {
+  // Outside the transaction below, so a recipe write that then fails leaves a
+  // few unused catalogue entries behind. That is the cheap side of the trade:
+  // an unused entry is a row in a screen built for editing them.
+  await ensureIngredients(input)
+
   try {
     await db.$transaction([
       db.recipeIngredient.deleteMany({ where: { recipeId: id } }),
@@ -207,7 +213,6 @@ export async function updateRecipe(
     ])
   } catch (error) {
     if (isRecordNotFoundError(error)) throw new RecipeNotFoundError()
-    if (isForeignKeyError(error)) throw new UnknownIngredientError()
     throw error
   }
 }
