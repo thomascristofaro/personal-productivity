@@ -11,6 +11,7 @@ const valid = {
   GOOGLE_CLIENT_SECRET: "GOCSPX-not-a-real-secret",
   OWNER_EMAIL: "owner@gmail.com",
   PARTNER_EMAIL: "partner@gmail.com",
+  GOOGLE_AI_API_KEY: "AIza-not-a-real-key",
 }
 
 const without = (key: keyof typeof valid) => {
@@ -26,6 +27,22 @@ describe("EnvSchema", () => {
 
   it("defaults NODE_ENV to development", () => {
     expect(EnvSchema.parse(valid).NODE_ENV).toBe("development")
+  })
+
+  it("splits GEMINI_MODELS into a list, first entry first", () => {
+    const parsed = EnvSchema.parse({
+      ...valid,
+      GEMINI_MODELS: "gemini-3.7-flash, gemini-3.5-flash-lite",
+    })
+
+    expect(parsed.GEMINI_MODELS).toEqual([
+      "gemini-3.7-flash",
+      "gemini-3.5-flash-lite",
+    ])
+  })
+
+  it("falls back to a list rather than to nothing", () => {
+    expect(EnvSchema.parse(valid).GEMINI_MODELS.length).toBeGreaterThan(0)
   })
 
   it("rejects a missing database URL rather than starting without one", () => {

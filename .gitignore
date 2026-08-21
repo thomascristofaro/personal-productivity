@@ -51,3 +51,6 @@ next-env.d.ts
 # snapshots and traces the playwright MCP server drops while driving the app
 # through a manual checklist — output of a verification, never a source
 /.playwright-mcp
+
+# Dev server logs, written when the server is started detached for a browser check.
+dev-*.log

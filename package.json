@@ -22,9 +22,11 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@ai-sdk/google": "^4.0.47",
     "@base-ui/react": "^1.7.0",
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",
+    "ai": "^7.0.70",
     "better-auth": "^1.6.28",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

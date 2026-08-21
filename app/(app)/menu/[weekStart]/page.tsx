@@ -2,7 +2,11 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
-import { saveSlot } from "@/app/(app)/menu/[weekStart]/actions"
+import {
+  generateWeek,
+  saveSlot,
+} from "@/app/(app)/menu/[weekStart]/actions"
+import { GenerateButton } from "@/components/menu/generate-button"
 import { WeekGrid } from "@/components/menu/week-grid"
 import { ListBody } from "@/components/page/page-body"
 import { PageHeader } from "@/components/page/page-header"
@@ -51,6 +55,13 @@ export default async function MenuWeekPage({
     dayFormat.format(dateForDay(weekStart, day))
   )
 
+  // Generating replaces the week, so the button asks first when there is
+  // something to lose. The count is what the confirmation names; the server
+  // re-reads it regardless, because a hidden or disabled button guards nothing.
+  const filledSlots = slots.filter(
+    (slot) => slot.recipeId !== null || slot.freeText !== null
+  ).length
+
   const isCurrentWeek = iso(weekStartFor(new Date())) === iso(weekStart)
   const todayIndex = isCurrentWeek ? dayIndexFor(new Date()) : -1
 
@@ -63,6 +74,11 @@ export default async function MenuWeekPage({
   return (
     <ListBody>
       <PageHeader title="Menù" subtitle={range}>
+        <GenerateButton
+          weekStart={iso(weekStart)}
+          filledSlots={filledSlots}
+          action={generateWeek}
+        />
         <Button
           variant="outline"
           render={<Link href={`/spesa/${iso(weekStart)}`} />}

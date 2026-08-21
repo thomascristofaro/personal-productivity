@@ -1,6 +1,7 @@
 import "dotenv/config"
 
 import { db } from "../lib/db"
+import { MENU_PROPOSAL_PROMPT } from "../lib/prompts/menu-proposal"
 import { INGREDIENTS } from "./catalog"
 
 // `lib/env.ts` is server-only and validates far more than this script needs.
@@ -52,8 +53,30 @@ async function main() {
     })
   }
 
+  // The prompt file is the default; the row is a copy that then drifts as it is
+  // tuned. `update` deliberately leaves `prompt` and `model` alone — re-seeding
+  // must not discard the tuning the settings screen exists to enable.
+  await db.llmFunction.upsert({
+    where: { id: "menu-proposal" },
+    update: {
+      name: "Generazione menù",
+      description:
+        "Compone i quattordici pasti della settimana scegliendo fra le ricette disponibili.",
+    },
+    create: {
+      id: "menu-proposal",
+      name: "Generazione menù",
+      description:
+        "Compone i quattordici pasti della settimana scegliendo fra le ricette disponibili.",
+      prompt: MENU_PROPOSAL_PROMPT,
+      model: (process.env.GEMINI_MODELS ?? "gemini-3.7-flash")
+        .split(",")[0]
+        .trim(),
+    },
+  })
+
   console.log(
-    `Seeded ${USERS.length} users and ${INGREDIENTS.length} ingredients.`
+    `Seeded ${USERS.length} users, ${INGREDIENTS.length} ingredients and 1 LLM function.`
   )
 }
 

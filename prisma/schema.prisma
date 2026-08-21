@@ -259,3 +259,45 @@ model RateLimit {
   count       Int
   lastRequest BigInt
 }
+
+// One row per LLM-backed feature, keyed by a stable string rather than a cuid:
+// the code names the function it wants, and a generated id would mean a lookup
+// by a column that is not the key. Today there is exactly one row.
+model LlmFunction {
+  id          String         @id
+  name        String
+  description String
+  prompt      String
+  model       String
+  temperature Float          @default(1)
+  maxTokens   Int            @default(4096)
+  // The AI SDK's normalised effort scale, not Google's thinkingBudget: the
+  // core translates it per provider, so this survives a provider change.
+  reasoning   String         @default("provider-default")
+  updatedAt   DateTime       @default(now()) @updatedAt
+  executions  LlmExecution[]
+}
+
+// What one call did. `prompt` is stored per execution on purpose: it is the
+// version history, and unlike a table of prompt versions each entry arrives
+// attached to the result it produced — design document 2026-08-21 section 7.3.
+// Kept to the most recent twenty per function.
+model LlmExecution {
+  id         String      @id @default(cuid())
+  functionId String
+  function   LlmFunction @relation(fields: [functionId], references: [id], onDelete: Cascade)
+  prompt     String
+  model      String
+  // Null when the call never returned one — a timeout reports no usage.
+  inputTokens  Int?
+  outputTokens Int?
+  durationMs   Int
+  // The raw text the model answered, kept verbatim so a bad week can be read
+  // back rather than guessed at.
+  output    String?
+  error     String?
+  createdAt DateTime @default(now())
+
+  // Every read is "the last twenty of this function", in this order.
+  @@index([functionId, createdAt])
+}

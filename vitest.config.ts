@@ -26,6 +26,7 @@ export default defineConfig({
       GOOGLE_CLIENT_SECRET: "test",
       OWNER_EMAIL: "owner@example.invalid",
       PARTNER_EMAIL: "partner@example.invalid",
+      GOOGLE_AI_API_KEY: "test-key",
     },
   },
 })

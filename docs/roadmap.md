@@ -5,7 +5,7 @@ and state** — nothing else does. The design authority stays
 `docs/superpowers/specs/2026-08-13-menu-spesa-design.md`, and the decisions live
 in `docs/conventions/`. Do not restate either here; point at them.
 
-Last updated: 2026-08-20. `main` is deployed. Work normally happens on a branch
+Last updated: 2026-08-21. `main` is deployed. Work normally happens on a branch
 per plan — see "In flight" for the one standing exception and the branch open
 now.
 
@@ -25,6 +25,8 @@ now.
 | [`2026-08-18-shopping-list-again`](superpowers/plans/2026-08-18-shopping-list-again.md)                                                                                                  | `days` on a line, `lib/services/shopping-view.ts` and its merge, the `+` drawer, and free items landing in the catalogue                                                                                                                                                                                                                                                                                                            |
 | [`2026-08-18-shopping-done`](superpowers/plans/2026-08-18-shopping-done.md)                                                                                                              | `Purchase` and `PurchaseItem`, the bar at the till, `/spesa/storico`, `lib/money.ts`, and the aggregator subtracting what has already been bought                                                                                                                                                                                                                                                                                   |
 | [`2026-08-20-page-primitives`](superpowers/plans/2026-08-20-page-primitives.md), design in [`2026-08-20-page-primitives-design`](superpowers/specs/2026-08-20-page-primitives-design.md) | one form contract instead of six — `lib/form.ts`, `useFormState`, four typed fields and `FormField` — `FormDrawer` replacing four hand-rolled close-on-success effects, one page shell instead of thirteen `<main>`s, `ListSection`, `SearchField`, `FilterChips`, and `MessagePage` for the three "does not exist" screens. Two things a user sees: «Svuota» is gone from the slot drawer, and `/catalogo` gained its search field |
+| [`2026-08-21-menu-generation`](superpowers/plans/2026-08-21-menu-generation.md), design in [`2026-08-21-menu-generation-design`](superpowers/specs/2026-08-21-menu-generation-design.md) | the LLM half of the menu: `lib/services/llm.ts` — the only file that may import an SDK — `proposeMenu`, candidates as numbered lines the model answers with integers, recency derived from past `MenuSlot` rows, and a waiting dialog that turns into the failure. Runs on **Google Gemini**, not Anthropic                                                                                                                         |
+| [`2026-08-21-llm-registry`](superpowers/plans/2026-08-21-llm-registry.md)                                                                                                                | `LlmFunction` and `LlmExecution`, `requireOwner()` over `OWNER_EMAIL`, the prompt moving into the database with `lib/prompts/menu-proposal.ts` as the fallback, and the four owner-only screens under `/impostazioni/llm`. **Editing that prompt file changes nothing on a seeded database**                                                                                                                                        |
 
 ## In flight
 
@@ -253,27 +255,22 @@ Three things, on the owner's call, none of them planned in a document:
 
 In dependency order. Each needs its own plan; none has one yet.
 
-### 1. Menu generation — spec §6.2, §7
+### 1. Regenerating one slot or one day — spec §6.2
 
-The grid exists and is editable by hand. What is missing is the LLM half:
-`lib/services/llm.ts` — **it does not exist yet**, and `CLAUDE.md` binds every
-Anthropic call to go through it — plus `proposeMenu` and regenerating one slot,
-a day or the week.
+**Deliberately left out** of menu generation, not forgotten. The week is the
+unit that shipped; a slot-level call is the same call with a different candidate
+set and one slot of output. Do not record it as debt.
 
-One design question has no answer yet, and it is not an oversight to patch
-quietly: **nothing in the schema records when a recipe was cooked**, so the
-cooldown of §6.2 has to derive "recently cooked" from the `MenuSlot` rows of
-past weeks. Settle that before writing the plan.
+### 2. Recipe import — nothing left that needs an LLM
 
-### 2. Recipe import from a URL — spec §6.1
+The import **shipped in #19** and works from JSON-LD alone. The owner excluded
+the LLM fallback on 2026-08-21: it works well enough as it is, so
+`structureRecipe`, `parseIngredientLines` and `guessAisles` are not built and
+`lib/services/llm.ts` exposes `proposeMenu` only.
 
-JSON-LD extractor, LLM fallback, then matching the parsed lines against the
-catalogue. This is why `lib/services/ingredient-parse.ts` and
-`lib/services/ingredient-name.ts` are still in the repo with no caller — see the
-note in the spec's §5 design notes before deleting them as dead code.
-
-Also needs `lib/services/llm.ts`, and `app/manifest.ts` for the Android share
-target, which does not exist either.
+`lib/services/ingredient-parse.ts` and `lib/services/ingredient-name.ts` are
+still called by the import, so the note that once protected them from being
+deleted as dead code no longer applies.
 
 ### 3. PWA and deployment — spec §9, §10
 
@@ -372,6 +369,24 @@ or `docs/conventions/` as it was decided.
   are run by hand during development, and by CI on pull requests once item 4
   above exists. Do not reintroduce a hook to close that gap — it is the same
   automatic-at-commit behaviour that was rejected.
+- **The LLM is Google Gemini, not Anthropic — 2026-08-21.** Through the Vercel
+  AI SDK, on the **Cloud Agent Platform** and not AI Studio: the key in
+  `GOOGLE_AI_API_KEY` is refused by `generativelanguage.googleapis.com` with
+  `API_KEY_SERVICE_BLOCKED`, so `GOOGLE_AI_BASE_URL` points at
+  `aiplatform.googleapis.com` and `llm.ts` hands both to the provider — the
+  variable is also deliberately **not** the `GOOGLE_GENERATIVE_AI_API_KEY` the
+  SDK would look for by itself. `pwsh scripts/llm-probe.ps1` says which host a
+  key can actually reach, and the two failures look identical from the app. The
+  design of
+  [`2026-08-21`](superpowers/specs/2026-08-21-menu-generation-design.md) §2
+  amends three decisions of the parent spec — provider, prompts leaving the
+  filesystem, and the cooldown ceasing to be a filter. Read that table before
+  reconciling the two documents.
+- **A new required environment variable has to be added in three places.**
+  `lib/env.ts`, `vitest.config.ts` — which declares a fake environment inline
+  rather than reading `.env` — and the fixture in `lib/env.test.ts`. Miss either
+  of the last two and the suite fails on an absence that exists only in the test
+  harness.
 - **Frontend choices get surfaced, not decided silently.** The owner is a backend
   developer and asked for React and UI patterns to come from the skills in
   `.agents/skills/` rather than from memory, and for any debatable frontend call
