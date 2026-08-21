@@ -266,9 +266,15 @@ with the API down.**
 | No candidate recipes                                  | The generate action is not offered. An empty recipe book is not an error state to report from an LLM call. |
 | Execution row fails to write                          | The menu is still returned. History is diagnostics; losing a row must not lose a generation.               |
 
-A generation **never writes slots directly.** It pre-fills the grid, which the
-user then edits and saves — the parent spec §6.2 makes the grid the source of
-truth and the LLM a convenience over it.
+A generation **writes the slots it proposes, and is only offered on a week where
+every slot is empty.** The parent spec §6.2 makes the grid the source of truth
+and the LLM a convenience over it; that property is preserved by the emptiness
+precondition rather than by withholding the write. There is nothing to
+overwrite, and every slot stays editable afterwards exactly as if it had been
+typed by hand.
+
+The alternative — holding fourteen proposed slots in client state until a
+separate save — buys no safety and costs a second source of truth for the grid.
 
 ---
 
