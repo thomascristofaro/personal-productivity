@@ -622,8 +622,6 @@ Search that file for `Output` and for `experimental_output`. If the result prope
 - [ ] **Step 2: Write the boundary**
 
 ```ts
-import "server-only"
-
 import { createGoogleGenerativeAI } from "@ai-sdk/google"
 import { generateText, Output } from "ai"
 
@@ -831,8 +829,6 @@ Expected: FAIL — the module does not exist.
 - [ ] **Step 3: Write the service**
 
 ```ts
-import "server-only"
-
 import { HOUSEHOLD_SERVINGS, RECENCY_WINDOW_WEEKS } from "@/lib/config"
 import { db } from "@/lib/db"
 import {
