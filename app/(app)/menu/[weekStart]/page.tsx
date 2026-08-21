@@ -2,7 +2,11 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
-import { saveSlot } from "@/app/(app)/menu/[weekStart]/actions"
+import {
+  generateWeek,
+  saveSlot,
+} from "@/app/(app)/menu/[weekStart]/actions"
+import { GenerateButton } from "@/components/menu/generate-button"
 import { WeekGrid } from "@/components/menu/week-grid"
 import { ListBody } from "@/components/page/page-body"
 import { PageHeader } from "@/components/page/page-header"
@@ -51,6 +55,12 @@ export default async function MenuWeekPage({
     dayFormat.format(dateForDay(weekStart, day))
   )
 
+  // Generating writes into the slots, so it is offered only where there is
+  // nothing to overwrite — design document 2026-08-21 section 8.
+  const isEmptyWeek = slots.every(
+    (slot) => slot.recipeId === null && slot.freeText === null
+  )
+
   const isCurrentWeek = iso(weekStartFor(new Date())) === iso(weekStart)
   const todayIndex = isCurrentWeek ? dayIndexFor(new Date()) : -1
 
@@ -63,6 +73,9 @@ export default async function MenuWeekPage({
   return (
     <ListBody>
       <PageHeader title="Menù" subtitle={range}>
+        {isEmptyWeek && (
+          <GenerateButton weekStart={iso(weekStart)} action={generateWeek} />
+        )}
         <Button
           variant="outline"
           render={<Link href={`/spesa/${iso(weekStart)}`} />}

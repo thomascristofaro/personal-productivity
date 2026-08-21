@@ -11,6 +11,12 @@ import {
   SlotInputSchema,
   WeekStartSchema,
 } from "@/lib/schemas/menu"
+import {
+  DuplicateProposalError,
+  LlmError,
+  NoCandidatesError,
+  proposeMenu,
+} from "@/lib/services/menu-proposal"
 import { setSlot, UnknownRecipeError } from "@/lib/services/menus"
 
 const iso = (date: Date) => date.toISOString().slice(0, 10)
@@ -81,4 +87,46 @@ export const saveSlot: FormAction = async (_state, formData) => {
   // the raw field — that string reaches the cache key.
   revalidatePath(`/menu/${iso(address.weekStart.data)}`)
   return success()
+}
+
+/**
+ * Fills an empty week with a proposal.
+ *
+ * Not a `FormAction`: it is invoked from a button rather than a form, so it
+ * takes the week directly and answers with a message or nothing. The write is
+ * safe because the caller only offers it on a week where every slot is empty —
+ * there is nothing here to overwrite.
+ */
+export async function generateWeek(
+  weekStart: string
+): Promise<{ error: string } | void> {
+  const parsed = WeekStartSchema.safeParse(weekStart)
+  if (!parsed.success) return { error: "Questa settimana non esiste." }
+
+  await requireSession()
+
+  try {
+    const slots = await proposeMenu(parsed.data)
+
+    for (const slot of slots) {
+      await setSlot(parsed.data, slot.day, slot.meal, {
+        recipeId: slot.recipeId,
+        freeText: null,
+        servings: null,
+      })
+    }
+  } catch (error) {
+    if (error instanceof NoCandidatesError) {
+      return { error: "Aggiungi qualche ricetta prima di generare un menù." }
+    }
+    if (error instanceof DuplicateProposalError) {
+      return { error: "Il menù proposto ripeteva un piatto. Riprova." }
+    }
+    if (error instanceof LlmError) {
+      return { error: "Non sono riuscito a generare il menù. Riprova." }
+    }
+    throw error
+  }
+
+  revalidatePath(`/menu/${iso(parsed.data)}`)
 }
