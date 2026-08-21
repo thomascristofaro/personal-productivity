@@ -10,7 +10,7 @@ const FOUND = {
 
 describe("countLabel", () => {
   it("uses the caller's whole sentence for none", () => {
-    // Not a prefix on `one`: /spesa says «Tutto preso.» here, which shares no
+    // Not a prefix on `one`: /shopping says «Tutto preso.» here, which shares no
     // word with the other two branches.
     expect(countLabel(0, FOUND)).toBe("Nessuna voce trovata.")
   })

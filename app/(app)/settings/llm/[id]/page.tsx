@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
-import { saveFunction } from "@/app/(app)/impostazioni/llm/[id]/actions"
+import { saveFunction } from "@/app/(app)/settings/llm/[id]/actions"
 import { FunctionForm } from "@/components/llm/function-form"
 import { DetailBody } from "@/components/page/page-body"
 import { PageHeader } from "@/components/page/page-header"
@@ -43,7 +43,7 @@ export default async function LlmFunctionPage({
       <PageHeader title={fn.name} subtitle={fn.description}>
         <Button
           variant="outline"
-          render={<Link href={`/impostazioni/llm/${id}/esecuzioni`} />}
+          render={<Link href={`/settings/llm/${id}/runs`} />}
           nativeButton={false}
         >
           Esecuzioni

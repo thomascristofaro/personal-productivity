@@ -9,7 +9,7 @@ import {
   restoreItem,
   setTaken,
   toggle,
-} from "@/app/(app)/spesa/[weekStart]/actions"
+} from "@/app/(app)/shopping/[weekStart]/actions"
 import { EmptyState } from "@/components/page/empty-state"
 import { ListBody } from "@/components/page/page-body"
 import { PageHeader } from "@/components/page/page-header"
@@ -82,7 +82,7 @@ export default async function ShoppingWeekPage({
             it is never irrelevant. "Rigenera" is, and is not. */}
         <Button
           variant="outline"
-          render={<Link href="/spesa/storico" />}
+          render={<Link href="/shopping/history" />}
           nativeButton={false}
         >
           Storico

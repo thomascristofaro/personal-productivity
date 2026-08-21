@@ -70,8 +70,8 @@ being worth having.
 
 ### A list
 
-`app/(app)/catalogo/page.tsx` is the full version — search, chips, three empty
-states. `/recipes` drops the chips, `/spesa/storico` drops both.
+`app/(app)/catalog/page.tsx` is the full version — search, chips, three empty
+states. `/recipes` drops the chips, `/shopping/history` drops both.
 
 ```tsx
 export default async function CatalogPage({
@@ -87,7 +87,7 @@ export default async function CatalogPage({
   return (
     <ListBody>
       <PageHeader title="Catalogo">
-        <Button render={<Link href="/catalogo/new" />} nativeButton={false}>
+        <Button render={<Link href="/catalog/new" />} nativeButton={false}>
           Nuova
         </Button>
       </PageHeader>
@@ -95,7 +95,7 @@ export default async function CatalogPage({
       {/* SearchField reads useSearchParams, so it needs a boundary. */}
       <Suspense>
         <SearchField
-          basePath="/catalogo"
+          basePath="/catalog"
           placeholder="Cerca…"
           label="Cerca una voce"
         />
@@ -107,7 +107,7 @@ export default async function CatalogPage({
         renderItem={(item) => (
           <DataListRow
             key={item.name}
-            href={`/catalogo/${encodeURIComponent(item.name)}/edit`}
+            href={`/catalog/${encodeURIComponent(item.name)}/edit`}
             title={item.name}
           >
             <Badge variant="secondary">{item.aisle}</Badge>
@@ -122,7 +122,7 @@ export default async function CatalogPage({
               description="Aggiungi la prima voce."
             >
               <Button
-                render={<Link href="/catalogo/new" />}
+                render={<Link href="/catalog/new" />}
                 nativeButton={false}
               >
                 Nuova voce
@@ -139,7 +139,7 @@ export default async function CatalogPage({
 `countLabel` (`lib/count-label`) builds the sentence a list announces. The words
 are the caller's, in a module-level constant, because Italian agrees them with
 the noun — «voci trovat**e**» but «articoli trovat**i**» — and because the zero
-case is not always a negation: `/spesa` says «Tutto preso.» there.
+case is not always a negation: `/shopping` says «Tutto preso.» there.
 
 **Write the row inline in `renderItem`.** All three lists do. If one ever grows
 enough to move out, it still renders `DataListRow` — never a second row
@@ -156,7 +156,7 @@ export default async function NewCatalogItemPage() {
 
   return (
     <DetailBody>
-      <PageHeader title="Nuova voce" back={{ href: "/catalogo", label: "Catalogo" }} />
+      <PageHeader title="Nuova voce" back={{ href: "/catalog", label: "Catalogo" }} />
       <CatalogForm action={saveCatalogItem} units={units} values={{ name: "", … }} />
     </DetailBody>
   )
@@ -177,7 +177,7 @@ export function CatalogForm({ values, action, units }) {
   const form = useFormState(action, FIELD_ORDER, { name: values.name, … })
 
   return (
-    <PageForm form={form} cancelHref="/catalogo">
+    <PageForm form={form} cancelHref="/catalog">
       <TextField key={form.fieldKey("name")} {...form.fieldProps("name")}
                  label="Nome" error={form.errorOf("name")} required />
       <SelectField key={form.fieldKey("kind")} {...form.fieldProps("kind")}

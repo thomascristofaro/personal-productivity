@@ -43,7 +43,7 @@ export default async function PurchaseHistoryPage() {
         renderItem={(purchase) => (
           <DataListRow
             key={purchase.id}
-            href={`/spesa/storico/${purchase.id}`}
+            href={`/shopping/history/${purchase.id}`}
             title={dayFormat.format(purchase.purchasedAt)}
           >
             {/* A badge and not a blank: a blank reads as free. */}

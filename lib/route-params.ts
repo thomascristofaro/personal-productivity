@@ -2,7 +2,7 @@
  * The plain text behind a dynamic route segment.
  *
  * Next hands `params` the segment exactly as it appears in the URL, still
- * percent-encoded — so a catalogue entry linked as `/catalogo/aceto%20balsamico/edit`
+ * percent-encoded — so a catalogue entry linked as `/catalog/aceto%20balsamico/edit`
  * arrives as `"aceto%20balsamico"` and matches no row. Decoding is the caller's
  * job, and it is the same job whether the page was loaded cold or reached by a
  * client-side navigation.

@@ -52,7 +52,7 @@ export default async function ExecutionPage({
       >
         <Button
           variant="outline"
-          render={<Link href={`/impostazioni/llm/${id}/esecuzioni`} />}
+          render={<Link href={`/settings/llm/${id}/runs`} />}
           nativeButton={false}
         >
           Torna alle esecuzioni

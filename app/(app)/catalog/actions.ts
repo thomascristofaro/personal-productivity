@@ -81,11 +81,11 @@ export const saveCatalogItem: FormAction = async (_state, formData) => {
     throw error
   }
 
-  revalidatePath("/catalogo")
+  revalidatePath("/catalog")
   revalidatePath("/recipes")
   // Replace, not push: `redirect` defaults to push inside a Server Action, and
   // Back would then land on the form that was just submitted.
-  redirect("/catalogo", RedirectType.replace)
+  redirect("/catalog", RedirectType.replace)
 }
 
 export async function removeCatalogItem(name: string): Promise<void> {
@@ -110,6 +110,6 @@ export async function removeCatalogItem(name: string): Promise<void> {
     }
   }
 
-  revalidatePath("/catalogo")
-  redirect("/catalogo", RedirectType.replace)
+  revalidatePath("/catalog")
+  redirect("/catalog", RedirectType.replace)
 }

@@ -32,7 +32,7 @@ export default async function LlmFunctionsPage() {
         renderItem={(item) => (
           <DataListRow
             key={item.id}
-            href={`/impostazioni/llm/${item.id}`}
+            href={`/settings/llm/${item.id}`}
             title={item.name}
           >
             <span>{item.description}</span>

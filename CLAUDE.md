@@ -150,6 +150,9 @@ Italian for what the user reads. English for everything else.
   PWA manifest, `lang="it"`.
 - **English**: identifiers, comments, TSDoc, file names, commit messages, branch
   names, documentation, test names, log messages.
+- **English**: URL segments and search-param names — `/shopping/history`,
+  `?kind=products`. The app is installed as a PWA, so nobody reads the address
+  bar; the folder tree is read every day.
 - Database **names** are English even when the concept is Italian: `MealType.LUNCH`,
   `weekStart`, `aisle`. Database **values** stay Italian, because they are data:
   `"ortofrutta"`, `"320 g di spaghetti"`.

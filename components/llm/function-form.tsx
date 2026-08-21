@@ -42,7 +42,7 @@ export function FunctionForm({ id, action, models, initial }: Props) {
   })
 
   return (
-    <PageForm form={form} cancelHref="/impostazioni/llm">
+    <PageForm form={form} cancelHref="/settings/llm">
       <input type="hidden" name="id" value={id} />
 
       <FormField

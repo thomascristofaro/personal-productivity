@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation"
 
-import { saveTotal } from "@/app/(app)/spesa/storico/actions"
+import { saveTotal } from "@/app/(app)/shopping/history/actions"
 import { ListSection } from "@/components/page/list-section"
 import { DetailBody } from "@/components/page/page-body"
 import { PageHeader } from "@/components/page/page-header"
@@ -46,7 +46,7 @@ export default async function PurchasePage({
     <DetailBody>
       <PageHeader
         title={dayFormat.format(purchase.purchasedAt)}
-        back={{ href: "/spesa/storico", label: "Storico spesa" }}
+        back={{ href: "/shopping/history", label: "Storico spesa" }}
         subtitle={
           purchase.totalCents === null
             ? "Importo non ancora inserito."

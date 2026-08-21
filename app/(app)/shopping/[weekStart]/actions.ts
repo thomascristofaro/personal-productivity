@@ -51,7 +51,7 @@ export async function regenerate(formData: FormData): Promise<void> {
     if (!(error instanceof NoMenuError)) throw error
   }
 
-  revalidatePath(`/spesa/${iso(weekStart.data)}`)
+  revalidatePath(`/shopping/${iso(weekStart.data)}`)
 }
 
 export async function toggle(formData: FormData): Promise<void> {
@@ -76,7 +76,7 @@ export async function toggle(formData: FormData): Promise<void> {
     if (!(error instanceof NoListError)) throw error
   }
 
-  revalidatePath(`/spesa/${iso(weekStart.data)}`)
+  revalidatePath(`/shopping/${iso(weekStart.data)}`)
 }
 
 export const addItem: FormAction = async (_state, formData) => {
@@ -117,7 +117,7 @@ export const addItem: FormAction = async (_state, formData) => {
     throw error
   }
 
-  revalidatePath(`/spesa/${iso(weekStart.data)}`)
+  revalidatePath(`/shopping/${iso(weekStart.data)}`)
   return success()
 }
 
@@ -132,7 +132,7 @@ export async function removeItem(formData: FormData): Promise<void> {
 
   await removeFromList(ids.data)
 
-  revalidatePath(`/spesa/${iso(weekStart.data)}`)
+  revalidatePath(`/shopping/${iso(weekStart.data)}`)
 }
 
 export async function restoreItem(formData: FormData): Promise<void> {
@@ -144,7 +144,7 @@ export async function restoreItem(formData: FormData): Promise<void> {
 
   await restoreToList(ids.data)
 
-  revalidatePath(`/spesa/${iso(weekStart.data)}`)
+  revalidatePath(`/shopping/${iso(weekStart.data)}`)
 }
 
 export async function setTaken(formData: FormData): Promise<void> {
@@ -165,7 +165,7 @@ export async function setTaken(formData: FormData): Promise<void> {
     if (!(error instanceof NoListError)) throw error
   }
 
-  revalidatePath(`/spesa/${iso(weekStart.data)}`)
+  revalidatePath(`/shopping/${iso(weekStart.data)}`)
 }
 
 export const complete: FormAction = async (_state, formData) => {
@@ -198,7 +198,7 @@ export const complete: FormAction = async (_state, formData) => {
     throw error
   }
 
-  revalidatePath(`/spesa/${iso(weekStart.data)}`)
-  revalidatePath("/spesa/storico")
+  revalidatePath(`/shopping/${iso(weekStart.data)}`)
+  revalidatePath("/shopping/history")
   return success()
 }
