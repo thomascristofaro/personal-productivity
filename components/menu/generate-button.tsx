@@ -47,7 +47,10 @@ export function GenerateButton({ weekStart, action }: Props) {
           if (!open && !pending) setError(null)
         }}
       >
-        <AlertDialogContent>
+        {/* Keyed on the state: without a remount the dialog is already open
+            when waiting turns into failure, and a screen reader announces
+            nothing — the one transition that most needs announcing. */}
+        <AlertDialogContent key={pending ? "pending" : "error"}>
           {pending ? (
             <AlertDialogHeader>
               <AlertDialogTitle>Sto preparando il menù…</AlertDialogTitle>
@@ -59,7 +62,7 @@ export function GenerateButton({ weekStart, action }: Props) {
           ) : (
             <>
               <AlertDialogHeader>
-                <AlertDialogTitle>Non ce l&apos;ho fatta</AlertDialogTitle>
+                <AlertDialogTitle>Non ce l’ho fatta</AlertDialogTitle>
                 <AlertDialogDescription>{error}</AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
