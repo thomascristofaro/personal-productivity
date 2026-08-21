@@ -26,7 +26,7 @@ export function GoogleSignIn({ callbackURL }: { callbackURL: string }) {
             // Where a refused account lands. Sign-up is disabled, so an address
             // that is not seeded gets here — without this it would meet a raw
             // error page instead of being told, in Italian, what happened.
-            errorCallbackURL: "/login?negato=1",
+            errorCallbackURL: "/login?denied=1",
           })
 
           // On success the browser has already left for Google, so arriving

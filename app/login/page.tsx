@@ -9,13 +9,13 @@ export const metadata = { title: "Accedi" }
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ negato?: string; next?: string }>
+  searchParams: Promise<{ denied?: string; next?: string }>
 }) {
   // Verified, not getSession(): in development the fallback would send every
   // visit straight back to the app, and signing in locally would be impossible.
   if ((await getVerifiedSession()) !== null) redirect("/menu")
 
-  const { negato, next } = await searchParams
+  const { denied, next } = await searchParams
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-sm flex-col justify-center gap-6 px-6 text-center">
@@ -26,7 +26,7 @@ export default async function LoginPage({
         </p>
       </div>
 
-      {negato === undefined ? null : (
+      {denied === undefined ? null : (
         <p role="alert" className="text-sm text-pretty text-destructive">
           Questo account Google non è abilitato.
         </p>
