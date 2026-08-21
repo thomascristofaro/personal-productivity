@@ -165,6 +165,20 @@ Environment variables are read and validated in `lib/env.ts` and nowhere else, s
 a missing variable fails at startup rather than at the first request that needs
 it. ESLint forbids `process.env` elsewhere.
 
+## Where the code runs
+
+`vercel.json` pins the functions to `fra1`, Frankfurt, because that is where the
+Neon database is. It is the only thing in that file, and it is not a
+platform-lock: it says "run next to the data", which is true anywhere.
+
+The cost of getting it wrong is not one slow query. A single interaction is six
+to eight round trips — the session lookup, the mutation, then the re-render of
+the revalidated page with its own session lookup and reads. Sharing a region
+makes each one about a millisecond. Crossing the Atlantic makes each one about a
+hundred, and the same code takes a second.
+
+So: if the database ever moves, this file moves with it, the same day.
+
 ## What is deliberately not in this file
 
 | Topic                                                     | Where                                         |
