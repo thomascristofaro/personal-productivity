@@ -7,6 +7,7 @@ import { DetailBody } from "@/components/page/page-body"
 import { PageHeader } from "@/components/page/page-header"
 import { Button } from "@/components/ui/button"
 import { requireOwner } from "@/lib/auth/owner"
+import { env } from "@/lib/env"
 import { getFunction } from "@/lib/services/llm-registry"
 import { decodeSegment } from "@/lib/route-params"
 
@@ -52,6 +53,7 @@ export default async function LlmFunctionPage({
       <FunctionForm
         id={id}
         action={saveFunction}
+        models={env.GEMINI_MODELS}
         initial={{
           prompt: fn.prompt,
           model: fn.model,

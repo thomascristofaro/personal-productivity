@@ -170,7 +170,7 @@ export async function proposeMenu(
   // generation down — design document 2026-08-21 section 7.2.
   const settings = await getSettings(FUNCTION_ID, {
     prompt: MENU_PROPOSAL_PROMPT,
-    model: env.GEMINI_MODEL,
+    model: env.GEMINI_MODELS[0],
     temperature: 1,
     maxTokens: 4096,
     reasoning: "provider-default",

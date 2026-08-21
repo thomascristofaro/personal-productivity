@@ -29,6 +29,22 @@ describe("EnvSchema", () => {
     expect(EnvSchema.parse(valid).NODE_ENV).toBe("development")
   })
 
+  it("splits GEMINI_MODELS into a list, first entry first", () => {
+    const parsed = EnvSchema.parse({
+      ...valid,
+      GEMINI_MODELS: "gemini-3.7-flash, gemini-3.5-flash-lite",
+    })
+
+    expect(parsed.GEMINI_MODELS).toEqual([
+      "gemini-3.7-flash",
+      "gemini-3.5-flash-lite",
+    ])
+  })
+
+  it("falls back to a list rather than to nothing", () => {
+    expect(EnvSchema.parse(valid).GEMINI_MODELS.length).toBeGreaterThan(0)
+  })
+
   it("rejects a missing database URL rather than starting without one", () => {
     expect(() => EnvSchema.parse({ DIRECT_URL: valid.DIRECT_URL })).toThrow()
   })

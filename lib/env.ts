@@ -43,9 +43,22 @@ export const EnvSchema = z.object({
   GOOGLE_AI_BASE_URL: z
     .url()
     .default("https://aiplatform.googleapis.com/v1/publishers/google"),
-  // Design document 2026-08-21 section 3 chose gemini-3.7-flash. It lives here
-  // so the next model is an environment change, not a deploy.
-  GEMINI_MODEL: z.string().min(1).default("gemini-3.7-flash"),
+  // The models offered on the settings screen, comma separated. The first is
+  // the default a function falls back to when the registry has no row. A list
+  // rather than one name so trying another model is a choice in the app, and
+  // adding one to try is an environment change rather than a deploy.
+  GEMINI_MODELS: z
+    .string()
+    .default(
+      "gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash,gemini-3.5-flash-lite"
+    )
+    .transform((value) =>
+      value
+        .split(",")
+        .map((name) => name.trim())
+        .filter((name) => name.length > 0)
+    )
+    .refine((names) => names.length > 0, "must list at least one model"),
 })
 
 const parsed = EnvSchema.safeParse(process.env)

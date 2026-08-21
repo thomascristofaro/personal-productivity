@@ -20,6 +20,9 @@ const FIELD_ORDER = [
 type Props = {
   id: string
   action: FormAction
+  // From the environment, so the list is a deployment setting rather than a
+  // constant in a client component that cannot read it.
+  models: readonly string[]
   initial: {
     prompt: string
     model: string
@@ -29,7 +32,7 @@ type Props = {
   }
 }
 
-export function FunctionForm({ id, action, initial }: Props) {
+export function FunctionForm({ id, action, models, initial }: Props) {
   const form = useFormState(action, FIELD_ORDER, {
     prompt: initial.prompt,
     model: initial.model,
@@ -56,14 +59,14 @@ export function FunctionForm({ id, action, initial }: Props) {
         />
       </FormField>
 
-      <FormField name="model" label="Modello" error={form.errorOf("model")}>
-        <Input
-          {...form.fieldProps("model")}
-          key={form.fieldKey("model")}
-          autoComplete="off"
-          spellCheck={false}
-        />
-      </FormField>
+      <SelectField
+        {...form.fieldProps("model", { described: true })}
+        key={form.fieldKey("model")}
+        label="Modello"
+        description="I modelli disponibili arrivano da GEMINI_MODELS. Il primo della lista è quello predefinito."
+        error={form.errorOf("model")}
+        options={models}
+      />
 
       <SelectField
         {...form.fieldProps("reasoning", { described: true })}

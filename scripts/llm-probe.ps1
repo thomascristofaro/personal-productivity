@@ -30,7 +30,9 @@ if ([string]::IsNullOrWhiteSpace($key)) {
   exit 1
 }
 if ([string]::IsNullOrWhiteSpace($Model)) {
-  $Model = if ($envVars["GEMINI_MODEL"]) { $envVars["GEMINI_MODEL"] } else { "gemini-3.7-flash" }
+  # First of GEMINI_MODELS, which is the one a function falls back to.
+  $listed = $envVars["GEMINI_MODELS"]
+  $Model = if ($listed) { ($listed -split ",")[0].Trim() } else { "gemini-3.7-flash" }
 }
 
 Write-Host "Key: $($key.Substring(0,6))…$($key.Substring($key.Length-4))  Model: $Model`n"

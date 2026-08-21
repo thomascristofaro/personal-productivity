@@ -69,7 +69,9 @@ async function main() {
       description:
         "Compone i quattordici pasti della settimana scegliendo fra le ricette disponibili.",
       prompt: MENU_PROPOSAL_PROMPT,
-      model: process.env.GEMINI_MODEL ?? "gemini-3.7-flash",
+      model: (process.env.GEMINI_MODELS ?? "gemini-3.7-flash")
+        .split(",")[0]
+        .trim(),
     },
   })
 
