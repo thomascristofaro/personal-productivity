@@ -11,6 +11,7 @@ const valid = {
   GOOGLE_CLIENT_SECRET: "GOCSPX-not-a-real-secret",
   OWNER_EMAIL: "owner@gmail.com",
   PARTNER_EMAIL: "partner@gmail.com",
+  GOOGLE_AI_API_KEY: "AIza-not-a-real-key",
 }
 
 const without = (key: keyof typeof valid) => {

@@ -11,6 +11,8 @@ export const DAYS_IN_WEEK = 7
 // this is what the shopping list scales to.
 export const HOUSEHOLD_SERVINGS = 2
 
-// Recipes cooked within this many days are excluded from the candidates handed
-// to the menu proposal, so the constraint cannot be argued with by a prompt.
-export const DEFAULT_COOLDOWN_DAYS = 3
+// How far back a recipe is worth remembering when proposing a menu. Beyond
+// this, "cooked four months ago" and "never cooked" say the same thing and only
+// cost tokens. Recency is a preference the prompt weighs, not a filter that
+// removes candidates — design document 2026-08-21 section 6.
+export const RECENCY_WINDOW_WEEKS = 8

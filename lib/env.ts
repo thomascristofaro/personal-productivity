@@ -32,6 +32,13 @@ export const EnvSchema = z.object({
   // disabled, so this pair is exactly the set of people who can sign in.
   OWNER_EMAIL: z.email(),
   PARTNER_EMAIL: z.email(),
+  // Google AI Studio, not the Cloud Agent Platform: express-mode keys are not
+  // accepted by @ai-sdk/google. The SDK looks for GOOGLE_GENERATIVE_AI_API_KEY
+  // by itself, so llm.ts passes this one in explicitly.
+  GOOGLE_AI_API_KEY: z.string().min(1),
+  // Design document 2026-08-21 section 3 chose gemini-3.7-flash. It lives here
+  // so the next model is an environment change, not a deploy.
+  GEMINI_MODEL: z.string().min(1).default("gemini-3.7-flash"),
 })
 
 const parsed = EnvSchema.safeParse(process.env)

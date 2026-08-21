@@ -75,7 +75,7 @@ Never `--no-verify`.
 | File                                    | Change                                                                    |
 | --------------------------------------- | ------------------------------------------------------------------------- |
 | `package.json`                          | `ai` and `@ai-sdk/google`                                                 |
-| `.env.example`                          | `GOOGLE_GENERATIVE_AI_API_KEY`, `GEMINI_MODEL`                            |
+| `.env.example`                          | `GOOGLE_AI_API_KEY`, `GEMINI_MODEL`                            |
 | `lib/env.ts`                            | the same two, validated                                                   |
 | `eslint.config.mjs`                     | the confinement rule moves from `@anthropic-ai/sdk` to `ai` / `@ai-sdk/*` |
 | `lib/config.ts`                         | `DEFAULT_COOLDOWN_DAYS` removed, `RECENCY_WINDOW_WEEKS` added             |
@@ -96,7 +96,7 @@ Nothing calls an LLM yet. This task makes it possible to, and makes it impossibl
 **Interfaces:**
 
 - Consumes: nothing.
-- Produces: `env.GOOGLE_GENERATIVE_AI_API_KEY: string`, `env.GEMINI_MODEL: string`, and `RECENCY_WINDOW_WEEKS: number` from `lib/config.ts`.
+- Produces: `env.GOOGLE_AI_API_KEY: string`, `env.GEMINI_MODEL: string`, and `RECENCY_WINDOW_WEEKS: number` from `lib/config.ts`.
 
 - [ ] **Step 1: Install the SDK**
 
@@ -111,7 +111,7 @@ Empty values — the file documents names, never secrets.
 
 ```
 # Google AI Studio (aistudio.google.com), not Google Cloud. A plain API key.
-GOOGLE_GENERATIVE_AI_API_KEY=
+GOOGLE_AI_API_KEY=
 # The model menu generation runs on. Changing it must not need a code edit.
 GEMINI_MODEL=gemini-3.7-flash
 ```
@@ -123,7 +123,7 @@ Inside `EnvSchema`, after `PARTNER_EMAIL`. The comment style matches the file: s
 ```ts
   // Google AI Studio, not the Cloud Agent Platform: express-mode keys are not
   // accepted by @ai-sdk/google. See the design document section 3.
-  GOOGLE_GENERATIVE_AI_API_KEY: z.string().min(1),
+  GOOGLE_AI_API_KEY: z.string().min(1),
   // Design section 3 chose gemini-3.7-flash. It lives here so the next model
   // is an environment change, not a deploy.
   GEMINI_MODEL: z.string().min(1).default("gemini-3.7-flash"),
@@ -131,7 +131,7 @@ Inside `EnvSchema`, after `PARTNER_EMAIL`. The comment style matches the file: s
 
 - [ ] **Step 4: Put a real key in `.env`**
 
-`GOOGLE_GENERATIVE_AI_API_KEY` from aistudio.google.com. Without it every command below fails at import time, because `lib/env.ts` throws on an invalid environment — which is the intended behaviour, not a bug to work around.
+`GOOGLE_AI_API_KEY` from aistudio.google.com. Without it every command below fails at import time, because `lib/env.ts` throws on an invalid environment — which is the intended behaviour, not a bug to work around.
 
 - [ ] **Step 5: Re-point the ESLint confinement rule**
 
@@ -624,7 +624,7 @@ Search that file for `Output` and for `experimental_output`. If the result prope
 ```ts
 import "server-only"
 
-import { google } from "@ai-sdk/google"
+import { createGoogleGenerativeAI } from "@ai-sdk/google"
 import { generateText, Output } from "ai"
 
 import { env } from "@/lib/env"
@@ -652,6 +652,11 @@ export class LlmError extends Error {
     this.name = "LlmError"
   }
 }
+
+// The SDK looks for GOOGLE_GENERATIVE_AI_API_KEY on its own. This project names
+// the variable GOOGLE_AI_API_KEY, so the provider is handed the key rather than
+// left to go looking for one it will not find.
+const google = createGoogleGenerativeAI({ apiKey: env.GOOGLE_AI_API_KEY })
 
 const TIMEOUT_MS = 60_000
 

@@ -48,10 +48,10 @@ const noDatabaseInternals = {
     "Import the shared client from @/lib/db. Only lib/db.ts may construct a Prisma client.",
 };
 
-const noAnthropicSdk = {
-  group: ["@anthropic-ai/sdk", "@anthropic-ai/sdk/*"],
+const noLlmSdk = {
+  group: ["ai", "@ai-sdk/*", "@ai-sdk/**"],
   message:
-    "Every Anthropic call goes through lib/services/llm.ts, so the provider stays replaceable.",
+    "Every LLM call goes through lib/services/llm.ts, so the provider stays replaceable.",
 };
 
 const noServerCode = {
@@ -90,7 +90,7 @@ const eslintConfig = defineConfig([
     rules: {
       "no-restricted-imports": restrictImports(
         noDatabaseInternals,
-        noAnthropicSdk,
+        noLlmSdk,
       ),
     },
   },
@@ -100,7 +100,7 @@ const eslintConfig = defineConfig([
     rules: {
       "no-restricted-imports": restrictImports(
         noDatabaseInternals,
-        noAnthropicSdk,
+        noLlmSdk,
         noServerCode,
       ),
     },
@@ -112,7 +112,7 @@ const eslintConfig = defineConfig([
     rules: {
       "no-restricted-imports": restrictImports(
         noDatabaseInternals,
-        noAnthropicSdk,
+        noLlmSdk,
         noFramework,
         noUpperLayers,
       ),
@@ -178,7 +178,7 @@ const eslintConfig = defineConfig([
     rules: {
       "no-restricted-imports": restrictImports(
         noDatabaseInternals,
-        noAnthropicSdk,
+        noLlmSdk,
         noFramework,
         noUpperLayers,
         noServerCode,
@@ -202,7 +202,7 @@ const eslintConfig = defineConfig([
     rules: {
       "no-restricted-imports": restrictImports(
         noDatabaseInternals,
-        noAnthropicSdk,
+        noLlmSdk,
         noFramework,
         noUpperLayers,
         noServerCode,
@@ -222,7 +222,7 @@ const eslintConfig = defineConfig([
   {
     files: ["lib/db.ts"],
     rules: {
-      "no-restricted-imports": restrictImports(noAnthropicSdk),
+      "no-restricted-imports": restrictImports(noLlmSdk),
     },
   },
 
