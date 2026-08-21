@@ -36,6 +36,13 @@ export const EnvSchema = z.object({
   // accepted by @ai-sdk/google. The SDK looks for GOOGLE_GENERATIVE_AI_API_KEY
   // by itself, so llm.ts passes this one in explicitly.
   GOOGLE_AI_API_KEY: z.string().min(1),
+  // Which Google endpoint the key belongs to. The two are not interchangeable:
+  // an Agent Platform key is refused by generativelanguage.googleapis.com with
+  // API_KEY_SERVICE_BLOCKED, and the SDK targets that host by default. Probe a
+  // key with `pwsh scripts/llm-probe.ps1` before changing this.
+  GOOGLE_AI_BASE_URL: z
+    .url()
+    .default("https://aiplatform.googleapis.com/v1/publishers/google"),
   // Design document 2026-08-21 section 3 chose gemini-3.7-flash. It lives here
   // so the next model is an environment change, not a deploy.
   GEMINI_MODEL: z.string().min(1).default("gemini-3.7-flash"),

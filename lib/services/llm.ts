@@ -45,11 +45,16 @@ export class LlmError extends Error {
   }
 }
 
-// The SDK looks for GOOGLE_GENERATIVE_AI_API_KEY on its own. This project names
-// the variable GOOGLE_AI_API_KEY, so the provider is handed the key rather than
-// left to go looking for one it will not find. The model is not read here: the
+// Two things the SDK would otherwise get wrong here. It looks for
+// GOOGLE_GENERATIVE_AI_API_KEY, which is not what this project calls the
+// variable; and it targets generativelanguage.googleapis.com, which is AI
+// Studio. This app's key belongs to the Cloud Agent Platform, and that host
+// refuses it outright — so both are passed in. The model is not read here: the
 // caller knows about the registry and this file deliberately does not.
-const google = createGoogleGenerativeAI({ apiKey: env.GOOGLE_AI_API_KEY })
+const google = createGoogleGenerativeAI({
+  apiKey: env.GOOGLE_AI_API_KEY,
+  baseURL: env.GOOGLE_AI_BASE_URL,
+})
 
 const TIMEOUT_MS = 60_000
 
