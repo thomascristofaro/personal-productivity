@@ -8,5 +8,5 @@ export const dynamic = "force-dynamic"
 
 export default function ShoppingPage() {
   const weekStart = weekStartFor(new Date())
-  redirect(`/spesa/${weekStart.toISOString().slice(0, 10)}`)
+  redirect(`/shopping/${weekStart.toISOString().slice(0, 10)}`)
 }

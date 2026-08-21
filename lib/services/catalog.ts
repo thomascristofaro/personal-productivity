@@ -101,7 +101,7 @@ export function isKnownAisle(aisle: string): boolean {
 }
 
 /**
- * Maps the `?tipo=` search param of the catalogue screen to a kind.
+ * Maps the `?kind=` search param of the catalogue screen to a kind.
  *
  * A switch and not a lookup object: an object literal inherits from
  * `Object.prototype`, so `KIND_BY_CHIP["constructor"]` would hand Prisma a
@@ -112,16 +112,16 @@ export function isKnownAisle(aisle: string): boolean {
  * The chip values are Italian because they are in the address bar the user
  * sees; the kinds are English because they are database values.
  *
- * @param tipo The raw search param, or undefined when no chip is chosen.
+ * @param kind The raw search param, or undefined when no chip is chosen.
  * @returns The kind to filter by, or undefined to filter by nothing.
  */
 export function kindFilterFor(
-  tipo: string | undefined
+  kind: string | undefined
 ): CatalogItemKind | undefined {
-  switch (tipo) {
-    case "ingredienti":
+  switch (kind) {
+    case "ingredients":
       return "INGREDIENT"
-    case "prodotti":
+    case "products":
       return "PRODUCT"
     default:
       return undefined

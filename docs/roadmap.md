@@ -118,7 +118,7 @@ to the overlay. `IngredientPicker` now controls its open state. The recipe form
 uses the same picker and gets the fix with it.
 
 Plan C's checklist found one more, now fixed: **the nav marked two entries as
-the current page.** `/spesa/storico` sits under `/spesa`, and the prefix test lit
+the current page.** `/shopping/history` sits under `/shopping`, and the prefix test lit
 both, so `aria-current="page"` stopped meaning "this page". It now picks the
 longest matching href.
 

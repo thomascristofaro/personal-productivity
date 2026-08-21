@@ -64,6 +64,6 @@ export const saveFunction: FormAction = async (_state, formData) => {
     return failure("Questa funzione non esiste più.", { values })
   }
 
-  revalidatePath(`/impostazioni/llm/${id.data}`)
+  revalidatePath(`/settings/llm/${id.data}`)
   return success("Impostazioni salvate.")
 }

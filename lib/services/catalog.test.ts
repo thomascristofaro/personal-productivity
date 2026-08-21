@@ -60,11 +60,11 @@ describe("isKnownAisle", () => {
 
 describe("kindFilterFor", () => {
   it("maps the ingredients chip to a kind", () => {
-    expect(kindFilterFor("ingredienti")).toBe("INGREDIENT")
+    expect(kindFilterFor("ingredients")).toBe("INGREDIENT")
   })
 
   it("maps the products chip to a kind", () => {
-    expect(kindFilterFor("prodotti")).toBe("PRODUCT")
+    expect(kindFilterFor("products")).toBe("PRODUCT")
   })
 
   it("filters nothing when no chip is chosen", () => {

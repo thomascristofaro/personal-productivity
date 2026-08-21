@@ -21,16 +21,16 @@ import { cn } from "@/lib/utils"
 // users think in, not alphabetical.
 const NAV_ITEMS = [
   { href: "/menu", label: "Menù" },
-  { href: "/spesa", label: "Spesa" },
+  { href: "/shopping", label: "Spesa" },
   { href: "/recipes", label: "Ricettario" },
-  { href: "/catalogo", label: "Catalogo" },
+  { href: "/catalog", label: "Catalogo" },
 ] as const
 
 // Appended only for the owner. Hiding a link is not access control — every page
-// and action under /impostazioni calls requireOwner — it only stops the partner
+// and action under /settings calls requireOwner — it only stops the partner
 // finding a door that would refuse her.
 const OWNER_ITEMS = [
-  { href: "/impostazioni/llm", label: "Impostazioni" },
+  { href: "/settings/llm", label: "Impostazioni" },
 ] as const
 
 // The bar and the panel share one row: same height, same padding, same theme
@@ -54,7 +54,7 @@ export function AppNav({
   const items = isOwner ? [...NAV_ITEMS, ...OWNER_ITEMS] : NAV_ITEMS
 
   // The longest matching href, not every matching one. Nothing in the menu
-  // needs it today — the entry for /spesa/storico was moved into the shopping
+  // needs it today — the entry for /shopping/history was moved into the shopping
   // header — but a plain prefix test lights every ancestor, and the moment two
   // entries nest again `aria-current="page"` stops meaning "this page".
   const activeHref = items.filter(

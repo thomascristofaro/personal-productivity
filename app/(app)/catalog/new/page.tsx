@@ -1,4 +1,4 @@
-import { saveCatalogItem } from "@/app/(app)/catalogo/actions"
+import { saveCatalogItem } from "@/app/(app)/catalog/actions"
 import { CatalogForm } from "@/components/catalog/catalog-form"
 import { DetailBody } from "@/components/page/page-body"
 import { PageHeader } from "@/components/page/page-header"
@@ -14,7 +14,7 @@ export default async function NewCatalogItemPage() {
     <DetailBody>
       <PageHeader
         title="Nuova voce"
-        back={{ href: "/catalogo", label: "Catalogo" }}
+        back={{ href: "/catalog", label: "Catalogo" }}
       />
       <CatalogForm
         action={saveCatalogItem}

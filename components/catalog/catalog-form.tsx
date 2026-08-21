@@ -50,7 +50,7 @@ export function CatalogForm({
   })
 
   return (
-    <PageForm form={form} cancelHref="/catalogo">
+    <PageForm form={form} cancelHref="/catalog">
       {values.originalName === undefined ? null : (
         <input type="hidden" name="originalName" value={values.originalName} />
       )}

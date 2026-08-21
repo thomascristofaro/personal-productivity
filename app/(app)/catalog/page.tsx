@@ -18,8 +18,8 @@ export const metadata = { title: "Catalogo" }
 
 const KIND_CHIPS = [
   { value: undefined, label: "Tutti" },
-  { value: "ingredienti", label: "Ingredienti" },
-  { value: "prodotti", label: "Prodotti" },
+  { value: "ingredients", label: "Ingredienti" },
+  { value: "products", label: "Prodotti" },
 ] as const
 
 const FOUND = {
@@ -32,35 +32,35 @@ export default async function CatalogPage({
   searchParams,
 }: {
   // Next resolves a repeated param to a string array, not a string.
-  searchParams: Promise<{ q?: string | string[]; tipo?: string | string[] }>
+  searchParams: Promise<{ q?: string | string[]; kind?: string | string[] }>
 }) {
-  const { q: rawQuery, tipo: rawTipo } = await searchParams
+  const { q: rawQuery, kind: rawKind } = await searchParams
   const q = firstOf(rawQuery)
-  const tipo = firstOf(rawTipo)
+  const kind = firstOf(rawKind)
   const isSearching = Boolean(q?.trim())
-  const items = await listCatalogItems(q, kindFilterFor(tipo))
+  const items = await listCatalogItems(q, kindFilterFor(kind))
 
   return (
     <ListBody>
       <PageHeader title="Catalogo">
-        <Button render={<Link href="/catalogo/new" />} nativeButton={false}>
+        <Button render={<Link href="/catalog/new" />} nativeButton={false}>
           Nuova
         </Button>
       </PageHeader>
 
       <Suspense>
         <SearchField
-          basePath="/catalogo"
+          basePath="/catalog"
           placeholder="Cerca una voce…"
           label="Cerca una voce"
         />
       </Suspense>
 
       <FilterChips
-        basePath="/catalogo"
-        param="tipo"
+        basePath="/catalog"
+        param="kind"
         chips={KIND_CHIPS}
-        active={tipo}
+        active={kind}
         label="Filtra per tipo"
         keep={{ q }}
       />
@@ -71,7 +71,7 @@ export default async function CatalogPage({
         renderItem={(item) => (
           <DataListRow
             key={item.name}
-            href={`/catalogo/${encodeURIComponent(item.name)}/edit`}
+            href={`/catalog/${encodeURIComponent(item.name)}/edit`}
             title={item.name}
           >
             {/* No badge for the kind. It was there, first coloured and then
@@ -92,7 +92,7 @@ export default async function CatalogPage({
         empty={
           isSearching ? (
             <EmptyState title="Nessuna voce con questo nome." />
-          ) : tipo !== undefined ? (
+          ) : kind !== undefined ? (
             // A third case, or filtering to a kind that has no entries reads as
             // an empty catalogue.
             <EmptyState title="Nessuna voce di questo tipo." />
@@ -102,7 +102,7 @@ export default async function CatalogPage({
               description="Aggiungi la prima voce."
             >
               <Button
-                render={<Link href="/catalogo/new" />}
+                render={<Link href="/catalog/new" />}
                 nativeButton={false}
               >
                 Nuova voce

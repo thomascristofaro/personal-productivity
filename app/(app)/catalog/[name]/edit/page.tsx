@@ -3,7 +3,7 @@ import { notFound } from "next/navigation"
 import {
   removeCatalogItem,
   saveCatalogItem,
-} from "@/app/(app)/catalogo/actions"
+} from "@/app/(app)/catalog/actions"
 import { CatalogForm } from "@/components/catalog/catalog-form"
 import { DetailBody } from "@/components/page/page-body"
 import { PageHeader } from "@/components/page/page-header"
@@ -39,7 +39,7 @@ export default async function EditCatalogItemPage({
     <DetailBody>
       <PageHeader
         title="Modifica voce"
-        back={{ href: "/catalogo", label: "Catalogo" }}
+        back={{ href: "/catalog", label: "Catalogo" }}
       />
 
       <CatalogForm

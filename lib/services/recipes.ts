@@ -28,7 +28,7 @@ const isRecordNotFoundError = (error: unknown) => hasPrismaCode(error, "P2025")
 // Creates whatever the recipe names and the catalogue lacks, so a save is never
 // refused over a name the user has already decided to use — an imported recipe
 // brings six new names out of nine. `altro` and no unit is what every new entry
-// starts as; /catalogo is where it gets corrected, and the recipe form marks the
+// starts as; /catalog is where it gets corrected, and the recipe form marks the
 // new ones before the save so a site's own typo can be caught first.
 //
 // createMany with skipDuplicates rather than read-then-write: two saves landing

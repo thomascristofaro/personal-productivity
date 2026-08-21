@@ -41,7 +41,7 @@ export default async function ExecutionsPage({
       <PageHeader title="Esecuzioni" subtitle="Le ultime venti chiamate">
         <Button
           variant="outline"
-          render={<Link href={`/impostazioni/llm/${id}`} />}
+          render={<Link href={`/settings/llm/${id}`} />}
           nativeButton={false}
         >
           Torna alla funzione
@@ -60,7 +60,7 @@ export default async function ExecutionsPage({
         renderItem={(run) => (
           <DataListRow
             key={run.id}
-            href={`/impostazioni/llm/${id}/esecuzioni/${run.id}`}
+            href={`/settings/llm/${id}/runs/${run.id}`}
             title={stampFormat.format(run.createdAt)}
           >
             {run.error === null ? (

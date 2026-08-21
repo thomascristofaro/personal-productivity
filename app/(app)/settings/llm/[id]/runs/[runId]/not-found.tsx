@@ -8,7 +8,7 @@ export default function NotFound() {
     <MessagePage title="Questa esecuzione non esiste più.">
       <Button
         variant="outline"
-        render={<Link href="/impostazioni/llm" />}
+        render={<Link href="/settings/llm" />}
         nativeButton={false}
       >
         Torna alle funzioni

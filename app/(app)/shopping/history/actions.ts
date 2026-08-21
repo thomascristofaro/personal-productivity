@@ -22,7 +22,7 @@ export const saveTotal: FormAction = async (_state, formData) => {
   await requireSession()
   await setPurchaseTotal(id.data, total.data)
 
-  revalidatePath("/spesa/storico")
-  revalidatePath(`/spesa/storico/${id.data}`)
+  revalidatePath("/shopping/history")
+  revalidatePath(`/shopping/history/${id.data}`)
   return success()
 }

@@ -81,7 +81,7 @@ export default async function MenuWeekPage({
         />
         <Button
           variant="outline"
-          render={<Link href={`/spesa/${iso(weekStart)}`} />}
+          render={<Link href={`/shopping/${iso(weekStart)}`} />}
           nativeButton={false}
         >
           Spesa
