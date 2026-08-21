@@ -26,6 +26,13 @@ const NAV_ITEMS = [
   { href: "/catalogo", label: "Catalogo" },
 ] as const
 
+// Appended only for the owner. Hiding a link is not access control — every page
+// and action under /impostazioni calls requireOwner — it only stops the partner
+// finding a door that would refuse her.
+const OWNER_ITEMS = [
+  { href: "/impostazioni/llm", label: "Impostazioni" },
+] as const
+
 // The bar and the panel share one row: same height, same padding, same theme
 // toggle, and the trigger swaps between the hamburger and the close. Opening
 // the menu then reads as the icon changing rather than the page moving.
@@ -34,15 +41,23 @@ const TRIGGER = "gap-2 px-2 text-base font-medium"
 
 // The name arrives as a prop: this is a client component, so it cannot read the
 // session itself. The layout above it does.
-export function AppNav({ userName }: { userName: string }) {
+export function AppNav({
+  userName,
+  isOwner = false,
+}: {
+  userName: string
+  isOwner?: boolean
+}) {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
+
+  const items = isOwner ? [...NAV_ITEMS, ...OWNER_ITEMS] : NAV_ITEMS
 
   // The longest matching href, not every matching one. Nothing in the menu
   // needs it today — the entry for /spesa/storico was moved into the shopping
   // header — but a plain prefix test lights every ancestor, and the moment two
   // entries nest again `aria-current="page"` stops meaning "this page".
-  const activeHref = NAV_ITEMS.filter(
+  const activeHref = items.filter(
     (item) => pathname === item.href || pathname.startsWith(`${item.href}/`)
   ).sort((a, b) => b.href.length - a.href.length)[0]?.href
 
@@ -86,7 +101,7 @@ export function AppNav({ userName }: { userName: string }) {
           <div>
             <p className="pb-4 text-xs text-muted-foreground">Menu</p>
             <ul className="flex flex-col">
-              {NAV_ITEMS.map((item) => {
+              {items.map((item) => {
                 const isActive = item.href === activeHref
 
                 return (

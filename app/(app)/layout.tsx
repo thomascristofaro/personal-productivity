@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import { AppNav } from "@/components/app-nav"
 import { Toaster } from "@/components/ui/sonner"
 import { getSession } from "@/lib/auth"
+import { isOwner } from "@/lib/auth/owner"
 import { db } from "@/lib/db"
 
 // This layout stays a server component: AppNav is a client component, but it
@@ -21,12 +22,15 @@ export default async function AppLayout({
 
   const user = await db.user.findUnique({
     where: { id: session.userId },
-    select: { name: true },
+    select: { name: true, email: true },
   })
 
   return (
     <>
-      <AppNav userName={user?.name ?? ""} />
+      <AppNav
+        userName={user?.name ?? ""}
+        isOwner={user !== null && isOwner(user.email)}
+      />
       <div className="mx-auto w-full max-w-2xl pr-[max(--spacing(4),env(safe-area-inset-right))] pb-[calc(--spacing(24)+env(safe-area-inset-bottom))] pl-[max(--spacing(4),env(safe-area-inset-left))]">
         {children}
       </div>
