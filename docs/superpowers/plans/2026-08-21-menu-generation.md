@@ -68,7 +68,7 @@ Never `--no-verify`.
 | `lib/services/menu-proposal.test.ts`   | covers mapping and rejection, with the LLM stubbed                  |
 | `lib/services/llm.ts`                  | the single boundary to the AI SDK — `proposeMenu` and nothing else  |
 | `lib/prompts/menu-proposal.ts`         | the default prompt, in a file of its own                            |
-| `components/menu/generate-button.tsx`  | the client button, its pending state and its error                  |
+| `components/menu/generate-button.tsx`  | the button, the waiting dialog and the failure dialog               |
 
 **Modified**
 
@@ -1081,15 +1081,33 @@ export async function generateWeek(weekStart: string) {
 
 Note the deliberate narrowness: this writes into an empty week. Overwriting slots the user filled by hand is not in scope — the button is only offered when the week is empty, which Step 3 enforces.
 
-- [ ] **Step 3: Write the button**
+- [ ] **Step 3: Check what `alert-dialog` actually exports**
 
-`components/menu/generate-button.tsx`. It is a client component because it owns a pending state and an error.
+`components/ui/alert-dialog.tsx` is already installed — **do not run `shadcn add`**. This installation is built on Base UI, so open the file and confirm the export names before writing against them. Step 4 assumes `AlertDialog`, `AlertDialogContent`, `AlertDialogHeader`, `AlertDialogTitle`, `AlertDialogDescription`, `AlertDialogFooter`, `AlertDialogAction`, `AlertDialogCancel`. If a name differs, follow the file, not this plan.
+
+While you are in there, find how dismissal is controlled. The waiting state below must **not** be dismissible: Escape or a click outside during a generation would leave the user staring at a grid that is about to change under them. If the component closes on Escape by default, pass whatever prop disables it.
+
+- [ ] **Step 4: Write the button and its dialog**
+
+`components/menu/generate-button.tsx`. A client component because it owns three states and a modal.
+
+The dialog is the point of this task. A generation takes several seconds — long enough that a button which merely greys out reads as an app that has hung. The dialog says what is happening, and it is the same surface that reports the failure, so the user never has to wonder which of the two occurred.
 
 ```tsx
 "use client"
 
 import { useState, useTransition } from "react"
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 
 type Props = {
@@ -1101,57 +1119,91 @@ export function GenerateButton({ weekStart, action }: Props) {
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
+  function generate() {
+    setError(null)
+    startTransition(async () => {
+      const result = await action(weekStart)
+      if (result?.error) setError(result.error)
+    })
+  }
+
   return (
-    <div>
-      <Button
-        type="button"
-        disabled={pending}
-        onClick={() =>
-          startTransition(async () => {
-            setError(null)
-            const result = await action(weekStart)
-            if (result?.error) setError(result.error)
-          })
-        }
-      >
-        {pending ? "Sto generando…" : "Genera il menù"}
+    <>
+      <Button type="button" disabled={pending} onClick={generate}>
+        Genera il menù
       </Button>
-      {error !== null && (
-        <p role="alert" className="mt-2 text-sm text-destructive">
-          {error}
-        </p>
-      )}
-    </div>
+
+      {/* One dialog, two states. On success neither is true and it closes by
+          itself, because the action has already revalidated the grid. */}
+      <AlertDialog open={pending || error !== null}>
+        <AlertDialogContent>
+          {pending ? (
+            <AlertDialogHeader>
+              <AlertDialogTitle>Sto preparando il menù…</AlertDialogTitle>
+              <AlertDialogDescription>
+                Sto scegliendo i piatti della settimana. Ci vuole qualche
+                secondo.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+          ) : (
+            <>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Non ce l&apos;ho fatta</AlertDialogTitle>
+                <AlertDialogDescription>{error}</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setError(null)}>
+                  Chiudi
+                </AlertDialogCancel>
+                <AlertDialogAction onClick={generate}>
+                  Riprova
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </>
+          )}
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }
 ```
 
-- [ ] **Step 4: Render it, but only on an empty week**
+Two things this deliberately does **not** do. There is no cancel button while it is generating: the server action cannot be called back, so a cancel would only lie about what it stopped. And the waiting state has no footer at all, which is what makes it visibly not-dismissible rather than dismissible-but-please-do-not.
+
+- [ ] **Step 5: Render it, but only on an empty week**
 
 In `app/(app)/menu/[weekStart]/page.tsx`, render `GenerateButton` only when every slot of the week is empty. The page already has the slots in hand from `getMenuWeek`; the condition is that none of them carries a `recipeId` or a `freeText`. Pass `generateWeek` as the `action` prop.
 
-- [ ] **Step 5: Verify**
+- [ ] **Step 6: Verify**
 
 Run: `pnpm verify`
 Expected: PASS.
 
-- [ ] **Step 6: Manual browser check, at 390px**
+- [ ] **Step 7: Run `web-design-guidelines` over the changed files**
+
+`CLAUDE.md`: UI work is not done until this skill has been run over the changed files and its findings addressed or explicitly dismissed. The files are `components/menu/generate-button.tsx` and `app/(app)/menu/[weekStart]/page.tsx`.
+
+Pay attention to what it says about the waiting state: a modal that appears without warning takes focus, and a screen reader user needs to be told what it is waiting for, not just that something opened.
+
+- [ ] **Step 8: Manual browser check, at 390px**
 
 No end-to-end tests in this project — a standing decision. Walk this by hand, or drive it through the `playwright` MCP server:
 
 1. Open a week with no slots filled. The button is there.
-2. Press it. It goes to "Sto generando…" and is not pressable twice.
-3. It comes back with the grid filled. **No dish appears twice in the week** — this is the check that matters.
-4. Open a slot and change the recipe. The edit sticks; the proposal was only a pre-fill.
-5. Reload the week. The button is gone, because the week is no longer empty.
-6. Break the key in `.env` (a character will do), restart `pnpm dev`, press the button on an empty week. An Italian error appears, the grid is untouched, and building the week by hand still works. **Put the key back.**
-7. Empty the recipe book in a scratch database, or point at one with no recipes: the button is not offered.
+2. Press it. **The dialog opens and says it is preparing the menu.** The button behind it is not reachable.
+3. Press Escape, and click outside the dialog. **Neither dismisses it** while it is generating.
+4. It closes by itself and the grid is filled. **No dish appears twice in the week** — this is the check that matters.
+5. Open a slot and change the recipe. The edit sticks; the proposal was only a pre-fill.
+6. Reload the week. The button is gone, because the week is no longer empty.
+7. Break the key in `.env` (a character will do), restart `pnpm dev`, press the button on an empty week. **The dialog switches to the failure state**, in Italian, with "Chiudi" and "Riprova". The grid is untouched and building the week by hand still works. Press "Chiudi": the dialog goes and the page is usable. **Put the key back.**
+8. With the key still broken, press "Riprova" instead: it returns to the waiting state and fails again, without stacking dialogs.
+9. Empty the recipe book in a scratch database, or point at one with no recipes: the button is not offered.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
 git add "app/(app)/menu/[weekStart]/actions.ts" "app/(app)/menu/[weekStart]/page.tsx" components/menu/generate-button.tsx
-git commit -m "feat: ask for a week, and keep the grid when the answer never comes"
+git commit -m "feat: ask for a week, and say so while the answer is on its way"
 ```
 
 ---
@@ -1197,7 +1249,7 @@ Checked against the spec after writing:
 - §4.3 code-enforced distinctness → Task 6, `resolveProposal`.
 - §5 criteria and their ranking → Task 4, the prompt.
 - §6 recency, eight-week window, calendar-as-cooked → Task 6, `loadCandidates`.
-- §8 failure handling → Task 7, plus checklist points 6 and 7.
+- §8 failure handling → Task 7: the action maps each error to an Italian message, the dialog shows it with a way out, and checklist points 7 to 9 walk the failures in a browser.
 - §9 testing → Tasks 2, 3, 6 test; Task 7 checks by hand.
 - §7 registry → **deliberately not in this plan.** Next one.
 
