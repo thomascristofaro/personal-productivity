@@ -1,13 +1,21 @@
 "use client"
 
+import { SelectField } from "@/components/page/fields"
 import { FormField } from "@/components/page/form-field"
 import { PageForm } from "@/components/page/page-form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useFormState } from "@/hooks/use-form-state"
 import type { FormAction } from "@/lib/form"
+import { REASONING_LEVELS } from "@/lib/schemas/llm-function"
 
-const FIELD_ORDER = ["prompt", "model", "temperature", "maxTokens"] as const
+const FIELD_ORDER = [
+  "prompt",
+  "model",
+  "reasoning",
+  "temperature",
+  "maxTokens",
+] as const
 
 type Props = {
   id: string
@@ -17,6 +25,7 @@ type Props = {
     model: string
     temperature: number
     maxTokens: number
+    reasoning: string
   }
 }
 
@@ -26,6 +35,7 @@ export function FunctionForm({ id, action, initial }: Props) {
     model: initial.model,
     temperature: String(initial.temperature),
     maxTokens: String(initial.maxTokens),
+    reasoning: initial.reasoning,
   })
 
   return (
@@ -54,6 +64,15 @@ export function FunctionForm({ id, action, initial }: Props) {
           spellCheck={false}
         />
       </FormField>
+
+      <SelectField
+        {...form.fieldProps("reasoning", { described: true })}
+        key={form.fieldKey("reasoning")}
+        label="Ragionamento"
+        description="Quanto il modello ragiona prima di rispondere. Scala dell'AI SDK, non di Google: vale anche cambiando fornitore."
+        error={form.errorOf("reasoning")}
+        options={REASONING_LEVELS}
+      />
 
       <FormField
         name="temperature"

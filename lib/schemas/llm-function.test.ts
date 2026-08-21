@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest"
 
-import { LlmFunctionInputSchema } from "./llm-function"
+import { LlmFunctionInputSchema, REASONING_LEVELS } from "./llm-function"
 
 const valid = {
   prompt: "Sei l'assistente che compone il menù.",
   model: "gemini-3.7-flash",
   temperature: 1,
   maxTokens: 4096,
+  reasoning: "provider-default",
 }
 
 describe("LlmFunctionInputSchema", () => {
@@ -51,6 +52,20 @@ describe("LlmFunctionInputSchema", () => {
     expect(
       LlmFunctionInputSchema.parse({ ...valid, prompt: "  ciao  " }).prompt
     ).toBe("ciao")
+  })
+
+  it("accepts every level of the AI SDK's scale", () => {
+    for (const level of Object.keys(REASONING_LEVELS)) {
+      expect(
+        LlmFunctionInputSchema.safeParse({ ...valid, reasoning: level }).success
+      ).toBe(true)
+    }
+  })
+
+  it("rejects a level outside it, so a stale form cannot write a bad value", () => {
+    expect(
+      LlmFunctionInputSchema.safeParse({ ...valid, reasoning: "turbo" }).success
+    ).toBe(false)
   })
 
   it("reports its errors in Italian", () => {

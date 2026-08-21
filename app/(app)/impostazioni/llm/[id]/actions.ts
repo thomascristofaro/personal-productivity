@@ -8,7 +8,13 @@ import { fieldErrorsFrom, valuesFrom } from "@/lib/form-errors"
 import { LlmFunctionInputSchema } from "@/lib/schemas/llm-function"
 import { updateFunction } from "@/lib/services/llm-registry"
 
-const FORM_FIELDS = ["prompt", "model", "temperature", "maxTokens"] as const
+const FORM_FIELDS = [
+  "prompt",
+  "model",
+  "reasoning",
+  "temperature",
+  "maxTokens",
+] as const
 
 // An empty numeric field arrives as "", which is not an absent value to Zod.
 function number(value: FormDataEntryValue | null) {
@@ -22,6 +28,7 @@ export const saveFunction: FormAction = async (_state, formData) => {
     model: formData.get("model"),
     temperature: number(formData.get("temperature")),
     maxTokens: number(formData.get("maxTokens")),
+    reasoning: formData.get("reasoning"),
   })
 
   const values = valuesFrom(formData, FORM_FIELDS)

@@ -57,6 +57,7 @@ export default async function LlmFunctionPage({
           model: fn.model,
           temperature: fn.temperature,
           maxTokens: fn.maxTokens,
+          reasoning: fn.reasoning,
         }}
       />
 

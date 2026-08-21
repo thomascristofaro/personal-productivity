@@ -7,7 +7,12 @@ import {
 } from "@/lib/prompts/menu-proposal"
 import type { MenuProposal } from "@/lib/schemas/menu-proposal"
 
-import { callMenuProposal, LlmError, type LlmProposalResult } from "./llm"
+import {
+  callMenuProposal,
+  LlmError,
+  type LlmProposalResult,
+  type ReasoningLevel,
+} from "./llm"
 import { getSettings, recordExecution } from "./llm-registry"
 import {
   buildCandidateLines,
@@ -168,6 +173,7 @@ export async function proposeMenu(
     model: env.GEMINI_MODEL,
     temperature: 1,
     maxTokens: 4096,
+    reasoning: "provider-default",
   })
 
   const request = buildMenuProposalRequest({
@@ -189,6 +195,7 @@ export async function proposeMenu(
       model: settings.model,
       temperature: settings.temperature,
       maxTokens: settings.maxTokens,
+      reasoning: settings.reasoning as ReasoningLevel,
     })
   } catch (error) {
     failure = error

@@ -7,6 +7,15 @@ import {
   type MenuProposal,
 } from "@/lib/schemas/menu-proposal"
 
+export type ReasoningLevel =
+  | "provider-default"
+  | "none"
+  | "minimal"
+  | "low"
+  | "medium"
+  | "high"
+  | "xhigh"
+
 export type LlmProposalInput = {
   instructions: string
   request: string
@@ -14,6 +23,11 @@ export type LlmProposalInput = {
   model: string
   temperature: number
   maxTokens: number
+  // The AI SDK's own scale, which it translates per provider — Google's
+  // thinkingLevel here, budget_tokens elsewhere. Deliberately not
+  // providerOptions.google.thinkingConfig: that would tie the registry to
+  // one vendor for a setting the core already abstracts.
+  reasoning: ReasoningLevel
 }
 
 export type LlmProposalResult = {
@@ -85,6 +99,7 @@ export async function callMenuProposal(
       prompt: input.request,
       temperature: input.temperature,
       maxOutputTokens: input.maxTokens,
+      reasoning: input.reasoning,
       output: Output.object({
         schema: menuProposalSchema(input.candidateCount),
       }),

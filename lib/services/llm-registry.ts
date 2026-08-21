@@ -10,6 +10,7 @@ export type LlmSettings = {
   model: string
   temperature: number
   maxTokens: number
+  reasoning: string
 }
 
 export type ExecutionRecord = {
@@ -51,7 +52,13 @@ export async function getSettings(
 ): Promise<LlmSettings> {
   const row = await db.llmFunction.findUnique({
     where: { id },
-    select: { prompt: true, model: true, temperature: true, maxTokens: true },
+    select: {
+      prompt: true,
+      model: true,
+      temperature: true,
+      maxTokens: true,
+      reasoning: true,
+    },
   })
 
   return row ?? fallback
