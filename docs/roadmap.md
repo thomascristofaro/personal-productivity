@@ -27,6 +27,8 @@ now.
 | [`2026-08-20-page-primitives`](superpowers/plans/2026-08-20-page-primitives.md), design in [`2026-08-20-page-primitives-design`](superpowers/specs/2026-08-20-page-primitives-design.md) | one form contract instead of six — `lib/form.ts`, `useFormState`, four typed fields and `FormField` — `FormDrawer` replacing four hand-rolled close-on-success effects, one page shell instead of thirteen `<main>`s, `ListSection`, `SearchField`, `FilterChips`, and `MessagePage` for the three "does not exist" screens. Two things a user sees: «Svuota» is gone from the slot drawer, and `/catalogo` gained its search field |
 | [`2026-08-21-menu-generation`](superpowers/plans/2026-08-21-menu-generation.md), design in [`2026-08-21-menu-generation-design`](superpowers/specs/2026-08-21-menu-generation-design.md) | the LLM half of the menu: `lib/services/llm.ts` — the only file that may import an SDK — `proposeMenu`, candidates as numbered lines the model answers with integers, recency derived from past `MenuSlot` rows, and a waiting dialog that turns into the failure. Runs on **Google Gemini**, not Anthropic                                                                                                                         |
 
+| [`2026-08-21-llm-registry`](superpowers/plans/2026-08-21-llm-registry.md) | `LlmFunction` and `LlmExecution`, `requireOwner()` over `OWNER_EMAIL`, the prompt moving into the database with `lib/prompts/menu-proposal.ts` as the fallback, and the four owner-only screens under `/impostazioni/llm`. **Editing that prompt file changes nothing on a seeded database** |
+
 ## In flight
 
 **The recipe import**, on the branch `feat/recipe-import` —
@@ -254,24 +256,13 @@ Three things, on the owner's call, none of them planned in a document:
 
 In dependency order. Each needs its own plan; none has one yet.
 
-### 1. The LLM function registry — 2026-08-21 design §7
-
-The plan is written:
-[`2026-08-21-llm-registry`](superpowers/plans/2026-08-21-llm-registry.md). Two
-tables, `requireOwner()` on `OWNER_EMAIL`, the prompt moving into the database
-with the file staying as the fallback, and four owner-only screens under
-`/impostazioni/llm`.
-
-It depends on menu generation being merged: it modifies `lib/services/llm.ts`,
-`lib/services/menu-proposal.ts` and `lib/prompts/menu-proposal.ts`.
-
-### 2. Regenerating one slot or one day — spec §6.2
+### 1. Regenerating one slot or one day — spec §6.2
 
 **Deliberately left out** of menu generation, not forgotten. The week is the
 unit that shipped; a slot-level call is the same call with a different candidate
 set and one slot of output. Do not record it as debt.
 
-### 3. Recipe import — nothing left that needs an LLM
+### 2. Recipe import — nothing left that needs an LLM
 
 The import **shipped in #19** and works from JSON-LD alone. The owner excluded
 the LLM fallback on 2026-08-21: it works well enough as it is, so
@@ -282,7 +273,7 @@ the LLM fallback on 2026-08-21: it works well enough as it is, so
 still called by the import, so the note that once protected them from being
 deleted as dead code no longer applies.
 
-### 4. PWA and deployment — spec §9, §10
+### 3. PWA and deployment — spec §9, §10
 
 **The manifest shipped on 2026-08-16**, with `app/manifest.ts` and icons drawn by
 `ImageResponse` in `app/icons/[icon]/route.tsx`. What is left here is the
@@ -319,7 +310,7 @@ abilitato." The message points at `disableSignUp`, which is not what happened �
 the account _is_ allowed, the link is what was refused. The seed now sets the
 flag; rows created before it need a one-off `UPDATE`.
 
-### 5. Continuous integration on pull requests
+### 4. Continuous integration on pull requests
 
 Outside the dependency chain above — it blocks nothing and nothing blocks it.
 
