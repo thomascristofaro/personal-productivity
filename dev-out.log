@@ -1,0 +1,19 @@
+▲ Next.js 16.2.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.1.15:3000
+- Environments: .env
+✓ Ready in 1477ms
+
+○ Compiling /menu/[weekStart] ...
+ GET /menu/2026-09-07 200 in 14.0s (next.js: 11.6s, proxy.ts: 182ms, application-code: 2.2s)
+ GET /icons/icon-192.png 200 in 1912ms (next.js: 1589ms, proxy.ts: 12ms, generate-params: 992ms, application-code: 312ms)
+ POST /menu/2026-09-07 200 in 575ms (next.js: 145ms, proxy.ts: 8ms, application-code: 422ms)
+  └─ ƒ generateWeek("2026-09-07") in 396ms app/(app)/menu/[weekStart]/actions.ts
+✓ Compiled in 191ms
+ GET /menu/2026-09-07 200 in 642ms (next.js: 248ms, proxy.ts: 59ms, application-code: 334ms)
+ GET /menu/2026-09-07 200 in 162ms (next.js: 43ms, proxy.ts: 12ms, application-code: 107ms)
+ GET /icons/icon-192.png 200 in 63ms (next.js: 35ms, proxy.ts: 6ms, generate-params: 11ms, application-code: 22ms)
+✓ Compiled in 160ms
+ GET /menu/2026-09-07 200 in 488ms (next.js: 160ms, proxy.ts: 54ms, application-code: 274ms)
+ GET /menu/2026-09-07 200 in 136ms (next.js: 9ms, proxy.ts: 18ms, application-code: 109ms)
+ GET /icons/icon-192.png 200 in 64ms (next.js: 35ms, proxy.ts: 7ms, generate-params: 14ms, application-code: 21ms)

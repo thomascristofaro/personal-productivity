@@ -204,7 +204,12 @@ export async function proposeMenu(
     outputTokens: result?.outputTokens ?? null,
     durationMs: Date.now() - startedAt,
     output: result?.raw ?? null,
-    error: failure instanceof Error ? failure.message : null,
+    error:
+      failure instanceof LlmError
+        ? failure.detail
+        : failure instanceof Error
+          ? failure.message
+          : null,
   }).catch(() => {})
 
   if (failure !== undefined) throw failure

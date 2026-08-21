@@ -27,9 +27,21 @@ export type LlmProposalResult = {
 
 /** The model was unreachable, too slow, or answered something unusable. */
 export class LlmError extends Error {
+  /**
+   * What actually went wrong, for the execution history.
+   *
+   * `message` is shown to a user and says nothing useful on purpose. Recording
+   * that instead of this made the first real failure — an API key without
+   * `generativelanguage.googleapis.com` enabled — indistinguishable from a
+   * timeout, which defeats the point of keeping a history at all.
+   */
+  readonly detail: string
+
   constructor(message: string, options?: { cause?: unknown }) {
     super(message, options)
     this.name = "LlmError"
+    this.detail =
+      options?.cause instanceof Error ? options.cause.message : message
   }
 }
 
