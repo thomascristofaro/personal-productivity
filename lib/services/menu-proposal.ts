@@ -1,12 +1,14 @@
 import { HOUSEHOLD_SERVINGS, RECENCY_WINDOW_WEEKS } from "@/lib/config"
 import { db } from "@/lib/db"
+import { env } from "@/lib/env"
 import {
   buildMenuProposalRequest,
   MENU_PROPOSAL_PROMPT,
 } from "@/lib/prompts/menu-proposal"
 import type { MenuProposal } from "@/lib/schemas/menu-proposal"
 
-import { callMenuProposal, LlmError } from "./llm"
+import { callMenuProposal, LlmError, type LlmProposalResult } from "./llm"
+import { getSettings, recordExecution } from "./llm-registry"
 import {
   buildCandidateLines,
   indexCandidates,
@@ -36,6 +38,9 @@ export class NoCandidatesError extends Error {
 }
 
 const MS_PER_DAY = 86_400_000
+
+/** The registry row this service reads its prompt and model from. */
+const FUNCTION_ID = "menu-proposal"
 
 /**
  * Turns the model's integer answer into slots, refusing anything that breaks
@@ -156,18 +161,55 @@ export async function proposeMenu(
     timeZone: "UTC",
   }).format(weekStart)
 
-  const { proposal } = await callMenuProposal({
-    instructions: MENU_PROPOSAL_PROMPT,
-    request: buildMenuProposalRequest({
-      candidates: buildCandidateLines(candidates),
-      month,
-      servings: HOUSEHOLD_SERVINGS,
-      filled: "Tutti gli slot sono liberi.",
-    }),
-    candidateCount: index.count,
+  // The file is the fallback, not a leftover: an unseeded table must not take
+  // generation down — design document 2026-08-21 section 7.2.
+  const settings = await getSettings(FUNCTION_ID, {
+    prompt: MENU_PROPOSAL_PROMPT,
+    model: env.GEMINI_MODEL,
+    temperature: 1,
+    maxTokens: 4096,
   })
 
-  return resolveProposal(proposal, index.byNumber)
+  const request = buildMenuProposalRequest({
+    candidates: buildCandidateLines(candidates),
+    month,
+    servings: HOUSEHOLD_SERVINGS,
+    filled: "Tutti gli slot sono liberi.",
+  })
+
+  const startedAt = Date.now()
+  let result: LlmProposalResult | undefined
+  let failure: unknown
+
+  try {
+    result = await callMenuProposal({
+      instructions: settings.prompt,
+      request,
+      candidateCount: index.count,
+      model: settings.model,
+      temperature: settings.temperature,
+      maxTokens: settings.maxTokens,
+    })
+  } catch (error) {
+    failure = error
+  }
+
+  // Bookkeeping must never fail a generation: history is diagnostics, and
+  // losing a row must not lose a menu.
+  await recordExecution({
+    functionId: FUNCTION_ID,
+    prompt: settings.prompt,
+    model: settings.model,
+    inputTokens: result?.inputTokens ?? null,
+    outputTokens: result?.outputTokens ?? null,
+    durationMs: Date.now() - startedAt,
+    output: result?.raw ?? null,
+    error: failure instanceof Error ? failure.message : null,
+  }).catch(() => {})
+
+  if (failure !== undefined) throw failure
+
+  return resolveProposal(result!.proposal, index.byNumber)
 }
 
 export { LlmError }

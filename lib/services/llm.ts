@@ -11,12 +11,18 @@ export type LlmProposalInput = {
   instructions: string
   request: string
   candidateCount: number
+  model: string
+  temperature: number
+  maxTokens: number
 }
 
 export type LlmProposalResult = {
   proposal: MenuProposal
   inputTokens: number
   outputTokens: number
+  // What the model actually said. By the time it is parsed this is gone, and
+  // it is what the execution history stores.
+  raw: string
 }
 
 /** The model was unreachable, too slow, or answered something unusable. */
@@ -29,7 +35,8 @@ export class LlmError extends Error {
 
 // The SDK looks for GOOGLE_GENERATIVE_AI_API_KEY on its own. This project names
 // the variable GOOGLE_AI_API_KEY, so the provider is handed the key rather than
-// left to go looking for one it will not find.
+// left to go looking for one it will not find. The model is not read here: the
+// caller knows about the registry and this file deliberately does not.
 const google = createGoogleGenerativeAI({ apiKey: env.GOOGLE_AI_API_KEY })
 
 const TIMEOUT_MS = 60_000
@@ -56,9 +63,11 @@ export async function callMenuProposal(
 ): Promise<LlmProposalResult> {
   try {
     const result = await generateText({
-      model: google(env.GEMINI_MODEL),
+      model: google(input.model),
       system: input.instructions,
       prompt: input.request,
+      temperature: input.temperature,
+      maxOutputTokens: input.maxTokens,
       output: Output.object({
         schema: menuProposalSchema(input.candidateCount),
       }),
@@ -69,6 +78,7 @@ export async function callMenuProposal(
       proposal: result.output,
       inputTokens: result.usage.inputTokens ?? 0,
       outputTokens: result.usage.outputTokens ?? 0,
+      raw: result.text,
     }
   } catch (cause) {
     throw new LlmError("La generazione del menù non è riuscita.", { cause })
