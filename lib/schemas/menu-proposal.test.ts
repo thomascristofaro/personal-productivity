@@ -57,6 +57,34 @@ describe("menuProposalSchema", () => {
     expect(parsed.success).toBe(false)
   })
 
+  it("rejects two slots addressing the same day and meal", () => {
+    // Not a duplicate recipe, so resolveProposal would not catch it: the second
+    // write would overwrite the first and the week would be one meal short.
+    const parsed = menuProposalSchema(30).safeParse({
+      slots: [slot(2, "LUNCH", 1), slot(2, "LUNCH", 2)],
+    })
+
+    expect(parsed.success).toBe(false)
+  })
+
+  it("accepts both meals of one day, which are two cells", () => {
+    const parsed = menuProposalSchema(30).safeParse({
+      slots: [slot(2, "LUNCH", 1), slot(2, "DINNER", 2)],
+    })
+
+    expect(parsed.success).toBe(true)
+  })
+
+  it("rejects more slots than the week has cells", () => {
+    const slots = Array.from({ length: 15 }, (_, i) => ({
+      day: i % 7,
+      meal: i < 7 ? ("LUNCH" as const) : ("DINNER" as const),
+      candidate: i + 1,
+    }))
+
+    expect(menuProposalSchema(30).safeParse({ slots }).success).toBe(false)
+  })
+
   it("rejects a meal that is not one of the two", () => {
     const parsed = menuProposalSchema(30).safeParse({
       slots: [{ day: 0, meal: "BRUNCH", candidate: 1 }],

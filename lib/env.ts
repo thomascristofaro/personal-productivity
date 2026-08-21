@@ -32,9 +32,10 @@ export const EnvSchema = z.object({
   // disabled, so this pair is exactly the set of people who can sign in.
   OWNER_EMAIL: z.email(),
   PARTNER_EMAIL: z.email(),
-  // Google AI Studio, not the Cloud Agent Platform: express-mode keys are not
-  // accepted by @ai-sdk/google. The SDK looks for GOOGLE_GENERATIVE_AI_API_KEY
-  // by itself, so llm.ts passes this one in explicitly.
+  // From the Google Cloud Agent Platform, not AI Studio — see
+  // GOOGLE_AI_BASE_URL below, which is the host this key is valid against. The
+  // SDK looks for GOOGLE_GENERATIVE_AI_API_KEY by itself, so llm.ts passes
+  // this one in explicitly.
   GOOGLE_AI_API_KEY: z.string().min(1),
   // Which Google endpoint the key belongs to. The two are not interchangeable:
   // an Agent Platform key is refused by generativelanguage.googleapis.com with

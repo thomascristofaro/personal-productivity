@@ -1,12 +1,20 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import { z } from "zod"
 
 import { requireOwner } from "@/lib/auth/owner"
 import { failure, success, type FormAction } from "@/lib/form"
 import { fieldErrorsFrom, valuesFrom } from "@/lib/form-errors"
 import { LlmFunctionInputSchema } from "@/lib/schemas/llm-function"
 import { updateFunction } from "@/lib/services/llm-registry"
+
+// The function id is a hidden field, so it arrives from the network like any
+// other. It reaches db.update and revalidatePath — a cache key — so it is
+// validated rather than trusted, exactly as saveSlot validates its address.
+const FunctionIdSchema = z
+  .string()
+  .regex(/^[a-z0-9-]{1,64}$/, "Questa funzione non esiste.")
 
 const FORM_FIELDS = [
   "prompt",
@@ -31,7 +39,12 @@ export const saveFunction: FormAction = async (_state, formData) => {
     reasoning: formData.get("reasoning"),
   })
 
+  const id = FunctionIdSchema.safeParse(formData.get("id"))
   const values = valuesFrom(formData, FORM_FIELDS)
+
+  if (!id.success) {
+    return failure("Questa funzione non esiste.", { values })
+  }
 
   if (!parsed.success) {
     return failure("Controlla i campi segnalati.", {
@@ -44,9 +57,13 @@ export const saveFunction: FormAction = async (_state, formData) => {
   // requireOwner does not protect this: an action is a public endpoint.
   await requireOwner()
 
-  const id = String(formData.get("id"))
-  await updateFunction(id, parsed.data)
+  try {
+    await updateFunction(id.data, parsed.data)
+  } catch {
+    // The row went away between the page load and the save.
+    return failure("Questa funzione non esiste più.", { values })
+  }
 
-  revalidatePath(`/impostazioni/llm/${id}`)
+  revalidatePath(`/impostazioni/llm/${id.data}`)
   return success("Impostazioni salvate.")
 }

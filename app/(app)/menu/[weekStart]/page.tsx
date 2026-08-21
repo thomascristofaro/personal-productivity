@@ -55,11 +55,12 @@ export default async function MenuWeekPage({
     dayFormat.format(dateForDay(weekStart, day))
   )
 
-  // Generating writes into the slots, so it is offered only where there is
-  // nothing to overwrite — design document 2026-08-21 section 8.
-  const isEmptyWeek = slots.every(
-    (slot) => slot.recipeId === null && slot.freeText === null
-  )
+  // Generating replaces the week, so the button asks first when there is
+  // something to lose. The count is what the confirmation names; the server
+  // re-reads it regardless, because a hidden or disabled button guards nothing.
+  const filledSlots = slots.filter(
+    (slot) => slot.recipeId !== null || slot.freeText !== null
+  ).length
 
   const isCurrentWeek = iso(weekStartFor(new Date())) === iso(weekStart)
   const todayIndex = isCurrentWeek ? dayIndexFor(new Date()) : -1
@@ -73,9 +74,11 @@ export default async function MenuWeekPage({
   return (
     <ListBody>
       <PageHeader title="Menù" subtitle={range}>
-        {isEmptyWeek && (
-          <GenerateButton weekStart={iso(weekStart)} action={generateWeek} />
-        )}
+        <GenerateButton
+          weekStart={iso(weekStart)}
+          filledSlots={filledSlots}
+          action={generateWeek}
+        />
         <Button
           variant="outline"
           render={<Link href={`/spesa/${iso(weekStart)}`} />}

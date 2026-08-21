@@ -16,41 +16,73 @@ import { Button } from "@/components/ui/button"
 
 type Props = {
   weekStart: string
-  action: (weekStart: string) => Promise<{ error: string } | void>
+  // How many slots already hold something. Zero means generating overwrites
+  // nothing and can go straight ahead.
+  filledSlots: number
+  action: (
+    weekStart: string,
+    overwrite?: boolean
+  ) => Promise<{ error: string } | void>
 }
 
-export function GenerateButton({ weekStart, action }: Props) {
+type Stage = "idle" | "confirming" | "error"
+
+export function GenerateButton({ weekStart, filledSlots, action }: Props) {
   const [pending, startTransition] = useTransition()
+  const [stage, setStage] = useState<Stage>("idle")
   const [error, setError] = useState<string | null>(null)
 
-  function generate() {
+  function run(overwrite: boolean) {
+    setStage("idle")
     setError(null)
     startTransition(async () => {
-      const result = await action(weekStart)
-      if (result?.error) setError(result.error)
+      try {
+        const result = await action(weekStart, overwrite)
+        if (result?.error) {
+          setError(result.error)
+          setStage("error")
+        }
+      } catch {
+        // Without this the transition rejects, nothing is shown, and the
+        // waiting dialog simply vanishes — the one outcome this screen exists
+        // to prevent.
+        setError("Qualcosa è andato storto. Riprova.")
+        setStage("error")
+      }
     })
   }
 
+  function start() {
+    if (filledSlots > 0) {
+      setStage("confirming")
+      return
+    }
+    run(false)
+  }
+
+  const open = pending || stage !== "idle"
+
   return (
     <>
-      <Button type="button" disabled={pending} onClick={generate}>
+      <Button type="button" disabled={pending} onClick={start}>
         Genera il menù
       </Button>
 
-      {/* One dialog, two states. On success neither is true and it closes by
-          itself, because the action has already revalidated the grid. */}
       <AlertDialog
-        open={pending || error !== null}
-        onOpenChange={(open) => {
+        open={open}
+        onOpenChange={(next) => {
           // Dismissal is refused while the call is in flight: closing it would
           // leave the grid about to change under whoever dismissed it.
-          if (!open && !pending) setError(null)
+          if (!next && !pending) {
+            setStage("idle")
+            setError(null)
+          }
         }}
       >
-        {/* Keyed on the state: without a remount the dialog is already open
-            when waiting turns into failure, and a screen reader announces
-            nothing — the one transition that most needs announcing. */}
-        <AlertDialogContent key={pending ? "pending" : "error"}>
+        {/* Keyed on the stage: without a remount the dialog is already open
+            when one state turns into another, and a screen reader announces
+            nothing — the transitions that most need announcing. */}
+        <AlertDialogContent key={pending ? "pending" : stage}>
           {pending ? (
             <AlertDialogHeader>
               <AlertDialogTitle>Sto preparando il menù…</AlertDialogTitle>
@@ -59,6 +91,25 @@ export function GenerateButton({ weekStart, action }: Props) {
                 secondo.
               </AlertDialogDescription>
             </AlertDialogHeader>
+          ) : stage === "confirming" ? (
+            <>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Sovrascrivo la settimana?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {filledSlots === 1
+                    ? "C’è già un pasto in questa settimana e verrà sostituito."
+                    : `Ci sono già ${filledSlots} pasti in questa settimana e verranno sostituiti.`}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setStage("idle")}>
+                  Annulla
+                </AlertDialogCancel>
+                <AlertDialogAction onClick={() => run(true)}>
+                  Genera lo stesso
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </>
           ) : (
             <>
               <AlertDialogHeader>
@@ -66,10 +117,10 @@ export function GenerateButton({ weekStart, action }: Props) {
                 <AlertDialogDescription>{error}</AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => setError(null)}>
+                <AlertDialogCancel onClick={() => setStage("idle")}>
                   Chiudi
                 </AlertDialogCancel>
-                <AlertDialogAction onClick={generate}>
+                <AlertDialogAction onClick={() => run(filledSlots > 0)}>
                   Riprova
                 </AlertDialogAction>
               </AlertDialogFooter>

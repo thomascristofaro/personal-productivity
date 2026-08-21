@@ -157,9 +157,13 @@ export async function listExecutions(functionId: string) {
 /**
  * One execution, with the prompt and the output it carried.
  *
+ * Scoped to its function: the id alone would render one function's run under
+ * another function's route instead of answering 404.
+ *
+ * @param functionId The function the execution must belong to.
  * @param runId The execution id.
- * @returns The row, or null.
+ * @returns The row, or null when it does not exist or belongs elsewhere.
  */
-export async function getExecution(runId: string) {
-  return db.llmExecution.findUnique({ where: { id: runId } })
+export async function getExecution(functionId: string, runId: string) {
+  return db.llmExecution.findFirst({ where: { id: runId, functionId } })
 }

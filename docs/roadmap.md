@@ -26,8 +26,7 @@ now.
 | [`2026-08-18-shopping-done`](superpowers/plans/2026-08-18-shopping-done.md)                                                                                                              | `Purchase` and `PurchaseItem`, the bar at the till, `/spesa/storico`, `lib/money.ts`, and the aggregator subtracting what has already been bought                                                                                                                                                                                                                                                                                   |
 | [`2026-08-20-page-primitives`](superpowers/plans/2026-08-20-page-primitives.md), design in [`2026-08-20-page-primitives-design`](superpowers/specs/2026-08-20-page-primitives-design.md) | one form contract instead of six — `lib/form.ts`, `useFormState`, four typed fields and `FormField` — `FormDrawer` replacing four hand-rolled close-on-success effects, one page shell instead of thirteen `<main>`s, `ListSection`, `SearchField`, `FilterChips`, and `MessagePage` for the three "does not exist" screens. Two things a user sees: «Svuota» is gone from the slot drawer, and `/catalogo` gained its search field |
 | [`2026-08-21-menu-generation`](superpowers/plans/2026-08-21-menu-generation.md), design in [`2026-08-21-menu-generation-design`](superpowers/specs/2026-08-21-menu-generation-design.md) | the LLM half of the menu: `lib/services/llm.ts` — the only file that may import an SDK — `proposeMenu`, candidates as numbered lines the model answers with integers, recency derived from past `MenuSlot` rows, and a waiting dialog that turns into the failure. Runs on **Google Gemini**, not Anthropic                                                                                                                         |
-
-| [`2026-08-21-llm-registry`](superpowers/plans/2026-08-21-llm-registry.md) | `LlmFunction` and `LlmExecution`, `requireOwner()` over `OWNER_EMAIL`, the prompt moving into the database with `lib/prompts/menu-proposal.ts` as the fallback, and the four owner-only screens under `/impostazioni/llm`. **Editing that prompt file changes nothing on a seeded database** |
+| [`2026-08-21-llm-registry`](superpowers/plans/2026-08-21-llm-registry.md)                                                                                                                | `LlmFunction` and `LlmExecution`, `requireOwner()` over `OWNER_EMAIL`, the prompt moving into the database with `lib/prompts/menu-proposal.ts` as the fallback, and the four owner-only screens under `/impostazioni/llm`. **Editing that prompt file changes nothing on a seeded database**                                                                                                                                        |
 
 ## In flight
 
@@ -371,10 +370,14 @@ or `docs/conventions/` as it was decided.
   above exists. Do not reintroduce a hook to close that gap — it is the same
   automatic-at-commit behaviour that was rejected.
 - **The LLM is Google Gemini, not Anthropic — 2026-08-21.** Through the Vercel
-  AI SDK, with a plain AI Studio key in `GOOGLE_AI_API_KEY`. That variable is
-  deliberately **not** the `GOOGLE_GENERATIVE_AI_API_KEY` the SDK looks for by
-  itself, so `llm.ts` hands the key to the provider rather than letting it
-  search. The design of
+  AI SDK, on the **Cloud Agent Platform** and not AI Studio: the key in
+  `GOOGLE_AI_API_KEY` is refused by `generativelanguage.googleapis.com` with
+  `API_KEY_SERVICE_BLOCKED`, so `GOOGLE_AI_BASE_URL` points at
+  `aiplatform.googleapis.com` and `llm.ts` hands both to the provider — the
+  variable is also deliberately **not** the `GOOGLE_GENERATIVE_AI_API_KEY` the
+  SDK would look for by itself. `pwsh scripts/llm-probe.ps1` says which host a
+  key can actually reach, and the two failures look identical from the app. The
+  design of
   [`2026-08-21`](superpowers/specs/2026-08-21-menu-generation-design.md) §2
   amends three decisions of the parent spec — provider, prompts leaving the
   filesystem, and the cooldown ceasing to be a filter. Read that table before

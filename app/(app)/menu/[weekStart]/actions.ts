@@ -17,7 +17,12 @@ import {
   NoCandidatesError,
   proposeMenu,
 } from "@/lib/services/menu-proposal"
-import { setSlot, UnknownRecipeError } from "@/lib/services/menus"
+import {
+  isWeekEmpty,
+  replaceWeekSlots,
+  setSlot,
+  UnknownRecipeError,
+} from "@/lib/services/menus"
 
 const iso = (date: Date) => date.toISOString().slice(0, 10)
 
@@ -90,31 +95,35 @@ export const saveSlot: FormAction = async (_state, formData) => {
 }
 
 /**
- * Fills an empty week with a proposal.
+ * Fills a week with a generated proposal.
  *
  * Not a `FormAction`: it is invoked from a button rather than a form, so it
- * takes the week directly and answers with a message or nothing. The write is
- * safe because the caller only offers it on a week where every slot is empty —
- * there is nothing here to overwrite.
+ * takes its arguments directly and answers with a message or nothing.
+ *
+ * `overwrite` is the caller stating intent, not the caller being trusted: the
+ * week's emptiness is re-read here, because the page hides the button on a
+ * filled week and a hidden button protects nothing. Without the flag a filled
+ * week is refused and the caller is expected to ask the user first.
  */
 export async function generateWeek(
-  weekStart: string
+  weekStart: string,
+  overwrite = false
 ): Promise<{ error: string } | void> {
   const parsed = WeekStartSchema.safeParse(weekStart)
   if (!parsed.success) return { error: "Questa settimana non esiste." }
 
   await requireSession()
 
+  if (!overwrite && !(await isWeekEmpty(parsed.data))) {
+    return { error: "Questa settimana ha già dei pasti. Ricarica la pagina." }
+  }
+
   try {
     const slots = await proposeMenu(parsed.data)
 
-    for (const slot of slots) {
-      await setSlot(parsed.data, slot.day, slot.meal, {
-        recipeId: slot.recipeId,
-        freeText: null,
-        servings: null,
-      })
-    }
+    // One transaction rather than fourteen writes: a failure halfway would
+    // leave a week that is neither the old one nor the new one.
+    await replaceWeekSlots(parsed.data, slots)
   } catch (error) {
     if (error instanceof NoCandidatesError) {
       return { error: "Aggiungi qualche ricetta prima di generare un menù." }
@@ -124,6 +133,9 @@ export async function generateWeek(
     }
     if (error instanceof LlmError) {
       return { error: "Non sono riuscito a generare il menù. Riprova." }
+    }
+    if (error instanceof UnknownRecipeError) {
+      return { error: "Una ricetta è stata eliminata. Riprova." }
     }
     throw error
   }

@@ -204,3 +204,70 @@ export async function clearSlot(
     }),
   ])
 }
+
+/**
+ * Replaces a whole week's slots in one transaction.
+ *
+ * Written for the generated proposal, which arrives as fourteen slots at once.
+ * Fourteen separate `setSlot` calls would not be atomic, and a failure halfway
+ * leaves a half-filled week — which the caller then cannot tell apart from a
+ * week somebody built by hand.
+ *
+ * Every existing slot of the week is removed first, including free-text ones:
+ * a proposal replaces the week rather than merging into it, and the caller is
+ * responsible for having asked before calling this.
+ *
+ * @param weekStart The Monday naming the week, at UTC midnight.
+ * @param slots The slots to write; an empty array clears the week.
+ * @returns Nothing.
+ * @throws UnknownRecipeError When a recipe was deleted between the proposal and the write.
+ */
+export async function replaceWeekSlots(
+  weekStart: Date,
+  slots: readonly { day: number; meal: Meal; recipeId: string }[]
+): Promise<void> {
+  const menu = await db.menu.upsert({
+    where: { weekStart },
+    create: { weekStart },
+    update: { slotsUpdatedAt: new Date() },
+    select: { id: true },
+  })
+
+  try {
+    await db.$transaction([
+      db.menuSlot.deleteMany({ where: { menuId: menu.id } }),
+      db.menuSlot.createMany({
+        data: slots.map((slot) => ({
+          menuId: menu.id,
+          day: slot.day,
+          meal: slot.meal,
+          recipeId: slot.recipeId,
+        })),
+      }),
+    ])
+  } catch (error) {
+    if (isForeignKeyError(error)) throw new UnknownRecipeError()
+    throw error
+  }
+}
+
+/**
+ * Whether the week holds nothing at all.
+ *
+ * Read on the server before a generation overwrites it: the page hides the
+ * button on a filled week, but a server action is a public endpoint and a
+ * hidden button is not a guard.
+ *
+ * @param weekStart The Monday naming the week, at UTC midnight.
+ * @returns True when no slot of the week carries a recipe or free text.
+ */
+export async function isWeekEmpty(weekStart: Date): Promise<boolean> {
+  const filled = await db.menuSlot.count({
+    where: {
+      menu: { weekStart },
+      OR: [{ recipeId: { not: null } }, { freeText: { not: null } }],
+    },
+  })
+
+  return filled === 0
+}

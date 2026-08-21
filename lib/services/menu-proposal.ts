@@ -201,6 +201,18 @@ export async function proposeMenu(
     failure = error
   }
 
+  // Resolved before the record is written: a proposal rejected for repeating a
+  // dish is a failure, and filing it as a success with token counts is exactly
+  // the case the history exists to explain.
+  let resolved: ProposedMenuSlot[] | undefined
+  if (failure === undefined) {
+    try {
+      resolved = resolveProposal(result!.proposal, index.byNumber)
+    } catch (error) {
+      failure = error
+    }
+  }
+
   // Bookkeeping must never fail a generation: history is diagnostics, and
   // losing a row must not lose a menu.
   await recordExecution({
@@ -221,7 +233,7 @@ export async function proposeMenu(
 
   if (failure !== undefined) throw failure
 
-  return resolveProposal(result!.proposal, index.byNumber)
+  return resolved!
 }
 
 export { LlmError }

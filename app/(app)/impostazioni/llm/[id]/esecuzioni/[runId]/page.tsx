@@ -41,7 +41,7 @@ export default async function ExecutionPage({
 
   if (id === null || runId === null) notFound()
 
-  const run = await getExecution(runId)
+  const run = await getExecution(id, runId)
   if (run === null) notFound()
 
   return (
