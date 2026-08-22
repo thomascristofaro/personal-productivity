@@ -17,6 +17,17 @@ describe("splitCsv", () => {
     ])
   })
 
+  it("looks past a preamble that holds no separator at all", () => {
+    // The Intesa export opens with a title and an account number. Choosing the
+    // delimiter from the first line alone gives every row one column, and the
+    // reader below never finds its header.
+    const file = ["Elenco movimenti", "Conto: IT00X000", "", "a,b", "1,2"].join(
+      "\n"
+    )
+
+    expect(splitCsv(file).at(-1)).toEqual(["1", "2"])
+  })
+
   it("keeps a comma that is inside quotes", () => {
     expect(splitCsv('a,b\n"uno, due",3')).toEqual([
       ["a", "b"],

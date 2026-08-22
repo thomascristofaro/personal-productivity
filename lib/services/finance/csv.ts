@@ -5,17 +5,29 @@
 
 const DELIMITERS = [";", ",", "\t"] as const
 
-// The delimiter that appears most often on the first line. Real files are not
-// ambiguous about this; guessing wrongly produces one column, which the readers
-// then refuse by name rather than importing nonsense.
+// How many lines to look at when deciding the delimiter. The first line is not
+// enough: the Intesa export opens with a title and an account number, neither
+// of which holds a separator, and choosing from those gives every row one
+// column and hides the header from the reader entirely.
+const SNIFF_LINES = 10
+
+// The delimiter that appears most often on any of the first few lines. Real
+// files are not ambiguous about this; guessing wrongly produces one column,
+// which the readers then refuse by name rather than importing nonsense.
 function delimiterOf(text: string): string {
-  const end = text.indexOf("\n")
-  const firstLine = end === -1 ? text : text.slice(0, end)
+  const lines = text
+    .split("\n")
+    .filter((line) => line.trim() !== "")
+    .slice(0, SNIFF_LINES)
+
   let best = ","
-  let bestCount = -1
+  let bestCount = 0
 
   for (const candidate of DELIMITERS) {
-    const count = firstLine.split(candidate).length - 1
+    const count = lines.reduce(
+      (most, line) => Math.max(most, line.split(candidate).length - 1),
+      0
+    )
     if (count > bestCount) {
       best = candidate
       bestCount = count
