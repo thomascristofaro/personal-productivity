@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/page/page-header"
 import { Button } from "@/components/ui/button"
 import { requireOwner } from "@/lib/auth/owner"
 import { env } from "@/lib/env"
+import { definitionFor } from "@/lib/llm-functions"
 import { getFunction } from "@/lib/services/llm-registry"
 import { decodeSegment } from "@/lib/route-params"
 
@@ -20,6 +21,20 @@ const OUTPUT_SHAPE = `{
     … quattordici slot
   ]
 }`
+
+// The declaration, not the row: a title needs no database, and this page is
+// reachable before anything has ever been saved.
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}) {
+  const { id: raw } = await params
+  const id = decodeSegment(raw)
+  const definition = id === null ? null : definitionFor(id)
+
+  return { title: definition?.name ?? "Funzione LLM" }
+}
 
 export default async function LlmFunctionPage({
   params,
