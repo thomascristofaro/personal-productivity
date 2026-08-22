@@ -4,9 +4,16 @@ import { EmptyState } from "@/components/page/empty-state"
 import { ListBody } from "@/components/page/page-body"
 import { PageHeader } from "@/components/page/page-header"
 import { requireOwner } from "@/lib/auth/owner"
+import { countLabel } from "@/lib/count-label"
 import { listFunctions } from "@/lib/services/llm-registry"
 
 export const metadata = { title: "Funzioni LLM" }
+
+const FOUND = {
+  none: "Nessuna funzione.",
+  one: "funzione assistita",
+  many: "funzioni assistite",
+}
 
 export default async function LlmFunctionsPage() {
   await requireOwner()
@@ -22,11 +29,11 @@ export default async function LlmFunctionsPage() {
 
       <DataList
         items={functions}
-        announcement={`${functions.length} funzioni.`}
+        announcement={countLabel(functions.length, FOUND)}
         empty={
           <EmptyState
             title="Nessuna funzione"
-            description="Esegui il seed per creare la generazione del menù."
+            description="Nessuna funzione assistita è dichiarata nel codice."
           />
         }
         renderItem={(item) => (

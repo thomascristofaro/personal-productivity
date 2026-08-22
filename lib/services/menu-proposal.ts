@@ -1,10 +1,6 @@
 import { HOUSEHOLD_SERVINGS, RECENCY_WINDOW_WEEKS } from "@/lib/config"
 import { db } from "@/lib/db"
-import { env } from "@/lib/env"
-import {
-  buildMenuProposalRequest,
-  MENU_PROPOSAL_PROMPT,
-} from "@/lib/prompts/menu-proposal"
+import { buildMenuProposalRequest } from "@/lib/prompts/menu-proposal"
 import type { MenuProposal } from "@/lib/schemas/menu-proposal"
 
 import {
@@ -166,15 +162,9 @@ export async function proposeMenu(
     timeZone: "UTC",
   }).format(weekStart)
 
-  // The file is the fallback, not a leftover: an unseeded table must not take
-  // generation down — design document 2026-08-21 section 7.2.
-  const settings = await getSettings(FUNCTION_ID, {
-    prompt: MENU_PROPOSAL_PROMPT,
-    model: env.GEMINI_MODELS[0],
-    temperature: 1,
-    maxTokens: 4096,
-    reasoning: "provider-default",
-  })
+  // The defaults live with the function definition, not here: an unseeded table
+  // must not take generation down — design document 2026-08-21 section 7.2.
+  const settings = await getSettings(FUNCTION_ID)
 
   const request = buildMenuProposalRequest({
     candidates: buildCandidateLines(candidates),

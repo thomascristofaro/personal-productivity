@@ -1,4 +1,10 @@
 import { db } from "@/lib/db"
+import { env } from "@/lib/env"
+import {
+  definitionFor,
+  LLM_FUNCTIONS,
+  type LlmFunctionDefinition,
+} from "@/lib/llm-functions"
 import type { LlmFunctionInput } from "@/lib/schemas/llm-function"
 
 /** Design document 2026-08-21 section 7.3. Bounded so nothing has to be
@@ -36,20 +42,36 @@ export function idsToPrune(ids: string[], keep: number): string[] {
 }
 
 /**
+ * The settings a function runs with when nothing has been tuned.
+ *
+ * @param definition The function as the code declares it.
+ * @returns The compiled-in defaults, with the first configured model.
+ */
+export function defaultsFor(definition: LlmFunctionDefinition): LlmSettings {
+  return {
+    prompt: definition.prompt,
+    model: env.GEMINI_MODELS[0],
+    temperature: definition.temperature,
+    maxTokens: definition.maxTokens,
+    reasoning: definition.reasoning,
+  }
+}
+
+/**
  * The settings a function should run with.
  *
- * Falls back to the caller's defaults when the row is absent rather than
- * throwing: the table ships empty, and an unseeded database must not take the
- * feature down — design document 2026-08-21 section 7.2.
+ * Falls back to the definition when the row is absent rather than throwing: the
+ * table ships empty, and an unseeded database must not take the feature down —
+ * design document 2026-08-21 section 7.2.
  *
  * @param id The function id.
- * @param fallback The defaults compiled into the application.
- * @returns The stored settings, or the fallback.
+ * @returns The stored settings, or the compiled-in defaults.
+ * @throws Error when no function with that id exists in the code.
  */
-export async function getSettings(
-  id: string,
-  fallback: LlmSettings
-): Promise<LlmSettings> {
+export async function getSettings(id: string): Promise<LlmSettings> {
+  const definition = definitionFor(id)
+  if (definition === null) throw new Error(`Unknown LLM function: ${id}`)
+
   const row = await db.llmFunction.findUnique({
     where: { id },
     select: {
@@ -61,21 +83,39 @@ export async function getSettings(
     },
   })
 
-  return row ?? fallback
+  return row ?? defaultsFor(definition)
 }
 
 /**
- * Writes a function's settings.
+ * Writes a function's settings, creating the row the first time it is tuned.
+ *
+ * An upsert rather than an update: the row does not exist until someone saves,
+ * so the first save on a fresh database is a create. `name` and `description`
+ * come from the definition and are never taken from the form — they describe
+ * the feature, not its tuning.
  *
  * @param id The function id.
  * @param input The validated settings.
  * @returns Nothing.
+ * @throws Error when no function with that id exists in the code.
  */
 export async function updateFunction(
   id: string,
   input: LlmFunctionInput
 ): Promise<void> {
-  await db.llmFunction.update({ where: { id }, data: input })
+  const definition = definitionFor(id)
+  if (definition === null) throw new Error(`Unknown LLM function: ${id}`)
+
+  await db.llmFunction.upsert({
+    where: { id },
+    update: input,
+    create: {
+      id,
+      name: definition.name,
+      description: definition.description,
+      ...input,
+    },
+  })
 }
 
 /**
@@ -104,31 +144,50 @@ export async function recordExecution(record: ExecutionRecord): Promise<void> {
 }
 
 /**
- * Every registered function, for the list screen.
+ * Every function the application has, for the list screen.
+ *
+ * Driven by the code rather than by the table: a function nobody has tuned yet
+ * has no row, and must still be listed and openable. The row only supplies the
+ * model once it exists.
  *
  * @returns The functions, by name.
  */
 export async function listFunctions() {
-  return db.llmFunction.findMany({
-    select: {
-      id: true,
-      name: true,
-      description: true,
-      model: true,
-      updatedAt: true,
-    },
-    orderBy: { name: "asc" },
+  const rows = await db.llmFunction.findMany({
+    select: { id: true, model: true },
   })
+  const models = new Map(rows.map((row) => [row.id, row.model]))
+
+  return LLM_FUNCTIONS.map((definition) => ({
+    id: definition.id,
+    name: definition.name,
+    description: definition.description,
+    model: models.get(definition.id) ?? env.GEMINI_MODELS[0],
+  })).sort((a, b) => a.name.localeCompare(b.name, "it"))
 }
 
 /**
- * One function's full settings.
+ * One function, as the detail screen needs it.
+ *
+ * The name and description always come from the definition; the settings come
+ * from the row when there is one and from the defaults when there is not. The
+ * screen is therefore usable before anything has ever been saved.
  *
  * @param id The function id.
- * @returns The row, or null when there is none.
+ * @returns The function, or null when no such function exists in the code.
  */
 export async function getFunction(id: string) {
-  return db.llmFunction.findUnique({ where: { id } })
+  const definition = definitionFor(id)
+  if (definition === null) return null
+
+  const settings = await getSettings(id)
+
+  return {
+    id: definition.id,
+    name: definition.name,
+    description: definition.description,
+    ...settings,
+  }
 }
 
 /**

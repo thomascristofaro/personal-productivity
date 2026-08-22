@@ -1,7 +1,7 @@
 import "dotenv/config"
 
 import { db } from "../lib/db"
-import { MENU_PROPOSAL_PROMPT } from "../lib/prompts/menu-proposal"
+import { LLM_FUNCTIONS } from "../lib/llm-functions"
 import { INGREDIENTS } from "./catalog"
 
 // `lib/env.ts` is server-only and validates far more than this script needs.
@@ -53,30 +53,31 @@ async function main() {
     })
   }
 
-  // The prompt file is the default; the row is a copy that then drifts as it is
-  // tuned. `update` deliberately leaves `prompt` and `model` alone — re-seeding
-  // must not discard the tuning the settings screen exists to enable.
-  await db.llmFunction.upsert({
-    where: { id: "menu-proposal" },
-    update: {
-      name: "Generazione menù",
-      description:
-        "Compone i quattordici pasti della settimana scegliendo fra le ricette disponibili.",
-    },
-    create: {
-      id: "menu-proposal",
-      name: "Generazione menù",
-      description:
-        "Compone i quattordici pasti della settimana scegliendo fra le ricette disponibili.",
-      prompt: MENU_PROPOSAL_PROMPT,
-      model: (process.env.GEMINI_MODELS ?? "gemini-3.7-flash")
-        .split(",")[0]
-        .trim(),
-    },
-  })
+  // The code is the register of which LLM functions exist (lib/llm-functions.ts)
+  // and the screens read it directly, so this seed is a convenience for local
+  // work rather than the thing that makes the feature appear. `update` leaves
+  // `prompt` and `model` alone: re-seeding must not discard tuning.
+  for (const fn of LLM_FUNCTIONS) {
+    await db.llmFunction.upsert({
+      where: { id: fn.id },
+      update: { name: fn.name, description: fn.description },
+      create: {
+        id: fn.id,
+        name: fn.name,
+        description: fn.description,
+        prompt: fn.prompt,
+        temperature: fn.temperature,
+        maxTokens: fn.maxTokens,
+        reasoning: fn.reasoning,
+        model: (process.env.GEMINI_MODELS ?? "gemini-3.7-flash")
+          .split(",")[0]
+          .trim(),
+      },
+    })
+  }
 
   console.log(
-    `Seeded ${USERS.length} users, ${INGREDIENTS.length} ingredients and 1 LLM function.`
+    `Seeded ${USERS.length} users, ${INGREDIENTS.length} ingredients and ${LLM_FUNCTIONS.length} LLM function(s).`
   )
 }
 
