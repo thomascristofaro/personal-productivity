@@ -7,11 +7,13 @@ export default function manifest(): MetadataRoute.Manifest {
     id: "/",
     name: "Personal Productivity",
     short_name: "Productivity",
-    description: "Menù settimanale e lista della spesa",
+    description: "Menù, spesa e finanze personali",
     lang: "it",
     dir: "ltr",
     scope: "/",
-    start_url: "/menu",
+    // The fork, not a module. With one module it redirects onwards by itself,
+    // so this stays right whichever modules a person can see.
+    start_url: "/",
     // All three params, because Android's share intent puts the link in
     // EXTRA_TEXT: Chrome fills `text` and leaves `url` empty. /import reads
     // both — see the import design document §6.

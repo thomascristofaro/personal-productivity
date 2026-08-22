@@ -28,6 +28,22 @@ export const MODULES: readonly AppModule[] = [
       { href: "/catalog", label: "Catalogo" },
     ],
   },
+  // Visible to everyone, and not only to whoever already owns an account: the
+  // one place to create the first account is inside the module, so hiding it
+  // until one exists locks everybody out on day one. Which accounts a person
+  // then sees is decided per account, in lib/services/finance/access.ts, which
+  // is where the privacy actually is.
+  {
+    id: "finance",
+    label: "Finanza",
+    description: "I movimenti dei conti, in un posto solo.",
+    href: "/finance",
+    nav: [
+      { href: "/finance", label: "Riepilogo" },
+      { href: "/finance/movements", label: "Movimenti" },
+      { href: "/finance/import", label: "Importa" },
+    ],
+  },
 ]
 
 // Appended only for the owner. Hiding a link is not access control — every page

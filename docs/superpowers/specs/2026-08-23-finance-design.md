@@ -58,8 +58,16 @@ It shows one large tappable card per module the signed-in user can see, each wit
 a title and a line of subtitle: **«Menù e spesa»** → `/menu`, **«Finanza»** →
 `/finance`.
 
-The Finanza card is rendered only when the user can see at least one account
-(§3). A door onto an empty room is worse than no door.
+**Both cards are shown to everyone.** The first draft of this section made the
+Finanza card conditional on already seeing an account, so as not to open a door
+onto an empty room. That cannot work: the only place to create the first account
+is inside the module, so the rule locks everybody out on day one. And the room is
+not empty — `/finance` with nothing to show offers to add the first account,
+which is the screen somebody in that state actually needs.
+
+Privacy is unaffected. §3 decides which accounts a person sees, per account,
+inside every query. That is where it belongs; a hidden nav entry was never
+access control.
 
 **When only one module is visible, `/` redirects to it and the fork is not
 shown.** A choice between one thing is not a choice, and it would make everyone
@@ -280,6 +288,15 @@ Recorded so nobody adds them as an oversight:
 8. The result says how many are left to categorise and how many pairs await
    confirmation, each a link.
 
+**Where the file lives between steps 4 and 5.** The preview needs the same file
+across two round trips, and a file input cannot be re-submitted after one. So the
+import screen is a client component: it reads the file with `FileReader`, holds
+the text in its own state, and posts it to two server actions — one that previews
+and one that writes. **Nothing is stored on the server in between.** A file over
+1 MB is refused before it is read, in the browser and again in the action: a
+statement is tens of kilobytes, and a bigger payload would hit Next's server
+action body limit as an opaque error rather than as a sentence.
+
 ### 5.2 The readers
 
 One reader per provider, hand-written, in `lib/services/finance/parsers/`:
@@ -332,9 +349,12 @@ comparison is not row-against-row, it is a **count**:
 `@@unique([accountId, fingerprint, occurrence])` enforces this in Postgres, so
 two concurrent imports cannot both decide they are the first.
 
-When the file carries a `providerRef` — Revolut does — it enters the fingerprint
-and makes it unique on its own; `occurrence` is then always 0 and the counting
-never engages. That is the good case, and the counting is what covers the others.
+When the file carries a `providerRef` it enters the fingerprint and makes it
+unique on its own; `occurrence` is then always 0 and the counting never engages.
+**Correction of 2026-08-23:** an earlier draft said Revolut's export carries one.
+Its statement CSV does not — of the three, only Satispay's is expected to. The
+counting is therefore the general case and not the fallback, which is why §5.3
+gets a named test of its own rather than a branch of another.
 
 ### 5.4 Dates
 

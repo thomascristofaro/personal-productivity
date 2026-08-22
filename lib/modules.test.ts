@@ -35,9 +35,22 @@ describe("MODULES", () => {
     expect(MODULES[0]?.id).toBe("menu")
   })
 
+  it("declares the finance module", () => {
+    expect(MODULES.map((module) => module.id)).toContain("finance")
+  })
+
   it("gives every module a distinct id", () => {
     const ids = MODULES.map((module) => module.id)
     expect(new Set(ids).size).toBe(ids.length)
+  })
+
+  it("sends the fork somewhere for every module", () => {
+    // `entry` and not `module`: a `const module` is a Next lint error, because
+    // assigning that name breaks the bundler's module wrapper.
+    for (const entry of MODULES) {
+      expect(entry.href.startsWith("/")).toBe(true)
+      expect(entry.nav.length).toBeGreaterThan(0)
+    }
   })
 })
 
