@@ -15,23 +15,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
+import { activeHrefIn, navGroupsFor, type AppModule } from "@/lib/modules"
 import { cn } from "@/lib/utils"
-
-// Adding a module to the app is one entry here. The order is the one the two
-// users think in, not alphabetical.
-const NAV_ITEMS = [
-  { href: "/menu", label: "Menù" },
-  { href: "/shopping", label: "Spesa" },
-  { href: "/recipes", label: "Ricettario" },
-  { href: "/catalog", label: "Catalogo" },
-] as const
-
-// Appended only for the owner. Hiding a link is not access control — every page
-// and action under /settings calls requireOwner — it only stops the partner
-// finding a door that would refuse her.
-const OWNER_ITEMS = [
-  { href: "/settings/llm", label: "Impostazioni" },
-] as const
 
 // The bar and the panel share one row: same height, same padding, same theme
 // toggle, and the trigger swaps between the hamburger and the close. Opening
@@ -39,27 +24,26 @@ const OWNER_ITEMS = [
 const ROW = "flex h-14 items-center justify-between gap-2 px-2"
 const TRIGGER = "gap-2 px-2 text-base font-medium"
 
-// The name arrives as a prop: this is a client component, so it cannot read the
-// session itself. The layout above it does.
+// The name and the modules arrive as props: this is a client component, so it
+// can neither read the session nor ask the database which accounts exist. The
+// layout above it does both.
 export function AppNav({
   userName,
+  modules,
   isOwner = false,
 }: {
   userName: string
+  modules: readonly AppModule[]
   isOwner?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
 
-  const items = isOwner ? [...NAV_ITEMS, ...OWNER_ITEMS] : NAV_ITEMS
-
-  // The longest matching href, not every matching one. Nothing in the menu
-  // needs it today — the entry for /shopping/history was moved into the shopping
-  // header — but a plain prefix test lights every ancestor, and the moment two
-  // entries nest again `aria-current="page"` stops meaning "this page".
-  const activeHref = items.filter(
-    (item) => pathname === item.href || pathname.startsWith(`${item.href}/`)
-  ).sort((a, b) => b.href.length - a.href.length)[0]?.href
+  const groups = navGroupsFor(modules, isOwner)
+  const activeHref = activeHrefIn(
+    groups.flatMap((group) => group.items),
+    pathname
+  )
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -98,35 +82,39 @@ export function AppNav({
         </div>
 
         <nav className="flex flex-col gap-8 px-6 py-10">
-          <div>
-            <p className="pb-4 text-xs text-muted-foreground">Menu</p>
-            <ul className="flex flex-col">
-              {items.map((item) => {
-                const isActive = item.href === activeHref
+          {groups.map((group, index) => (
+            <div key={group.title ?? index}>
+              <p className="pb-4 text-xs text-muted-foreground">
+                {group.title ?? "Menu"}
+              </p>
+              <ul className="flex flex-col">
+                {group.items.map((item) => {
+                  const isActive = item.href === activeHref
 
-                return (
-                  <li key={item.href}>
-                    <SheetClose
-                      render={<Link href={item.href} />}
-                      // A link is not a button, and Base UI wants to be told:
-                      // without this it warns and applies button semantics to
-                      // an anchor.
-                      nativeButton={false}
-                      // isActive only styles. Without this the highlight exists
-                      // for the eye and for nothing else.
-                      aria-current={isActive ? "page" : undefined}
-                      className={cn(
-                        "block rounded-md py-2 text-3xl font-medium tracking-tight transition-colors hover:text-primary focus-visible:ring-[3px] focus-visible:ring-ring/50",
-                        isActive ? "text-primary" : "text-foreground"
-                      )}
-                    >
-                      {item.label}
-                    </SheetClose>
-                  </li>
-                )
-              })}
-            </ul>
-          </div>
+                  return (
+                    <li key={item.href}>
+                      <SheetClose
+                        render={<Link href={item.href} />}
+                        // A link is not a button, and Base UI wants to be told:
+                        // without this it warns and applies button semantics to
+                        // an anchor.
+                        nativeButton={false}
+                        // isActive only styles. Without this the highlight
+                        // exists for the eye and for nothing else.
+                        aria-current={isActive ? "page" : undefined}
+                        className={cn(
+                          "block rounded-md py-2 text-3xl font-medium tracking-tight transition-colors hover:text-primary focus-visible:ring-[3px] focus-visible:ring-ring/50",
+                          isActive ? "text-primary" : "text-foreground"
+                        )}
+                      >
+                        {item.label}
+                      </SheetClose>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          ))}
 
           <div>
             <p className="pb-4 text-xs text-muted-foreground">Account</p>
