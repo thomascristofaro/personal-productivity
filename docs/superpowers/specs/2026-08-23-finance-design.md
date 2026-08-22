@@ -54,11 +54,23 @@ route group, so it never renders inside the shell. The fork needs the shell.
 - Delete `app/page.tsx`.
 - Add `app/(app)/page.tsx`. Same URL, now inside the layout that carries the nav.
 
-It shows two blocks, each a large tappable card with a title and one line of
-subtitle: **«Menù e spesa»** → `/menu`, **«Finanza»** → `/finance`.
+It shows one large tappable card per module the signed-in user can see, each with
+a title and a line of subtitle: **«Menù e spesa»** → `/menu`, **«Finanza»** →
+`/finance`.
 
-The Finanza block is rendered only when the signed-in user can see at least one
-account (§3). A door onto an empty room is worse than no door.
+The Finanza card is rendered only when the user can see at least one account
+(§3). A door onto an empty room is worse than no door.
+
+**When only one module is visible, `/` redirects to it and the fork is not
+shown.** A choice between one thing is not a choice, and it would make everyone
+tap through an extra screen to reach the only place they can go. This covers two
+real states with one rule: the app before the finance module exists, and the
+partner if she never keeps an account here. Both land straight on `/menu`, as
+they do today.
+
+The same rule governs the navigation: with one visible module the panel keeps
+today's single caption and its flat list, and the headings of §2.2 appear only
+once there is a second group to distinguish.
 
 No new component in `components/page/` for this. Two cards on one screen is not a
 primitive; it becomes one if a third module ever needs the same shape.
