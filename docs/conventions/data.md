@@ -105,6 +105,37 @@ query, in well under a second. Two consequences:
 - Wrap multi-write operations in a transaction. Regenerating a shopping list
   deletes and recreates rows; a half-applied regeneration is a lying list.
 
+### A nested `select` is one query per level
+
+Prisma does not join to load relations. It loads each level with its own query
+and stitches the results together in Node. `getMenuWeek` reads as one call and
+is three, measured against Postgres with `log_statement='all'`:
+
+| Written as                                                                     | Queries reaching Postgres              |
+| ------------------------------------------------------------------------------ | -------------------------------------- |
+| `menu.findUnique` with a nested `select` — today                               | `Menu` → `MenuSlot` → `Recipe` = **3** |
+| `menuSlot.findMany({ where: { menu: { weekStart } } })` — filter on the parent | `MenuSlot` → `Recipe` = **2**          |
+| `$queryRaw` with an explicit `JOIN`                                            | **1**                                  |
+
+The middle row costs nothing and gives up nothing: it is the same read turned
+around, starting from the children. The last row gives up the one thing worth
+keeping — the result type comes from the schema in the first two, and is a hand-
+written promise in the third. Rename a column and the first two stop compiling;
+the third compiles and fails in production.
+
+There is also `relationLoadStrategy: "join"`, which makes Prisma emit a single
+`LEFT JOIN LATERAL` with `JSONB_AGG` — no row duplication, the naive-join
+objection does not apply. It needs `previewFeatures = ["relationJoins"]` in the
+schema, and we have not turned it on: a preview feature is a maintenance
+commitment across Prisma versions.
+
+**None of this was worth doing when it was measured, on 2026-08-22.** With the
+functions in Frankfurt beside the database, a round trip is about a millisecond
+and three of them are noise. It was worth a second when the functions ran in
+Washington — which is the real lesson: the number of queries only matters once
+you know what one costs. Revisit if the app ever moves away from the database,
+or if a screen starts nesting three or four levels.
+
 ### Running services from a script
 
 `lib/db.ts` imports `server-only`, whose default entry point throws. A script

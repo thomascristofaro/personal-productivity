@@ -27,6 +27,10 @@ type Props = {
 
 type Stage = "idle" | "confirming" | "error"
 
+// What the dialog is showing. "idle" is not one of these: the dialog is closed
+// then, and while it animates out it must keep showing whatever it showed last.
+type View = "pending" | "confirming" | "error"
+
 export function GenerateButton({ weekStart, filledSlots, action }: Props) {
   const [pending, startTransition] = useTransition()
   const [stage, setStage] = useState<Stage>("idle")
@@ -62,9 +66,23 @@ export function GenerateButton({ weekStart, filledSlots, action }: Props) {
 
   const open = pending || stage !== "idle"
 
+  // The view lags the state by design. Deriving it from `stage` directly meant
+  // that dismissing the confirmation switched the content to the error branch
+  // while the dialog was still animating out — and because the content is
+  // keyed, Base UI saw a remount rather than a close and left the error panel
+  // on screen, with an empty description. Cancelling looked like a failure.
+  const [view, setView] = useState<View>("confirming")
+  const current: View | "idle" = pending ? "pending" : stage
+  if (current !== "idle" && current !== view) setView(current)
+
   return (
     <>
-      <Button type="button" disabled={pending} onClick={start}>
+      <Button
+        variant="outline"
+        type="button"
+        disabled={pending}
+        onClick={start}
+      >
         Genera il menù
       </Button>
 
@@ -79,11 +97,11 @@ export function GenerateButton({ weekStart, filledSlots, action }: Props) {
           }
         }}
       >
-        {/* Keyed on the stage: without a remount the dialog is already open
+        {/* Keyed on the view: without a remount the dialog is already open
             when one state turns into another, and a screen reader announces
             nothing — the transitions that most need announcing. */}
-        <AlertDialogContent key={pending ? "pending" : stage}>
-          {pending ? (
+        <AlertDialogContent key={view}>
+          {view === "pending" ? (
             <AlertDialogHeader>
               <AlertDialogTitle>Sto preparando il menù…</AlertDialogTitle>
               <AlertDialogDescription>
@@ -91,7 +109,7 @@ export function GenerateButton({ weekStart, filledSlots, action }: Props) {
                 secondo.
               </AlertDialogDescription>
             </AlertDialogHeader>
-          ) : stage === "confirming" ? (
+          ) : view === "confirming" ? (
             <>
               <AlertDialogHeader>
                 <AlertDialogTitle>Sovrascrivo la settimana?</AlertDialogTitle>

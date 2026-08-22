@@ -9,6 +9,8 @@ import { APP_TIMEZONE } from "@/lib/config"
 import { decodeSegment } from "@/lib/route-params"
 import { getExecution } from "@/lib/services/llm-registry"
 
+export const metadata = { title: "Esecuzione" }
+
 const stampFormat = new Intl.DateTimeFormat("it-IT", {
   timeZone: APP_TIMEZONE,
   dateStyle: "full",
@@ -61,18 +63,18 @@ export default async function ExecutionPage({
 
       <dl className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
         <div>
-          <dt className="text-muted-foreground text-xs">Modello</dt>
+          <dt className="text-xs text-muted-foreground">Modello</dt>
           <dd translate="no">{run.model}</dd>
         </div>
         <div>
-          <dt className="text-muted-foreground text-xs">Token</dt>
+          <dt className="text-xs text-muted-foreground">Token</dt>
           <dd className="tabular-nums">
             {numberFormat.format(run.inputTokens ?? 0)} in ·{" "}
             {numberFormat.format(run.outputTokens ?? 0)} out
           </dd>
         </div>
         <div>
-          <dt className="text-muted-foreground text-xs">Durata</dt>
+          <dt className="text-xs text-muted-foreground">Durata</dt>
           <dd className="tabular-nums">
             {numberFormat.format(run.durationMs)} ms
           </dd>

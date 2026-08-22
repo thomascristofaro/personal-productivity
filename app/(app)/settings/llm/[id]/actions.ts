@@ -60,8 +60,9 @@ export const saveFunction: FormAction = async (_state, formData) => {
   try {
     await updateFunction(id.data, parsed.data)
   } catch {
-    // The row went away between the page load and the save.
-    return failure("Questa funzione non esiste più.", { values })
+    // The id named a function the code does not have. Not "the row went away":
+    // the row is created by this very save when it is the first one.
+    return failure("Questa funzione non esiste.", { values })
   }
 
   revalidatePath(`/settings/llm/${id.data}`)
