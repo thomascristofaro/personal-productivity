@@ -219,7 +219,11 @@ export async function proposeMenu(
         : failure instanceof Error
           ? failure.message
           : null,
-  }).catch(() => {})
+  }).catch((bookkeepingError: unknown) => {
+    // Swallowed on purpose, but not in silence: this catch hid a foreign-key
+    // violation that lost every execution of an untouched function.
+    console.error("Failed to record LLM execution", bookkeepingError)
+  })
 
   if (failure !== undefined) throw failure
 
