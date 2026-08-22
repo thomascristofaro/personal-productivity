@@ -5,9 +5,8 @@ and state** — nothing else does. The design authority stays
 `docs/superpowers/specs/2026-08-13-menu-spesa-design.md`, and the decisions live
 in `docs/conventions/`. Do not restate either here; point at them.
 
-Last updated: 2026-08-21. `main` is deployed. Work normally happens on a branch
-per plan — see "In flight" for the one standing exception and the branch open
-now.
+Last updated: 2026-08-22. `main` is deployed, and nothing is in flight. Work
+normally happens on a branch per plan.
 
 ## Shipped
 
@@ -26,28 +25,55 @@ now.
 | [`2026-08-18-shopping-done`](superpowers/plans/2026-08-18-shopping-done.md)                                                                                                              | `Purchase` and `PurchaseItem`, the bar at the till, `/spesa/storico`, `lib/money.ts`, and the aggregator subtracting what has already been bought                                                                                                                                                                                                                                                                                   |
 | [`2026-08-20-page-primitives`](superpowers/plans/2026-08-20-page-primitives.md), design in [`2026-08-20-page-primitives-design`](superpowers/specs/2026-08-20-page-primitives-design.md) | one form contract instead of six — `lib/form.ts`, `useFormState`, four typed fields and `FormField` — `FormDrawer` replacing four hand-rolled close-on-success effects, one page shell instead of thirteen `<main>`s, `ListSection`, `SearchField`, `FilterChips`, and `MessagePage` for the three "does not exist" screens. Two things a user sees: «Svuota» is gone from the slot drawer, and `/catalogo` gained its search field |
 | [`2026-08-21-menu-generation`](superpowers/plans/2026-08-21-menu-generation.md), design in [`2026-08-21-menu-generation-design`](superpowers/specs/2026-08-21-menu-generation-design.md) | the LLM half of the menu: `lib/services/llm.ts` — the only file that may import an SDK — `proposeMenu`, candidates as numbered lines the model answers with integers, recency derived from past `MenuSlot` rows, and a waiting dialog that turns into the failure. Runs on **Google Gemini**, not Anthropic                                                                                                                         |
-| [`2026-08-21-llm-registry`](superpowers/plans/2026-08-21-llm-registry.md)                                                                                                                | `LlmFunction` and `LlmExecution`, `requireOwner()` over `OWNER_EMAIL`, the prompt moving into the database with `lib/prompts/menu-proposal.ts` as the fallback, and the four owner-only screens under `/impostazioni/llm`. **Editing that prompt file changes nothing on a seeded database**                                                                                                                                        |
+| [`2026-08-21-llm-registry`](superpowers/plans/2026-08-21-llm-registry.md)                                                                                                                | `LlmFunction` and `LlmExecution`, `requireOwner()` over `OWNER_EMAIL`, the prompt moving into the database with `lib/prompts/menu-proposal.ts` as the fallback, and the four owner-only screens under `/settings/llm`. The prompt file is the default and the row is the tuning — **editing the file changes nothing once the row exists**                                                                                          |
 
 ## In flight
 
-**The recipe import**, on the branch `feat/recipe-import` —
-[design](superpowers/specs/2026-08-20-recipe-import-design.md),
-[plan](superpowers/plans/2026-08-20-recipe-import.md). `share_target` now points
-at a `/import` that exists: a link shared from Android, or pasted into the app,
-becomes the recipe form pre-filled. `lib/json-ld.ts` reads the broken JSON real
-sites publish, `lib/url-guard.ts` refuses the addresses a fetcher must not
-reach, and a save creates the catalogue entries the recipe names instead of
-refusing over them. No component was added to `components/`.
+Nothing. The recipe import merged on 2026-08-21 (#19) — `share_target` points at
+a `/import` that exists, `lib/json-ld.ts` reads the broken JSON real sites
+publish, `lib/url-guard.ts` refuses the addresses a fetcher must not reach, and a
+save creates the catalogue entries the recipe names instead of refusing over
+them. No component was added to `components/`.
 
 **Deliberately without the LLM.** §6.1 of the menu design has JSON-LD first and
-an LLM fallback for pages without it; only the first half shipped, so there is
-still no `lib/services/llm.ts`, no SDK and no key to configure. Whether the
-fallback earns its cost is a question about real pages, and now there is a way
-to find out. Deferred with it: the LLM fallback for ingredient lines the Italian
+an LLM fallback for pages without it; only the first half shipped. Whether the
+fallback earns its cost is a question about real pages, and now there is a way to
+find out. Deferred with it: the LLM fallback for ingredient lines the Italian
 parser cannot read, and `guessAisles`.
 
 **Next up:** the finance module or the news reader — the first real test of
 whether the page primitives carry to a section that is not menu-and-shopping.
+
+**Merged on 2026-08-22:**
+
+**The functions were running in Washington and the database in Frankfurt.** Found
+by asking why production felt slow. Vercel's default region is `iad1`; Neon is in
+`eu-central-1`. Every interaction crossed the Atlantic — and not once: a save is
+the session lookup, the mutation, then the re-render of the revalidated page with
+its own session lookup and reads. Six to eight round trips, mostly sequential. At
+a millisecond each, invisible; at a hundred, the second the owner was waiting.
+**Fixed by hand in the Vercel dashboard, on the owner's call — there is no
+`vercel.json` in this repository, so nothing in the code records it.** If the
+database ever moves, the function region has to be moved with it, from the
+dashboard.
+
+**Three fixes from real use** (#23). Cancelling the overwrite prompt showed an
+error panel and left it up: the dialog content was a ternary chain whose last
+branch was the error, and because the content is keyed, Base UI read the
+simultaneous key change as a remount rather than a close. **The LLM function was
+invisible in production**: the settings screen listed rows, and only the seed
+creates them — which production never runs, by the decision in `data.md` that no
+local environment may reach it. `lib/llm-functions.ts` is now the register and
+the row is created by the first save. Also two owner screens that borrowed the
+shell's title, and «Genera il menù» taking `variant="outline"` at the owner's
+request.
+
+**English route segments** (#21). `catalogo`, `impostazioni`, `spesa`,
+`spesa/storico` and `esecuzioni` became `catalog`, `settings`, `shopping`,
+`shopping/history` and `runs`, with `?tipo=` becoming `?kind=`. The app is
+installed as a PWA, so nobody reads the address bar; the folder tree is read
+every day. The rule is now in `CLAUDE.md`, where its absence was what let two
+conventions coexist.
 
 **Merged on 2026-08-20**, all three:
 
