@@ -2,7 +2,6 @@ import "dotenv/config"
 
 import { db } from "../lib/db"
 import { LLM_FUNCTIONS } from "../lib/llm-functions"
-import { CATEGORIES } from "./categories"
 import { INGREDIENTS } from "./catalog"
 
 // `lib/env.ts` is server-only and validates far more than this script needs.
@@ -77,19 +76,13 @@ async function main() {
     })
   }
 
-  // Keyed on the name, like the catalogue: running the seed again renames
-  // nothing and adds nothing. A category the owner has since renamed comes back
-  // as a new one, which is the same trade the catalogue already makes.
-  for (const [index, category] of CATEGORIES.entries()) {
-    await db.category.upsert({
-      where: { name: category.name },
-      update: {},
-      create: { ...category, sortOrder: index },
-    })
-  }
+  // The finance categories are deliberately not here. They are what a schema
+  // change requires to work, not a convenience, so they go in a migration —
+  // which runs on every deploy, unlike this file. See
+  // prisma/migrations/20260823152937_seed_finance_categories.
 
   console.log(
-    `Seeded ${USERS.length} users, ${INGREDIENTS.length} ingredients, ${CATEGORIES.length} categories and ${LLM_FUNCTIONS.length} LLM function(s).`
+    `Seeded ${USERS.length} users, ${INGREDIENTS.length} ingredients and ${LLM_FUNCTIONS.length} LLM function(s).`
   )
 }
 

@@ -48,11 +48,18 @@ refused with the columns it wanted printed beside the columns it found, so the
 first real export diagnoses itself. **Do not treat those two as working until a
 real file has gone through them.**
 
-**Deploying it needs `pnpm db:seed` once.** Two migrations and thirteen seeded
-categories, one of which carries `kind = TRANSFER`. Confirming a pair assigns
-that one, so without the seed `transferCategoryId()` throws — deliberately, and
-in preference to writing a movement with no category into the one bucket the
-totals ignore.
+**Deploying it needs nothing by hand.** Three migrations, the last of which
+inserts the thirteen starting categories — data in a migration and not in
+`prisma/seed.ts`, because the module cannot work without one of them: confirming
+a transfer assigns the category whose kind is `TRANSFER`, and with none present
+`transferCategoryId()` throws rather than writing a movement into the one bucket
+the totals ignore.
+
+**Do not move that list back into the seed**, and do not wire `pnpm db:seed`
+into the build to solve a problem like this again. The seed also upserts the
+users on their email — see the warning under item 3 below — and re-inserts the
+108 catalogue rows, which is what resurrected nineteen ingredients and four
+recipes once already. It is a development convenience, not a deploy step.
 
 **A component refactor went in with it, and touches the menu module too.**
 `FormMessage` painted every message in the error colour, so `/settings/llm` had
