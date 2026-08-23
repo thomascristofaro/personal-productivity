@@ -118,13 +118,41 @@ export async function updateFunction(
   })
 }
 
+// `LlmExecution.functionId` is a foreign key, so a history row cannot exist
+// before the function row does — and the function row is only written when
+// someone saves the settings. Generating before ever visiting that screen
+// therefore wrote a menu and lost its execution to a constraint violation.
+// Creating the row here, with the defaults it was actually run with, keeps the
+// key and the cascade: deleting a function still takes its history with it.
+async function ensureRow(id: string): Promise<void> {
+  const definition = definitionFor(id)
+  if (definition === null) throw new Error(`Unknown LLM function: ${id}`)
+
+  await db.llmFunction.upsert({
+    where: { id },
+    update: {},
+    create: {
+      id,
+      name: definition.name,
+      description: definition.description,
+      ...defaultsFor(definition),
+    },
+  })
+}
+
 /**
  * Records one call and prunes the history back to the retention ceiling.
  *
+ * Creates the function row first when it is missing: the history has a foreign
+ * key to it, and the row is otherwise only written by a save on the settings
+ * screen.
+ *
  * @param record What the call was and what it did.
  * @returns Nothing.
+ * @throws Error when no function with that id exists in the code.
  */
 export async function recordExecution(record: ExecutionRecord): Promise<void> {
+  await ensureRow(record.functionId)
   await db.llmExecution.create({ data: record })
 
   const ids = await db.llmExecution.findMany({
