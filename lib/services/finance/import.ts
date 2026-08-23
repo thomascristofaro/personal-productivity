@@ -1,5 +1,6 @@
 import { db } from "@/lib/db"
 import { assertAccountVisible, visibleTo } from "@/lib/services/finance/access"
+import { applyRulesTo } from "@/lib/services/finance/apply-rules"
 import {
   type Fingerprinted,
   fingerprintOf,
@@ -17,7 +18,10 @@ export type ImportPreview = {
   periodTo: Date | null
 }
 
-export type ImportOutcome = ImportPreview & { batchId: string }
+export type ImportOutcome = ImportPreview & {
+  batchId: string
+  categorisedCount: number
+}
 
 export type ImportBatchSummary = {
   id: string
@@ -144,7 +148,7 @@ export async function commitImport(
 ): Promise<ImportOutcome> {
   const prepared = await prepare(actorId, accountId, text)
 
-  const batchId = await db.$transaction(async (tx) => {
+  const { batchId, writtenIds } = await db.$transaction(async (tx) => {
     const batch = await tx.importBatch.create({
       data: {
         accountId,
@@ -179,10 +183,23 @@ export async function commitImport(
       })
     }
 
-    return batch.id
+    // createMany returns no rows, so what it wrote is read back by the batch —
+    // the only thing that owns exactly those movements.
+    const written = await tx.movement.findMany({
+      where: { importBatchId: batch.id },
+      select: { id: true },
+    })
+
+    return { batchId: batch.id, writtenIds: written.map((row) => row.id) }
   })
 
-  return { ...report(prepared), batchId }
+  // Outside the transaction on purpose: the movements are already safe, and a
+  // rule that throws must not take the import down with it. The worst case is
+  // an import whose rows arrived uncategorised, which one tap on the rules
+  // screen fixes.
+  const categorisedCount = await applyRulesTo(writtenIds)
+
+  return { ...report(prepared), batchId, categorisedCount }
 }
 
 /**
