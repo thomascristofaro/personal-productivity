@@ -77,6 +77,33 @@ export const FinanceAccountInputSchema = z.object({
 
 export type FinanceAccountInput = z.infer<typeof FinanceAccountInputSchema>
 
+// Declared here rather than imported from the generated client, for the same
+// reason as FINANCE_PROVIDERS above: lib/schemas may import Zod and its own
+// siblings and nothing else. These tuples mirror the Prisma enums.
+export const CATEGORY_KINDS = ["EXPENSE", "INCOME", "TRANSFER"] as const
+
+export const CategoryKindSchema = z.enum(CATEGORY_KINDS, "Scegli un tipo.")
+export type CategoryKind = z.infer<typeof CategoryKindSchema>
+
+export const CATEGORY_KIND_LABELS: Record<CategoryKind, string> = {
+  EXPENSE: "Uscita",
+  INCOME: "Entrata",
+  TRANSFER: "Trasferimento",
+}
+
+export const RULE_KINDS = [
+  "DESCRIPTION_CONTAINS",
+  "PROVIDER_CATEGORY_IS",
+] as const
+
+export const RuleKindSchema = z.enum(RULE_KINDS, "Scegli un tipo di regola.")
+export type RuleKind = z.infer<typeof RuleKindSchema>
+
+export const RULE_KIND_LABELS: Record<RuleKind, string> = {
+  DESCRIPTION_CONTAINS: "La descrizione contiene",
+  PROVIDER_CATEGORY_IS: "La categoria del servizio è",
+}
+
 export const MovementNoteSchema = z
   .string()
   .trim()
