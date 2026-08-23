@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   FinanceAccountInputSchema,
   MovementNoteSchema,
+  RuleInputSchema,
   SignedEuroCentsSchema,
 } from "@/lib/schemas/finance"
 
@@ -86,5 +87,39 @@ describe("MovementNoteSchema", () => {
 
   it("refuses a note longer than the column expects", () => {
     expect(MovementNoteSchema.safeParse("x".repeat(501)).success).toBe(false)
+  })
+})
+
+describe("RuleInputSchema", () => {
+  const valid = {
+    kind: "DESCRIPTION_CONTAINS",
+    pattern: "ESSELUNGA",
+    categoryId: "cmt5jj0d8000bw0pfc1kl0yqd",
+    accountId: "",
+  }
+
+  it("reads an empty account as every account", () => {
+    expect(RuleInputSchema.parse(valid).accountId).toBeNull()
+  })
+
+  it("keeps an account when one is chosen", () => {
+    expect(
+      RuleInputSchema.parse({
+        ...valid,
+        accountId: "cmt5jhdxs0000w0pfpuhad789",
+      }).accountId
+    ).toBe("cmt5jhdxs0000w0pfpuhad789")
+  })
+
+  it("refuses a one-character pattern, which would match everything", () => {
+    expect(RuleInputSchema.safeParse({ ...valid, pattern: "a" }).success).toBe(
+      false
+    )
+  })
+
+  it("refuses an account id that is not an id", () => {
+    expect(RuleInputSchema.safeParse({ ...valid, accountId: "boh" }).success).toBe(
+      false
+    )
   })
 })

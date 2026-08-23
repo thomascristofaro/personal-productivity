@@ -111,3 +111,41 @@ export const MovementNoteSchema = z
   // Empty is a real state — the note has been cleared — and null is how the
   // column spells it.
   .transform((value) => (value === "" ? null : value))
+
+export const CategoryIdSchema = z.cuid("Questa categoria non è valida.")
+
+export const RuleIdSchema = z.cuid("Questa regola non è valida.")
+
+export const CategoryInputSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "Dai un nome alla categoria.")
+    .max(40, "Il nome può avere al massimo 40 caratteri."),
+  kind: CategoryKindSchema,
+  archived: z.boolean(),
+})
+
+export type CategoryInput = z.infer<typeof CategoryInputSchema>
+
+export const RuleInputSchema = z.object({
+  kind: RuleKindSchema,
+  pattern: z
+    .string()
+    .trim()
+    .min(2, "Scrivi almeno due caratteri.")
+    .max(80, "Il testo può avere al massimo 80 caratteri."),
+  categoryId: CategoryIdSchema,
+  // Empty means every account, which is what the picker's first option posts.
+  accountId: z
+    .string()
+    .trim()
+    .transform((value) => (value === "" ? null : value))
+    .refine(
+      (value) =>
+        value === null || FinanceAccountIdSchema.safeParse(value).success,
+      "Questo conto non è valido."
+    ),
+})
+
+export type RuleInput = z.infer<typeof RuleInputSchema>
