@@ -4,8 +4,10 @@ import { cache } from "react"
 import { saveMovementNote } from "@/app/(app)/finance/movements/[id]/actions"
 import { MovementAmount } from "@/components/finance/movement-amount"
 import { MovementNoteForm } from "@/components/finance/movement-note-form"
+import { DataRow } from "@/components/page/data-row"
 import { DetailBody } from "@/components/page/page-body"
 import { PageHeader } from "@/components/page/page-header"
+import { DetailSection } from "@/components/page/section"
 import { Separator } from "@/components/ui/separator"
 import { requireSession } from "@/lib/auth"
 import { getMovement } from "@/lib/services/finance/movements"
@@ -39,15 +41,6 @@ export async function generateMetadata({
   return { title: movement?.description ?? "Movimento" }
 }
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex items-baseline justify-between gap-4">
-      <span className="text-sm text-muted-foreground">{label}</span>
-      <span className="text-right text-sm break-words">{children}</span>
-    </div>
-  )
-}
-
 export default async function MovementPage({
   params,
 }: {
@@ -77,47 +70,41 @@ export default async function MovementPage({
 
       <Separator />
 
-      <section className="flex flex-col gap-2">
-        <h2 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-          Come è arrivato
-        </h2>
-
-        <Row label="Data">{longDay.format(movement.date)}</Row>
-        <Row label="Importo">
+      <DetailSection title="Come è arrivato" className="gap-2">
+        <DataRow label="Data">{longDay.format(movement.date)}</DataRow>
+        <DataRow label="Importo">
           <MovementAmount cents={movement.amountCents} />
-        </Row>
-        <Row label="Conto">{movement.accountName}</Row>
+        </DataRow>
+        <DataRow label="Conto">{movement.accountName}</DataRow>
         {movement.providerCategory === null ? null : (
-          <Row label="Categoria dichiarata">{movement.providerCategory}</Row>
+          <DataRow label="Categoria dichiarata">
+            {movement.providerCategory}
+          </DataRow>
         )}
         {movement.importedAt === null ? null : (
-          <Row label="Importato">
+          <DataRow label="Importato">
             {dayAndTime.format(movement.importedAt)}
             {movement.importFileName === null
               ? null
               : ` — ${movement.importFileName}`}
-          </Row>
+          </DataRow>
         )}
 
         <p className="pt-1 text-xs text-muted-foreground">
           Questi dati arrivano dal file e non si modificano: correggerli qui
           farebbe riscrivere l’originale al prossimo import dello stesso periodo.
         </p>
-      </section>
+      </DetailSection>
 
       <Separator />
 
-      <section className="flex flex-col gap-3">
-        <h2 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-          Le tue note
-        </h2>
-
+      <DetailSection title="Le tue note" className="gap-3">
         <MovementNoteForm
           movementId={movement.id}
           note={movement.note ?? ""}
           action={saveMovementNote}
         />
-      </section>
+      </DetailSection>
     </DetailBody>
   )
 }

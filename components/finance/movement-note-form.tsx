@@ -1,8 +1,8 @@
 "use client"
 
 import { TextareaField } from "@/components/page/fields"
-import { FormActions } from "@/components/page/form-actions"
 import { PageForm } from "@/components/page/page-form"
+import { Button } from "@/components/ui/button"
 import { useFormState } from "@/hooks/use-form-state"
 import type { FormAction } from "@/lib/form"
 
@@ -24,9 +24,19 @@ export function MovementNoteForm({
   return (
     <PageForm
       form={form}
-      // No cancelHref: the form is edited in place on the page it belongs to,
-      // and a link cancelling to the page you are already on says nothing.
-      actions={<FormActions isPending={form.isPending} submitLabel="Salva la nota" />}
+      className="gap-3"
+      // The same footer as PurchaseTotalForm, which is the same situation: a
+      // form edited in place on a page of readings, so there is nowhere for an
+      // Annulla to go and the submit sits back at `outline`.
+      //
+      // The confirmation is not written here. PageForm renders `state.message`,
+      // and since FormMessage learned the difference between a success and a
+      // refusal, "Nota salvata." arrives on its own and in the right colour.
+      actions={
+        <Button type="submit" variant="outline" disabled={form.isPending}>
+          {form.isPending ? "Salvo…" : "Salva la nota"}
+        </Button>
+      }
     >
       <input type="hidden" name="id" value={movementId} />
 
@@ -38,14 +48,6 @@ export function MovementNoteForm({
         description="Quello che il file non dice: a chi era il rimborso, perché quell’importo."
         rows={3}
       />
-
-      {form.state.ok && form.state.message !== null ? (
-        // The success is announced rather than shown as a toast: this form does
-        // not close, so there is a place on screen for the answer to live.
-        <p role="status" className="text-sm text-muted-foreground">
-          {form.state.message}
-        </p>
-      ) : null}
     </PageForm>
   )
 }

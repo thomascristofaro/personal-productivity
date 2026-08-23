@@ -1,12 +1,13 @@
 import Link from "next/link"
 
+import { CardList } from "@/components/page/data-list"
 import { DataListRow } from "@/components/page/data-list-row"
+import { DataRow } from "@/components/page/data-row"
 import { EmptyState } from "@/components/page/empty-state"
-import { ListSection } from "@/components/page/list-section"
 import { ListBody } from "@/components/page/page-body"
 import { PageHeader } from "@/components/page/page-header"
+import { DetailSection } from "@/components/page/section"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
 import { requireSession } from "@/lib/auth"
 import { formatEuro } from "@/lib/money"
 import { listAccounts } from "@/lib/services/finance/accounts"
@@ -31,10 +32,7 @@ export default async function FinancePage() {
   const { userId } = await requireSession()
   const accounts = await listAccounts(userId)
 
-  const total = accounts.reduce(
-    (sum, account) => sum + account.balanceCents,
-    0
-  )
+  const total = accounts.reduce((sum, account) => sum + account.balanceCents, 0)
 
   if (accounts.length === 0) {
     return (
@@ -59,32 +57,36 @@ export default async function FinancePage() {
     <ListBody>
       <PageHeader title="Finanza" />
 
-      <ListSection title="Saldi" className="gap-2">
-        {accounts.map((account) => (
-          <li key={account.id}>
-            <Card className="flex-row items-baseline justify-between gap-3 p-4">
-              <div className="flex min-w-0 flex-col gap-0.5">
-                <span className="font-medium break-words">{account.name}</span>
-                <span className="text-xs text-muted-foreground">
-                  {account.lastMovementAt === null
-                    ? "nessun movimento"
-                    : `aggiornato al ${day.format(account.lastMovementAt)}`}
-                </span>
-              </div>
-              <span className="shrink-0 font-medium tabular-nums">
+      <DetailSection title="Saldi" className="gap-2">
+        <CardList>
+          {accounts.map((account) => (
+            // The tile leads to that account's movements, which is the question
+            // a balance makes you ask next.
+            <DataListRow
+              key={account.id}
+              href={`/finance/movements?account=${account.id}`}
+              title={account.name}
+            >
+              <span className="font-medium text-foreground tabular-nums">
                 {formatEuro(account.balanceCents)}
               </span>
-            </Card>
-          </li>
-        ))}
+              <span>
+                {account.lastMovementAt === null
+                  ? "nessun movimento"
+                  : `aggiornato al ${day.format(account.lastMovementAt)}`}
+              </span>
+            </DataListRow>
+          ))}
+        </CardList>
 
-        <li className="flex items-baseline justify-between gap-3 px-4 pt-1">
-          <span className="text-sm text-muted-foreground">Totale</span>
-          <span className="font-semibold tabular-nums">
-            {formatEuro(total)}
-          </span>
-        </li>
-      </ListSection>
+        <div className="px-4 pt-1">
+          <DataRow label="Totale">
+            <span className="font-semibold tabular-nums">
+              {formatEuro(total)}
+            </span>
+          </DataRow>
+        </div>
+      </DetailSection>
 
       {/* Not a number to admire: when it disagrees with what the provider's own
           app shows, an import has a hole. */}
@@ -93,11 +95,13 @@ export default async function FinancePage() {
         quello che vedi sull’app del servizio, manca qualcosa da importare.
       </p>
 
-      <ListSection title="Vai a">
-        {WAYS_IN.map((way) => (
-          <DataListRow key={way.href} href={way.href} title={way.label} />
-        ))}
-      </ListSection>
+      <DetailSection title="Vai a" className="gap-2">
+        <CardList>
+          {WAYS_IN.map((way) => (
+            <DataListRow key={way.href} href={way.href} title={way.label} />
+          ))}
+        </CardList>
+      </DetailSection>
     </ListBody>
   )
 }

@@ -8,12 +8,19 @@ import {
   importStatement,
   previewStatement,
 } from "@/app/(app)/finance/import/actions"
+import { DataRow } from "@/components/page/data-row"
 import { SelectField } from "@/components/page/fields"
 import { FormField } from "@/components/page/form-field"
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { FieldGroup } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { countLabel } from "@/lib/count-label"
 
 export type ImportAccount = { id: string; name: string }
 
@@ -27,13 +34,22 @@ const day = new Intl.DateTimeFormat("it-IT", {
   year: "numeric",
 })
 
+// Zero never renders — the alert is guarded on a count above it — but one and
+// many are two different sentences in Italian, which is what countLabel is for.
+const UNREADABLE = {
+  none: "",
+  one: "riga non si legge",
+  many: "righe non si leggono",
+}
+
 function Period({ from, to }: { from: Date | null; to: Date | null }) {
   if (from === null || to === null) return <>nessuna data leggibile</>
-  return (
-    <>
-      dal {day.format(new Date(from))} al {day.format(new Date(to))}
-    </>
-  )
+
+  const start = day.format(new Date(from))
+  const end = day.format(new Date(to))
+
+  // "dal 2 agosto al 2 agosto" is how a one-day export would read otherwise.
+  return start === end ? <>{start}</> : <>dal {start} al {end}</>
 }
 
 export function ImportPanel({ accounts }: { accounts: ImportAccount[] }) {
@@ -134,23 +150,28 @@ export function ImportPanel({ accounts }: { accounts: ImportAccount[] }) {
         </p>
       ) : null}
 
+      {/* The default variant with a red title, not `variant="destructive"`:
+          that variant paints the description red too, through a child selector
+          a utility class cannot override, and the two column lists are the
+          evidence rather than more of the complaint. In this theme the variants
+          differ only in text colour, so nothing else is lost. */}
       {reply?.ok === false ? (
-        <Card className="gap-2 border-destructive/50 p-4">
-          <p role="alert" className="text-sm text-destructive">
-            {reply.message}
-          </p>
+        <Alert>
+          <AlertTitle className="text-destructive">{reply.message}</AlertTitle>
           {reply.expected === undefined ? null : (
-            <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+            <AlertDescription className="pt-1 text-xs">
               {/* Printed rather than logged: this is how a reader built on a
                   guessed layout gets corrected against the first real file. */}
-              <p>Colonne attese: {reply.expected.join(", ")}</p>
+              <p className="mb-0!">
+                Colonne attese: {reply.expected.join(", ")}
+              </p>
               <p>
                 Colonne trovate:{" "}
                 {reply.found?.length ? reply.found.join(", ") : "nessuna"}
               </p>
-            </div>
+            </AlertDescription>
           )}
-        </Card>
+        </Alert>
       ) : null}
 
       {preview !== undefined ? (
@@ -162,18 +183,27 @@ export function ImportPanel({ accounts }: { accounts: ImportAccount[] }) {
             </p>
           </div>
 
-          <ul className="flex flex-col gap-1 text-sm">
-            <li>{preview.newCount} movimenti nuovi</li>
-            <li className="text-muted-foreground">
-              {preview.duplicateCount} già presenti
-            </li>
-            {preview.unreadable > 0 ? (
-              <li className="text-destructive">
-                {preview.unreadable} righe illeggibili, che non verranno
-                importate
-              </li>
-            ) : null}
-          </ul>
+          <div className="flex flex-col gap-1">
+            <DataRow label="Movimenti nuovi">{preview.newCount}</DataRow>
+            <DataRow label="Già presenti">{preview.duplicateCount}</DataRow>
+          </div>
+
+          {preview.unreadable > 0 ? (
+            // `status` and not the Alert's own `alert`: this is a warning on a
+            // screen the user is already reading, not an interruption.
+            <Alert role="status">
+              <AlertTitle className="text-destructive">
+                {countLabel(preview.unreadable, UNREADABLE)}
+              </AlertTitle>
+              {/* Says nothing about how many, so it agrees with a title that
+                  may be singular or plural — and it answers the question the
+                  warning raises: the rest still arrives. */}
+              <AlertDescription>
+                Il resto viene importato lo stesso. Controlla il file prima di
+                continuare.
+              </AlertDescription>
+            </Alert>
+          ) : null}
 
           <div className="flex gap-2">
             <Button

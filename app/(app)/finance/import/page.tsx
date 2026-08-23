@@ -1,10 +1,12 @@
 import Link from "next/link"
 
 import { ImportPanel } from "@/components/finance/import-panel"
+import { CardList } from "@/components/page/data-list"
+import { DataListRow } from "@/components/page/data-list-row"
 import { EmptyState } from "@/components/page/empty-state"
-import { ListSection } from "@/components/page/list-section"
 import { ListBody } from "@/components/page/page-body"
 import { PageHeader } from "@/components/page/page-header"
+import { DetailSection } from "@/components/page/section"
 import { Button } from "@/components/ui/button"
 import { requireSession } from "@/lib/auth"
 import { listAccounts } from "@/lib/services/finance/accounts"
@@ -57,22 +59,22 @@ export default async function FinanceImportPage() {
       )}
 
       {imports.length === 0 ? null : (
-        <ListSection title="Import recenti">
-          {imports.map((batch) => (
-            <li
-              key={batch.id}
-              className="flex flex-col gap-0.5 border-b py-3 last:border-b-0"
-            >
-              <span className="text-sm font-medium break-words">
-                {batch.accountName} — {batch.fileName}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                {batch.rowsWritten} movimenti, {batch.rowsSkipped} già presenti
-                — {day.format(batch.createdAt)}
-              </span>
-            </li>
-          ))}
-        </ListSection>
+        <DetailSection title="Import recenti" className="gap-2">
+          <CardList>
+            {imports.map((batch) => (
+              // No href: an import is a reading, not a way in. An anchor with
+              // nowhere to go would be a keyboard stop that does nothing.
+              <DataListRow
+                key={batch.id}
+                title={`${batch.accountName} — ${batch.fileName}`}
+              >
+                <span>{batch.rowsWritten} movimenti</span>
+                <span>{batch.rowsSkipped} già presenti</span>
+                <span>{day.format(batch.createdAt)}</span>
+              </DataListRow>
+            ))}
+          </CardList>
+        </DetailSection>
       )}
     </ListBody>
   )
