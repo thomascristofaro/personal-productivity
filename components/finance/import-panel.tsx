@@ -115,7 +115,15 @@ export function ImportPanel({ accounts }: { accounts: ImportAccount[] }) {
             type="file"
             accept=".csv,text/csv"
             disabled={isPending}
-            onChange={(event) => choose(event.target.files?.[0])}
+            onChange={(event) => {
+              const chosen = event.target.files?.[0]
+              // Cleared straight away, so choosing the *same* file again still
+              // fires a change. Without this, re-importing a file to check that
+              // it is recognised as a duplicate does nothing at all, and the
+              // previous outcome stays on screen reading as if it had.
+              event.target.value = ""
+              choose(chosen)
+            }}
           />
         </FormField>
       </FieldGroup>
