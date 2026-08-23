@@ -14,7 +14,12 @@ import { requireSession } from "@/lib/auth"
 import { countLabel } from "@/lib/count-label"
 import { firstOf } from "@/lib/search-params"
 import { listAccounts } from "@/lib/services/finance/accounts"
-import { listMovements, offsetFrom } from "@/lib/services/finance/movements"
+import { listCategories } from "@/lib/services/finance/categories"
+import {
+  listMovements,
+  offsetFrom,
+  UNCATEGORISED_FILTER,
+} from "@/lib/services/finance/movements"
 
 export const metadata = { title: "Movimenti" }
 
@@ -36,42 +41,58 @@ export default async function MovementsPage({
   searchParams: Promise<{
     q?: string | string[]
     account?: string | string[]
+    category?: string | string[]
     offset?: string | string[]
   }>
 }) {
   const {
     q: rawQuery,
     account: rawAccount,
+    category: rawCategory,
     offset: rawOffset,
   } = await searchParams
   const q = firstOf(rawQuery)
   const account = firstOf(rawAccount)
+  const category = firstOf(rawCategory)
   const offset = offsetFrom(firstOf(rawOffset))
 
   const { userId } = await requireSession()
-  const [accounts, page] = await Promise.all([
+  const [accounts, categories, page] = await Promise.all([
     listAccounts(userId),
-    listMovements(userId, { accountId: account, q }, offset),
+    listCategories(),
+    listMovements(userId, { accountId: account, q, category }, offset),
   ])
 
   const isSearching = Boolean(q?.trim())
 
-  // At most four accounts, so the single row FilterChips renders still fits a
-  // 390px screen. The horizontal scroll the design asks for belongs to the
-  // category filter, which is the next plan's.
-  const chips = [
+  const accountChips = [
     { value: undefined, label: "Tutti" },
     ...accounts.map((one) => ({ value: one.id, label: one.name })),
+  ]
+
+  // «Trasferimenti» is not a filter of its own: it is the one category whose
+  // kind is TRANSFER, and it sits in this list like any other. What makes it
+  // special lives in countsTowardsTotals, in one function.
+  const categoryChips = [
+    { value: undefined, label: "Tutte" },
+    { value: UNCATEGORISED_FILTER, label: "Da categorizzare" },
+    ...categories
+      .filter((one) => !one.archived)
+      .map((one) => ({ value: one.id, label: one.name })),
   ]
 
   const more = new URLSearchParams()
   if (q) more.set("q", q)
   if (account) more.set("account", account)
+  if (category) more.set("category", category)
   more.set("offset", String(page.nextOffset))
 
   return (
     <ListBody>
-      <PageHeader title="Movimenti" back={{ href: "/finance", label: "Finanza" }}>
+      <PageHeader
+        title="Movimenti"
+        back={{ href: "/finance", label: "Finanza" }}
+      >
         <Button
           variant="outline"
           render={<Link href="/finance/import" />}
@@ -91,11 +112,20 @@ export default async function MovementsPage({
 
       <FilterChips
         basePath="/finance/movements"
+        param="category"
+        chips={categoryChips}
+        active={category}
+        label="Filtra per categoria"
+        keep={{ q, account }}
+      />
+
+      <FilterChips
+        basePath="/finance/movements"
         param="account"
-        chips={chips}
+        chips={accountChips}
         active={account}
         label="Filtra per conto"
-        keep={{ q }}
+        keep={{ q, category }}
       />
 
       <DataList
@@ -109,12 +139,15 @@ export default async function MovementsPage({
           >
             <span>{day.format(movement.date)}</span>
             <span>{movement.accountName}</span>
+            <span>{movement.categoryName ?? "da categorizzare"}</span>
             <MovementAmount cents={movement.amountCents} />
           </DataListRow>
         )}
         empty={
           isSearching ? (
             <EmptyState title="Nessun movimento con questo testo." />
+          ) : category !== undefined ? (
+            <EmptyState title="Nessun movimento in questa categoria." />
           ) : account !== undefined ? (
             <EmptyState title="Nessun movimento su questo conto." />
           ) : (

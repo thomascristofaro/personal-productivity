@@ -9,7 +9,23 @@ export const MOVEMENTS_PAGE_SIZE = 50
 // ask Postgres to skip a hundred million rows.
 const MAX_OFFSET = 100_000
 
-export type MovementFilters = { accountId?: string; q?: string }
+// What the detail screen shows of the other leg of a transfer.
+const TWIN = {
+  id: true,
+  description: true,
+  account: { select: { name: true } },
+} as const
+
+// The value the category chip carries for the movements nobody has classified
+// yet. Not a category id, because "no category" is not a category.
+export const UNCATEGORISED_FILTER = "uncategorised"
+
+export type MovementFilters = {
+  accountId?: string
+  q?: string
+  // UNCATEGORISED_FILTER, or a category id.
+  category?: string
+}
 
 export type MovementRow = {
   id: string
@@ -17,6 +33,7 @@ export type MovementRow = {
   amountCents: number
   description: string
   accountName: string
+  categoryName: string | null
 }
 
 export type MovementPage = {
@@ -25,13 +42,23 @@ export type MovementPage = {
   nextOffset: number
 }
 
+export type MovementTwin = {
+  id: string
+  description: string
+  accountName: string
+}
+
 export type MovementDetail = MovementRow & {
   accountId: string
+  categoryId: string | null
   providerCategory: string | null
   providerRef: string | null
   note: string | null
   importedAt: Date | null
   importFileName: string | null
+  // The other leg of a confirmed transfer, or null when this movement is not
+  // part of one.
+  twin: MovementTwin | null
 }
 
 /**
@@ -84,6 +111,11 @@ export async function listMovements(
       ...(query === ""
         ? {}
         : { description: { contains: query, mode: "insensitive" as const } }),
+      ...(filters.category === undefined
+        ? {}
+        : filters.category === UNCATEGORISED_FILTER
+          ? { categoryId: null }
+          : { categoryId: filters.category }),
     },
     select: {
       id: true,
@@ -91,6 +123,7 @@ export async function listMovements(
       amountCents: true,
       description: true,
       account: { select: { name: true } },
+      category: { select: { name: true } },
     },
     orderBy: [{ date: "desc" }, { createdAt: "desc" }],
     skip: offset,
@@ -107,6 +140,7 @@ export async function listMovements(
       amountCents: row.amountCents,
       description: row.description,
       accountName: row.account.name,
+      categoryName: row.category?.name ?? null,
     })),
     hasMore: rows.length > MOVEMENTS_PAGE_SIZE,
     nextOffset: offset + MOVEMENTS_PAGE_SIZE,
@@ -136,12 +170,20 @@ export async function getMovement(
       providerRef: true,
       note: true,
       accountId: true,
+      categoryId: true,
       account: { select: { name: true } },
+      category: { select: { name: true } },
       importBatch: { select: { createdAt: true, fileName: true } },
+      // Both sides, because a movement may be either leg and the screen does
+      // not care which: what it shows is "the other one".
+      transferFrom: { select: { toMovement: { select: TWIN } } },
+      transferTo: { select: { fromMovement: { select: TWIN } } },
     },
   })
 
   if (row === null) return null
+
+  const other = row.transferFrom?.toMovement ?? row.transferTo?.fromMovement
 
   return {
     id: row.id,
@@ -150,12 +192,46 @@ export async function getMovement(
     description: row.description,
     accountId: row.accountId,
     accountName: row.account.name,
+    categoryId: row.categoryId,
+    categoryName: row.category?.name ?? null,
     providerCategory: row.providerCategory,
     providerRef: row.providerRef,
     note: row.note,
     importedAt: row.importBatch?.createdAt ?? null,
     importFileName: row.importBatch?.fileName ?? null,
+    twin:
+      other === undefined
+        ? null
+        : {
+            id: other.id,
+            description: other.description,
+            accountName: other.account.name,
+          },
   }
+}
+
+/**
+ * Sets a movement's category by hand.
+ *
+ * `MANUAL` is what protects it: a rule applied backwards skips it afterwards,
+ * because a rule may improve a guess and may not overrule a decision.
+ *
+ * @param actorId - the user id, from the session
+ * @param id - the movement's id
+ * @param categoryId - the chosen category
+ * @returns whether a row was written
+ */
+export async function setMovementCategory(
+  actorId: string,
+  id: string,
+  categoryId: string
+): Promise<boolean> {
+  const { count } = await db.movement.updateMany({
+    where: { id, account: visibleTo(actorId) },
+    data: { categoryId, categorySource: "MANUAL" },
+  })
+
+  return count > 0
 }
 
 /**

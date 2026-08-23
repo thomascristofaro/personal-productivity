@@ -41,12 +41,18 @@ export function FilterChips({
           belongs in the address bar, so it survives a refresh and can be sent
           to the other phone. A client component here would buy nothing and
           pull the boundary up the tree. */}
-      <ul className="flex gap-2">
+      {/* Scrolls rather than wraps. With four chips it makes no difference;
+          with fourteen categories a wrapping row is three lines of chips above
+          every list, and an overflowing one hides the last of them off a 390px
+          screen with no way to reach them. The negative margin and its matching
+          padding let the row bleed to the screen edge, so a chip cut off at the
+          right reads as "there is more" rather than as a mistake. */}
+      <ul className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {chips.map((chip) => {
           const current = chip.value === active
 
           return (
-            <li key={chip.label}>
+            <li key={chip.label} className="shrink-0">
               <Link
                 href={hrefFor(chip.value)}
                 aria-current={current ? "page" : undefined}
