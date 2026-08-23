@@ -57,7 +57,12 @@ export function MovementCategoryForm({
       <input type="hidden" name="id" value={movementId} />
 
       <SelectField
-        key={form.fieldKey("categoryId")}
+        // The incoming value is part of the key, not only the attempt counter:
+        // a `defaultValue` is read at mount, and this one also changes without
+        // a submit — unlinking a transfer revalidates the page and clears the
+        // category. Without it the select goes on showing «Trasferimento» on a
+        // movement that no longer has one.
+        key={`${form.fieldKey("categoryId")}-${categoryId}`}
         {...form.fieldProps("categoryId")}
         label="Categoria"
         error={form.errorOf("categoryId")}
