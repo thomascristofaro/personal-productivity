@@ -5,8 +5,9 @@ and state** — nothing else does. The design authority stays
 `docs/superpowers/specs/2026-08-13-menu-spesa-design.md`, and the decisions live
 in `docs/conventions/`. Do not restate either here; point at them.
 
-Last updated: 2026-08-22. `main` is deployed, and nothing is in flight. Work
-normally happens on a branch per plan.
+Last updated: 2026-08-23. `main` is deployed. The finance module is in flight on
+`feat/finance-foundation` — see below. Work normally happens on a branch per
+plan; that branch is the stated exception and says why.
 
 ## Shipped
 
@@ -29,7 +30,45 @@ normally happens on a branch per plan.
 
 ## In flight
 
-Nothing. The recipe import merged on 2026-08-21 (#19) — `share_target` points at
+**The finance module, on `feat/finance-foundation`.** One branch carrying three
+plans, because each builds on the one before and squash merges make a stack of
+three painful. Design:
+[`2026-08-23-finance-design`](superpowers/specs/2026-08-23-finance-design.md).
+
+| Plan                                                                                        | What it leaves behind                                                                                                                                                                                                                                                                                                                                       |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`2026-08-23-module-fork`](superpowers/plans/2026-08-23-module-fork.md)                     | `lib/modules.ts` — a module is one entry in one list — and `/` moving inside `(app)` to become a fork. With one visible module it redirects, so nothing changed on screen until the second arrived                                                                                                                                                          |
+| [`2026-08-23-finance-core`](superpowers/plans/2026-08-23-finance-core.md)                   | `FinanceAccount`, `Movement`, `ImportBatch`, `visibleAccountIds`, the three readers, the import with its preview and its **duplicate counting**, and the accounts, movements and import screens                                                                                                                                                            |
+| [`2026-08-23-finance-meaning`](superpowers/plans/2026-08-23-finance-meaning.md)             | `Category`, `CategoryRule`, `TransferLink`, the three sieves, the one-tap rule with its backfill, the pairing and its confirmation, and the summary with the three-month comparison                                                                                                                                                                        |
+
+**Two readers are built on a guess.** Intesa Sanpaolo's and Satispay's column
+names have never been checked against a real export — both files say so at the
+top. Revolut's is the documented layout. A file whose header does not match is
+refused with the columns it wanted printed beside the columns it found, so the
+first real export diagnoses itself. **Do not treat those two as working until a
+real file has gone through them.**
+
+**Deploying it needs nothing by hand.** Three migrations, the last of which
+inserts the thirteen starting categories — data in a migration and not in
+`prisma/seed.ts`, because the module cannot work without one of them: confirming
+a transfer assigns the category whose kind is `TRANSFER`, and with none present
+`transferCategoryId()` throws rather than writing a movement into the one bucket
+the totals ignore.
+
+**Do not move that list back into the seed**, and do not wire `pnpm db:seed`
+into the build to solve a problem like this again. The seed also upserts the
+users on their email — see the warning under item 3 below — and re-inserts the
+108 catalogue rows, which is what resurrected nineteen ingredients and four
+recipes once already. It is a development convenience, not a deploy step.
+
+**A component refactor went in with it, and touches the menu module too.**
+`FormMessage` painted every message in the error colour, so `/settings/llm` had
+been confirming a save in red since it shipped. It now takes the tone from
+`state.ok`. Alongside: `DetailSection` and `CardList` extracted from
+`ListSection` and `DataList`, a new `DataRow`, `DataListRow` with an optional
+`href`, and `Alert` added from shadcn.
+
+Nothing else. The recipe import merged on 2026-08-21 (#19) — `share_target` points at
 a `/import` that exists, `lib/json-ld.ts` reads the broken JSON real sites
 publish, `lib/url-guard.ts` refuses the addresses a fetcher must not reach, and a
 save creates the catalogue entries the recipe names instead of refusing over

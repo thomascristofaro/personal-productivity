@@ -1,8 +1,11 @@
-import { cn } from "@/lib/utils"
+import { DetailSection } from "@/components/page/section"
 
 // The section, not a list of sections: two callers map over aisle groups and a
 // third has a single section with a fixed title. A component taking the groups
 // would force that third one to pass an array of one.
+//
+// The heading itself lives in DetailSection, so a detail screen that wants the
+// same heading over something that is not a list does not copy it.
 export function ListSection({
   title,
   className,
@@ -13,11 +16,8 @@ export function ListSection({
   children: React.ReactNode
 }) {
   return (
-    <section className={cn("flex flex-col gap-1", className)}>
-      <h2 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-        {title}
-      </h2>
+    <DetailSection title={title} className={className}>
       <ul className="flex flex-col">{children}</ul>
-    </section>
+    </DetailSection>
   )
 }

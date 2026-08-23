@@ -72,7 +72,7 @@ export function FormDrawer({
         <form action={form.formAction} className="flex flex-col gap-6 px-4">
           <FieldGroup key={form.attempt}>{children}</FieldGroup>
 
-          <FormMessage>{form.state.message}</FormMessage>
+          <FormMessage ok={form.state.ok}>{form.state.message}</FormMessage>
 
           <DrawerFooter className="px-0">
             <Button type="submit" disabled={form.isPending || submitDisabled}>

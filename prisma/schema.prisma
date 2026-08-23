@@ -30,6 +30,9 @@ model User {
   checkedItems ShoppingListItem[]
   sessions     Session[]
   accounts     Account[]
+
+  financeAccounts FinanceAccount[]
+  importBatches   ImportBatch[]
 }
 
 model Recipe {
@@ -200,6 +203,178 @@ model PurchaseItem {
   aisle      String
 
   @@index([purchaseId])
+}
+
+// The finance module. Its design is
+// docs/superpowers/specs/2026-08-23-finance-design.md.
+
+enum FinanceProvider {
+  SATISPAY
+  REVOLUT
+  INTESA
+}
+
+// A place money sits. "FinanceAccount" and not "Account": the latter is
+// better-auth's, and renaming that one needs a mapping in lib/auth/better-auth.ts.
+model FinanceAccount {
+  id       String          @id @default(cuid())
+  name     String
+  // An enum and not free text: it selects which reader parses an upload, so an
+  // unknown value would have no behaviour.
+  provider FinanceProvider
+  ownerId  String
+  owner    User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  // Visible to both users. Ownership is the module's only authorisation rule —
+  // design document section 3.
+  shared   Boolean         @default(false)
+  // The balance is derived, never stored: opening balance plus every movement
+  // from that date on. A stored balance diverges from the truth in silence.
+  openingBalanceCents Int      @default(0)
+  openingBalanceAt    DateTime @db.Date
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @default(now()) @updatedAt
+
+  movements Movement[]
+  imports   ImportBatch[]
+  rules     CategoryRule[]
+
+  @@index([ownerId])
+}
+
+// One line of a statement, never edited after import — correcting a description
+// would make the next import of that period write it again beside the
+// correction. `note` is where a human remark goes.
+model Movement {
+  id          String         @id @default(cuid())
+  accountId   String
+  account     FinanceAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  date        DateTime       @db.Date
+  // Integer cents, negative for an outgoing. One column and not two: a dare and
+  // an avere column would let a row be both or neither.
+  amountCents Int
+  description String
+  // What the file declared as its own category, verbatim. Null when it declares
+  // none.
+  providerCategory String?
+  // The provider's own transaction id, when the file carries one.
+  providerRef      String?
+  categoryId       String?
+  category         Category?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  categorySource   CategorySource @default(NONE)
+  // See lib/services/finance/fingerprint.ts. Two identical rows on one day share
+  // this, which is why `occurrence` exists.
+  fingerprint String
+  occurrence  Int    @default(0)
+  note        String?
+  // Nullable with SetNull rather than a required parent: deleting an import must
+  // never take its movements with it, and it removes the delete-ordering problem
+  // when an account cascades both.
+  importBatchId String?
+  importBatch   ImportBatch? @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
+  createdAt     DateTime     @default(now())
+
+  transferFrom TransferLink? @relation("TransferFrom")
+  transferTo   TransferLink? @relation("TransferTo")
+
+  // The duplicate rule, enforced by Postgres and not only by the service: two
+  // imports racing cannot both decide they are writing the first occurrence.
+  @@unique([accountId, fingerprint, occurrence])
+  @@index([accountId, date])
+  @@index([categoryId])
+}
+
+// What was loaded, by whom, and what it did. Not an undo: re-importing the same
+// file is harmless, so nothing needs to be taken back.
+model ImportBatch {
+  id          String         @id @default(cuid())
+  accountId   String
+  account     FinanceAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fileName    String
+  rowsRead    Int
+  rowsWritten Int
+  rowsSkipped Int
+  periodFrom  DateTime       @db.Date
+  periodTo    DateTime       @db.Date
+  createdAt   DateTime       @default(now())
+
+  movements Movement[]
+
+  @@index([accountId, createdAt])
+}
+
+enum CategoryKind {
+  EXPENSE
+  INCOME
+  TRANSFER
+}
+
+// Who decided a movement's category. It exists to protect a decision: without
+// it, the first "apply this rule to the past too" silently overwrites an
+// afternoon of manual corrections.
+enum CategorySource {
+  NONE
+  MANUAL
+  RULE
+  PROVIDER_MAP
+  TRANSFER_LINK
+}
+
+enum RuleKind {
+  DESCRIPTION_CONTAINS
+  PROVIDER_CATEGORY_IS
+}
+
+// Household-wide, not per user: two people looking at one movement should see
+// the same word for it. Accounts stay owned — the privacy is on the movement.
+model Category {
+  id        String       @id @default(cuid())
+  // Italian, because it is data.
+  name      String       @unique
+  kind      CategoryKind
+  sortOrder Int          @default(0)
+  // Hidden from pickers, kept on old movements. Deleting would either orphan
+  // history or recategorise it, and both rewrite the past.
+  archived  Boolean      @default(false)
+  createdAt DateTime     @default(now())
+
+  movements Movement[]
+  rules     CategoryRule[]
+
+  @@index([archived, sortOrder])
+}
+
+// Ordered, first match wins: a specific rule written today has to beat a general
+// one written in March without anyone rewriting the general one.
+model CategoryRule {
+  id         String   @id @default(cuid())
+  kind       RuleKind
+  // A substring for DESCRIPTION_CONTAINS, the provider's own category verbatim
+  // for PROVIDER_CATEGORY_IS. Never a regular expression: one in this field is
+  // something the owner would have to debug from a phone.
+  pattern    String
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  priority   Int      @default(0)
+  // Null means every account.
+  accountId  String?
+  account    FinanceAccount? @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@index([priority])
+  @@index([accountId])
+}
+
+// A row per pair, not a column on each movement. Both sides unique, so a
+// movement belongs to at most one link and unlinking frees both legs at once.
+model TransferLink {
+  id             String   @id @default(cuid())
+  fromMovementId String   @unique
+  fromMovement   Movement @relation("TransferFrom", fields: [fromMovementId], references: [id], onDelete: Cascade)
+  toMovementId   String   @unique
+  toMovement     Movement @relation("TransferTo", fields: [toMovementId], references: [id], onDelete: Cascade)
+  confirmedAt    DateTime @default(now())
 }
 
 // The models below are better-auth's core schema. Their field names are fixed

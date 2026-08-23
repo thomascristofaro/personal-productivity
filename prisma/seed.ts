@@ -76,6 +76,11 @@ async function main() {
     })
   }
 
+  // The finance categories are deliberately not here. They are what a schema
+  // change requires to work, not a convenience, so they go in a migration —
+  // which runs on every deploy, unlike this file. See
+  // prisma/migrations/20260823152937_seed_finance_categories.
+
   console.log(
     `Seeded ${USERS.length} users, ${INGREDIENTS.length} ingredients and ${LLM_FUNCTIONS.length} LLM function(s).`
   )

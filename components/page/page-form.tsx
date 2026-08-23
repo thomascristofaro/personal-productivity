@@ -49,7 +49,7 @@ export function PageForm({
     >
       <FieldGroup>{children}</FieldGroup>
 
-      <FormMessage>{form.state.message}</FormMessage>
+      <FormMessage ok={form.state.ok}>{form.state.message}</FormMessage>
 
       {actions ?? (
         <FormActions cancelHref={cancelHref} isPending={form.isPending} />

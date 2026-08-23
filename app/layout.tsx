@@ -12,9 +12,12 @@ const fontMono = Geist_Mono({
   variable: "--font-mono",
 })
 
+// The app's name, not a module's. "Menù e spesa" was right when there was one
+// module; it is now the name of one of two, and a finance page falling back to
+// it would be wrong. app/manifest.ts had already written down why.
 export const metadata: Metadata = {
-  title: "Menù e spesa",
-  description: "Menù settimanale e lista della spesa",
+  title: "Personal Productivity",
+  description: "Menù, spesa e finanze personali",
   icons: {
     icon: "/icons/icon-192.png",
     apple: "/icons/apple-icon-180.png",
