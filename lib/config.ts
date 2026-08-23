@@ -16,3 +16,8 @@ export const HOUSEHOLD_SERVINGS = 2
 // cost tokens. Recency is a preference the prompt weighs, not a filter that
 // removes candidates — design document 2026-08-21 section 6.
 export const RECENCY_WINDOW_WEEKS = 8
+
+// How far apart the two legs of a transfer may be. Money between two Italian
+// accounts lands in one to three days; four leaves room without pairing a
+// coincidence a week later.
+export const TRANSFER_WINDOW_DAYS = 4
