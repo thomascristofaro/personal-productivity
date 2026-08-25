@@ -41,15 +41,25 @@ three painful. Design:
 | [`2026-08-23-finance-core`](superpowers/plans/2026-08-23-finance-core.md)                   | `FinanceAccount`, `Movement`, `ImportBatch`, `visibleAccountIds`, the three readers, the import with its preview and its **duplicate counting**, and the accounts, movements and import screens                                                                                                                                                            |
 | [`2026-08-23-finance-meaning`](superpowers/plans/2026-08-23-finance-meaning.md)             | `Category`, `CategoryRule`, `TransferLink`, the three sieves, the one-tap rule with its backfill, the pairing and its confirmation, and the summary with the three-month comparison                                                                                                                                                                        |
 
-**Two readers are built on a guess.** Intesa Sanpaolo's and Satispay's column
-names have never been checked against a real export — both files say so at the
-top. Revolut's is the documented layout. A file whose header does not match is
-refused with the columns it wanted printed beside the columns it found, so the
-first real export diagnoses itself. **Do not treat those two as working until a
-real file has gone through them.**
+**Two readers are checked against a real export, one is still a guess.**
+Corrected on 2026-08-25 against the owner's own July–August files:
 
-**Deploying it needs nothing by hand.** Three migrations, the last of which
-inserts the thirteen starting categories — data in a migration and not in
+- **Revolut** — reads them. Its header is translated into the account's language,
+  so the reader accepts both spellings of every column; `State` stays English
+  while its values do not. A cancelled row is skipped, not counted as broken.
+- **Satispay** — reads them. The export is an `.xlsx` workbook and not a CSV, so
+  the module now depends on `read-excel-file`. A payment part-paid by meal
+  vouchers becomes two movements, which is why there is a fourth migration.
+- **Intesa Sanpaolo** — still written against a guess, and the file says so at
+  the top. **Do not treat it as working until a real export has gone through
+  it.**
+
+A file whose header does not match is refused with the columns it wanted printed
+beside the columns it found, so the first real export diagnoses itself. Both
+verified readers reproduce their statement's own closing balance to the cent.
+
+**Deploying it needs nothing by hand.** Four migrations. One inserts the
+thirteen starting categories — data in a migration and not in
 `prisma/seed.ts`, because the module cannot work without one of them: confirming
 a transfer assigns the category whose kind is `TRANSFER`, and with none present
 `transferCategoryId()` throws rather than writing a movement into the one bucket

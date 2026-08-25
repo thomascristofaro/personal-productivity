@@ -14,19 +14,26 @@ import {
 } from "@/lib/services/finance/import"
 import { UnrecognisedFileError } from "@/lib/services/finance/parsers/types"
 
-// One megabyte. A year of statements is tens of kilobytes, and Next's server
-// actions have a body limit a bigger payload would hit as an opaque error
-// rather than as this message.
+// The file travels base64-encoded, because one of the three exports is a binary
+// workbook. Base64 costs a third more than the bytes it carries, so this is the
+// 750 kB the browser enforces plus that overhead — a year of statements is tens
+// of kilobytes, and a bigger payload would hit Next's server action body limit
+// as an opaque error rather than as this message.
 const MAX_CHARACTERS = 1_000_000
 
 const StatementSchema = z.object({
   accountId: FinanceAccountIdSchema,
   fileName: z.string().trim().min(1).max(255),
-  text: z
-    .string()
+  content: z
+    .base64("Il file non è stato letto correttamente.")
     .min(1, "Il file è vuoto.")
     .max(MAX_CHARACTERS, "Il file è troppo grande."),
 })
+
+// Buffer is a Uint8Array, which is what a reader takes.
+function bytesOf(content: string): Uint8Array {
+  return Buffer.from(content, "base64")
+}
 
 export type ImportReply =
   | { ok: true; preview: ImportPreview; outcome?: undefined }
@@ -68,7 +75,7 @@ export async function previewStatement(input: unknown): Promise<ImportReply> {
       preview: await previewImport(
         userId,
         parsed.data.accountId,
-        parsed.data.text
+        bytesOf(parsed.data.content)
       ),
     }
   } catch (error) {
@@ -89,7 +96,7 @@ export async function importStatement(input: unknown): Promise<ImportReply> {
       userId,
       parsed.data.accountId,
       parsed.data.fileName,
-      parsed.data.text
+      bytesOf(parsed.data.content)
     )
 
     revalidatePath("/finance")

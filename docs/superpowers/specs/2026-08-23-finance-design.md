@@ -290,18 +290,26 @@ Recorded so nobody adds them as an oversight:
 
 **Where the file lives between steps 4 and 5.** The preview needs the same file
 across two round trips, and a file input cannot be re-submitted after one. So the
-import screen is a client component: it reads the file with `FileReader`, holds
-the text in its own state, and posts it to two server actions — one that previews
-and one that writes. **Nothing is stored on the server in between.** A file over
-1 MB is refused before it is read, in the browser and again in the action: a
-statement is tens of kilobytes, and a bigger payload would hit Next's server
-action body limit as an opaque error rather than as a sentence.
+import screen is a client component: it reads the file into its own state and
+posts it to two server actions — one that previews and one that writes.
+**Nothing is stored on the server in between.** A file over 750 kB is refused
+before it is read, in the browser and again in the action: a statement is tens of
+kilobytes, and a bigger payload would hit Next's server action body limit as an
+opaque error rather than as a sentence.
+
+**Correction of 2026-08-25, on seeing the real exports.** An earlier draft had
+the screen read the file as text with `FileReader`. Satispay exports an `.xlsx`
+workbook, not a CSV, and reading a workbook as text destroys it. The file
+therefore travels as **bytes, base64-encoded** in the server action's payload,
+and the readers take bytes rather than a string — the two CSV readers decode
+their own. Base64 costs a third more than the bytes it carries, which is where
+750 kB comes from: it is the 1 MB ceiling above, less that overhead.
 
 ### 5.2 The readers
 
 One reader per provider, hand-written, in `lib/services/finance/parsers/`:
-`satispay.ts`, `revolut.ts`, `intesa.ts`. Each knows its own format and returns
-the same shape:
+`satispay.ts`, `revolut.ts`, `intesa.ts`. Each takes the file's bytes, knows its
+own format, and returns the same shape:
 
 ```
 type ParsedMovement = {
@@ -326,6 +334,29 @@ against a problem already solved by exporting a file.
 absent it throws, the import writes nothing, and the screen says the file does
 not look like an export from that provider. A half-imported file is worse than a
 failed import, so partial writes are not a mode this module has.
+
+**One statement row is not always one movement.** Two cases, both found in the
+real exports of 2026-08-25:
+
+- **A Revolut fee.** `Costo` is charged beside the amount, so the reader emits it
+  as its own movement rather than folding it into the payment, which would make
+  the payment look bigger than it was and lose the fee as a line.
+- **A Satispay meal voucher.** The export carries both what a payment cost
+  (`Importo`, −19,82) and what the euro balance did (`Disponibilità`, −3,82);
+  the difference is what some voucher covered. The reader emits the payment for
+  its real cost and the difference as a second movement declaring the provider
+  category `Buono`, which a seeded rule maps to the TRANSFER category. The two
+  sum to the balance movement, so §8.1 still agrees with the app while the
+  expense stays the real one.
+
+  The second row is described as «Buono pasto o acquisto» and never names the
+  shop: a `DESCRIPTION_CONTAINS` rule for the shop runs before the provider map
+  and would file the credit under the shop's own category, cancelling part of the
+  expense it exists to complete.
+
+  A separate «Buoni Pasto» account was considered and rejected: the export
+  carries voucher _spending_ but never voucher _credits_, so such an account
+  would show a balance that falls forever and is never true.
 
 ### 5.3 Recognising duplicates without losing a movement
 
@@ -387,16 +418,25 @@ Every movement written by an import passes:
 1. **`DESCRIPTION_CONTAINS` rules**, by priority, first match wins.
    `categorySource = RULE`.
 2. **`PROVIDER_CATEGORY_IS` rules** — the map from what the file declared to what
-   we call it: *Revolut says `Groceries` → «Spesa»*.
+   we call it: *Satispay says `🏬 a un Negozio` → «Spesa»*.
    `categorySource = PROVIDER_MAP`.
 3. **Nothing.** `categoryId = null`, `categorySource = NONE`, and it appears
    under the «Da categorizzare» filter.
 
 Description rules run first because the owner wrote them looking at a real case,
 and a specific fact beats a general one. The provider's own category is good
-enough to cover most of the volume for free, which is why it is a sieve and not
-an afterthought — the files already carry categories, they are simply incomplete
-and inconsistent between the three providers.
+enough to cover some of the volume for free, which is why it is a sieve and not
+an afterthought.
+
+**Correction of 2026-08-25, on seeing the real exports.** An earlier draft said
+"the files already carry categories". They carry a _kind of transaction_, which
+is a weaker thing. Revolut's `Tipo` says `Pagamento con carta` or `Ricarica` —
+true of most of the file and worth nothing as a category. Satispay's is a little
+better (`🏬 a un Negozio`, `👤 da una Persona`, `🏦 Dalla Banca`), enough to
+file transfers and person-to-person payments but never to tell a supermarket
+from a bar. The second sieve therefore carries less of the load than this section
+assumed, and the first one carries more. Nothing about the design changes; the
+expectation of how much manual work the first month costs does.
 
 **No LLM.** Not deferred: decided. Rules are deterministic and reviewable, and
 the same shop must never land in two categories in two months, which is exactly
@@ -698,3 +738,15 @@ them: whether Intesa Sanpaolo exports CSV or only XLSX — and therefore whether
 this module needs a spreadsheet-reading dependency or a conversion by hand — and
 whether Satispay's export carries a transaction identifier, which decides whether
 its import leans on the counting of §5.3 or never needs it.
+
+**Settled on 2026-08-25**, by the Revolut and Satispay exports:
+
+- **Satispay exports `.xlsx`**, so the dependency was needed after all —
+  `read-excel-file`, chosen over SheetJS, whose npm release is four years old and
+  carries known advisories. Intesa is still unseen.
+- **Satispay's export carries a transaction id**, a UUID per row, exactly as
+  §5.3 expected. Revolut's does not, so the counting of §5.3 remains the general
+  case.
+- **Revolut translates its header** into the account's language, leaving `State`
+  in English while translating its values to `COMPLETATO`. The reader accepts
+  both spellings of every column.

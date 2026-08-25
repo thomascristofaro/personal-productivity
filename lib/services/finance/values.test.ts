@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest"
 
-import { amountToCents, dateToUtcMidnight } from "@/lib/services/finance/values"
+import {
+  amountToCents,
+  cellToUtcMidnight,
+  dateToUtcMidnight,
+  numberToCents,
+} from "@/lib/services/finance/values"
 
 describe("amountToCents", () => {
   it("reads a plain decimal point, as Revolut writes it", () => {
@@ -90,5 +95,45 @@ describe("dateToUtcMidnight", () => {
   it("returns null for something that is not a date", () => {
     expect(dateToUtcMidnight("")).toBeNull()
     expect(dateToUtcMidnight("ieri")).toBeNull()
+  })
+})
+
+describe("numberToCents", () => {
+  it("reads an amount a spreadsheet already parsed", () => {
+    expect(numberToCents(-19.82)).toBe(-1982)
+    expect(numberToCents(50)).toBe(5000)
+  })
+
+  it("rounds rather than truncating, so a cent is not lost in binary", () => {
+    expect(numberToCents(0.07)).toBe(7)
+    expect(numberToCents(-1.15)).toBe(-115)
+  })
+
+  it("returns null for a cell that is not a number", () => {
+    expect(numberToCents("n/d")).toBeNull()
+    expect(numberToCents(null)).toBeNull()
+    expect(numberToCents(Number.NaN)).toBeNull()
+  })
+})
+
+describe("cellToUtcMidnight", () => {
+  it("keeps the day the cell shows", () => {
+    const cell = new Date(Date.UTC(2026, 6, 15, 12, 30))
+    expect(cellToUtcMidnight(cell)?.toISOString()).toBe(
+      "2026-07-15T00:00:00.000Z"
+    )
+  })
+
+  it("keeps a late-evening payment on its own day", () => {
+    const cell = new Date(Date.UTC(2026, 6, 15, 23, 50))
+    expect(cellToUtcMidnight(cell)?.toISOString()).toBe(
+      "2026-07-15T00:00:00.000Z"
+    )
+  })
+
+  it("returns null for a cell that is not a date", () => {
+    expect(cellToUtcMidnight("15/07/2026")).toBeNull()
+    expect(cellToUtcMidnight(null)).toBeNull()
+    expect(cellToUtcMidnight(new Date(Number.NaN))).toBeNull()
   })
 })
