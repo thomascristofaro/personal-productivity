@@ -49,6 +49,20 @@ export function amountToCents(raw: string): number | null {
   return sign * (Number(wholeDigits) * 100 + fractionCents)
 }
 
+/**
+ * Reads an amount a spreadsheet already parsed as a number.
+ *
+ * A workbook stores an amount as a number, so there is nothing to spell and
+ * nothing to guess — only the rounding, which is the same trap as above.
+ *
+ * @param value - the cell's value
+ * @returns the amount in cents, or null when the cell held no finite number
+ */
+export function numberToCents(value: unknown): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value)) return null
+  return Math.round(value * 100)
+}
+
 const ISO = /^(\d{4})-(\d{2})-(\d{2})/
 // Four digits before two in the year alternation: the other order matches "20"
 // of "2026" and dates every Italian file twenty years early.
@@ -79,6 +93,24 @@ export function dateToUtcMidnight(raw: string): Date | null {
   }
 
   return null
+}
+
+/**
+ * Reads a date a spreadsheet already parsed, keeping the day it shows.
+ *
+ * A workbook's date is a number of days since 1900, and the library reads it
+ * into a Date whose UTC fields are the ones the cell displays. Taking those
+ * fields is therefore what keeps a payment made at 23:50 on the day it
+ * happened, where a local-time reading would move it.
+ *
+ * @param value - the cell's value
+ * @returns the date at midnight UTC, or null when the cell held no date
+ */
+export function cellToUtcMidnight(value: unknown): Date | null {
+  if (!(value instanceof Date) || Number.isNaN(value.getTime())) return null
+  return new Date(
+    Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate())
+  )
 }
 
 function build(year: number, month: number, day: number): Date | null {

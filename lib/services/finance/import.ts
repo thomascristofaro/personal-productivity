@@ -7,6 +7,7 @@ import {
   rowsToWrite,
 } from "@/lib/services/finance/fingerprint"
 import { readerFor } from "@/lib/services/finance/parsers"
+import type { StatementFile } from "@/lib/services/finance/parsers/types"
 
 export type ImportPreview = {
   accountName: string
@@ -49,7 +50,7 @@ type Prepared = {
 async function prepare(
   actorId: string,
   accountId: string,
-  text: string
+  file: StatementFile
 ): Promise<Prepared> {
   await assertAccountVisible(actorId, accountId)
 
@@ -60,7 +61,7 @@ async function prepare(
 
   // Throws UnrecognisedFileError, which reaches the screen unchanged: it carries
   // the columns it wanted and the columns it found, and that is the message.
-  const read = readerFor(account.provider)(text)
+  const read = await readerFor(account.provider)(file)
 
   const fingerprinted: Fingerprinted[] = read.movements.map((movement) => ({
     ...movement,
@@ -111,7 +112,7 @@ function report(prepared: Prepared): ImportPreview {
  *
  * @param actorId - the user id, from the session
  * @param accountId - the account the file belongs to
- * @param text - the whole file, as the browser read it
+ * @param file - the whole file, as the browser read it
  * @returns what the file holds and how much of it is new
  * @throws AccountNotVisibleError when the user cannot see the account
  * @throws UnrecognisedFileError when the file is not that provider's export
@@ -119,9 +120,9 @@ function report(prepared: Prepared): ImportPreview {
 export async function previewImport(
   actorId: string,
   accountId: string,
-  text: string
+  file: StatementFile
 ): Promise<ImportPreview> {
-  return report(await prepare(actorId, accountId, text))
+  return report(await prepare(actorId, accountId, file))
 }
 
 /**
@@ -135,7 +136,7 @@ export async function previewImport(
  * @param actorId - the user id, from the session
  * @param accountId - the account the file belongs to
  * @param fileName - what to record in the history; never parsed
- * @param text - the whole file, as the browser read it
+ * @param file - the whole file, as the browser read it
  * @returns what was written, and the batch that recorded it
  * @throws AccountNotVisibleError when the user cannot see the account
  * @throws UnrecognisedFileError when the file is not that provider's export
@@ -144,9 +145,9 @@ export async function commitImport(
   actorId: string,
   accountId: string,
   fileName: string,
-  text: string
+  file: StatementFile
 ): Promise<ImportOutcome> {
-  const prepared = await prepare(actorId, accountId, text)
+  const prepared = await prepare(actorId, accountId, file)
 
   const { batchId, writtenIds } = await db.$transaction(async (tx) => {
     const batch = await tx.importBatch.create({

@@ -1,7 +1,8 @@
-import { splitCsv } from "@/lib/services/finance/csv"
+import { decodeText, splitCsv } from "@/lib/services/finance/csv"
 import {
   type ParsedMovement,
   type ReadResult,
+  type StatementFile,
   UnrecognisedFileError,
 } from "@/lib/services/finance/parsers/types"
 import { amountToCents, dateToUtcMidnight } from "@/lib/services/finance/values"
@@ -19,12 +20,12 @@ const CATEGORY = "Categoria"
  * The export opens with a preamble of title and account rows, so the header is
  * looked for rather than assumed to be first.
  *
- * @param text - the whole CSV file
+ * @param file - the whole CSV file, as bytes
  * @returns the movements it holds, with what was read and what could not be
  * @throws UnrecognisedFileError when no row in the file is Intesa's header
  */
-export function readIntesa(text: string): ReadResult {
-  const rows = splitCsv(text)
+export async function readIntesa(file: StatementFile): Promise<ReadResult> {
+  const rows = splitCsv(decodeText(file))
 
   const headerAt = rows.findIndex((row) => {
     const names = row.map((name) => name.trim())

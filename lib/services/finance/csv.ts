@@ -38,6 +38,22 @@ function delimiterOf(text: string): string {
 }
 
 /**
+ * Reads an uploaded statement's bytes as text.
+ *
+ * The upload travels as bytes because one of the three exports is a binary
+ * workbook. The two that are CSV come back through here.
+ *
+ * @param file - the whole file, as it was uploaded
+ * @returns its text
+ */
+export function decodeText(file: Uint8Array): string {
+  // Not `fatal`: a file in some other encoding should reach the reader as
+  // mangled accents and be refused by column name, which says what is wrong,
+  // rather than throw here, which says only that something is.
+  return new TextDecoder("utf-8").decode(file)
+}
+
+/**
  * Splits a CSV file into rows of fields.
  *
  * @param text - the whole file

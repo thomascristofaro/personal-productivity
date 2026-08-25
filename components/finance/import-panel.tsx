@@ -11,11 +11,7 @@ import {
 import { DataRow } from "@/components/page/data-row"
 import { SelectField } from "@/components/page/fields"
 import { FormField } from "@/components/page/form-field"
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "@/components/ui/alert"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { FieldGroup } from "@/components/ui/field"
@@ -25,8 +21,23 @@ import { countLabel } from "@/lib/count-label"
 export type ImportAccount = { id: string; name: string }
 
 // The browser's own limit, matching the server's. Refused before the file is
-// read, so a huge file never becomes a megabyte of string in memory.
-const MAX_BYTES = 1_000_000
+// read, so a huge file never becomes a megabyte of string in memory. Three
+// quarters of a megabyte, because the file travels base64-encoded and that
+// costs a third more than the bytes it carries.
+const MAX_BYTES = 750_000
+
+// The file is sent as bytes, not as text: Satispay's export is a workbook, and
+// reading it as text destroys it. Encoded in chunks because spreading a whole
+// file into String.fromCharCode overflows the call stack somewhere above a
+// hundred thousand bytes.
+async function encode(file: File): Promise<string> {
+  const bytes = new Uint8Array(await file.arrayBuffer())
+  let binary = ""
+  for (let at = 0; at < bytes.length; at += 8192) {
+    binary += String.fromCharCode(...bytes.subarray(at, at + 8192))
+  }
+  return btoa(binary)
+}
 
 const day = new Intl.DateTimeFormat("it-IT", {
   day: "numeric",
@@ -49,18 +60,26 @@ function Period({ from, to }: { from: Date | null; to: Date | null }) {
   const end = day.format(new Date(to))
 
   // "dal 2 agosto al 2 agosto" is how a one-day export would read otherwise.
-  return start === end ? <>{start}</> : <>dal {start} al {end}</>
+  return start === end ? (
+    <>{start}</>
+  ) : (
+    <>
+      dal {start} al {end}
+    </>
+  )
 }
 
 export function ImportPanel({ accounts }: { accounts: ImportAccount[] }) {
   const [accountId, setAccountId] = useState(accounts[0]?.id ?? "")
-  const [file, setFile] = useState<{ name: string; text: string } | null>(null)
+  const [file, setFile] = useState<{ name: string; content: string } | null>(
+    null
+  )
   const [reply, setReply] = useState<ImportReply | null>(null)
   const [isPending, startTransition] = useTransition()
 
-  // The file's text stays here between the preview and the write. That is what
-  // makes the preview possible at all: a file input cannot be re-submitted
-  // after a round trip, and nothing is stored on the server in between.
+  // The file stays here between the preview and the write. That is what makes
+  // the preview possible at all: a file input cannot be re-submitted after a
+  // round trip, and nothing is stored on the server in between.
   const choose = (chosen: File | undefined) => {
     setReply(null)
     setFile(null)
@@ -75,9 +94,11 @@ export function ImportPanel({ accounts }: { accounts: ImportAccount[] }) {
     }
 
     startTransition(async () => {
-      const text = await chosen.text()
-      setFile({ name: chosen.name, text })
-      setReply(await previewStatement({ accountId, fileName: chosen.name, text }))
+      const content = await encode(chosen)
+      setFile({ name: chosen.name, content })
+      setReply(
+        await previewStatement({ accountId, fileName: chosen.name, content })
+      )
     })
   }
 
@@ -88,7 +109,7 @@ export function ImportPanel({ accounts }: { accounts: ImportAccount[] }) {
         await importStatement({
           accountId,
           fileName: file.name,
-          text: file.text,
+          content: file.content,
         })
       )
     })
@@ -123,13 +144,18 @@ export function ImportPanel({ accounts }: { accounts: ImportAccount[] }) {
         <FormField
           name="file"
           label="File"
-          description="Il CSV esportato dal servizio."
+          description="Il file esportato dal servizio: CSV per Revolut e Intesa, XLSX per Satispay."
         >
           <Input
             id="file"
             name="file"
             type="file"
-            accept=".csv,text/csv"
+            // FormField writes the description but cannot reach into its child
+            // to point at it, so the call site does. Worth the line here: the
+            // description is what says which of the two formats this account
+            // wants, and a screen reader would otherwise never hear it.
+            aria-describedby="file-description"
+            accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             disabled={isPending}
             onChange={(event) => {
               const chosen = event.target.files?.[0]

@@ -11,6 +11,23 @@ export type ParsedMovement = {
   providerRef: string | null
 }
 
+/**
+ * An uploaded statement, as bytes.
+ *
+ * Bytes and not text: Satispay exports a binary workbook, and a reader that
+ * took a string would have to be handed something already decoded, which for
+ * that one file destroys it. The CSV readers decode it themselves.
+ */
+export type StatementFile = Uint8Array
+
+/**
+ * A reader for one provider's export.
+ *
+ * Asynchronous for all three though only one needs to be: a signature that
+ * changes with the provider would push the difference into every caller.
+ */
+export type StatementReader = (file: StatementFile) => Promise<ReadResult>
+
 export type ReadResult = {
   movements: ParsedMovement[]
   // Data rows the file held, excluding the header and any preamble.

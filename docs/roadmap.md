@@ -37,15 +37,25 @@ branch, because each built on the one before and a stack of three squash merges
 is the situation that cost a morning on 2026-08-16. What is left of it that
 somebody needs to know:
 
-**Two readers are built on a guess.** Intesa Sanpaolo's and Satispay's column
-names have never been checked against a real export — both files say so at the
-top. Revolut's is the documented layout. A file whose header does not match is
-refused with the columns it wanted printed beside the columns it found, so the
-first real export diagnoses itself. **Do not treat those two as working until a
-real file has gone through them.**
+**Two readers are checked against a real export, one is still a guess.**
+Corrected on 2026-08-25 against the owner's own July–August files:
 
-**Deploying needs nothing by hand.** Three migrations, the last of which
-inserts the thirteen starting categories — data in a migration and not in
+- **Revolut** — reads them. Its header is translated into the account's language,
+  so the reader accepts both spellings of every column; `State` stays English
+  while its values do not. A cancelled row is skipped, not counted as broken.
+- **Satispay** — reads them. The export is an `.xlsx` workbook and not a CSV, so
+  the module now depends on `read-excel-file`. A payment part-paid by meal
+  vouchers becomes two movements, which is why there is a fourth migration.
+- **Intesa Sanpaolo** — still written against a guess, and the file says so at
+  the top. **Do not treat it as working until a real export has gone through
+  it.**
+
+A file whose header does not match is refused with the columns it wanted printed
+beside the columns it found, so the first real export diagnoses itself. Both
+verified readers reproduce their statement's own closing balance to the cent.
+
+**Deploying needs nothing by hand.** Four migrations. One inserts the
+thirteen starting categories — data in a migration and not in
 `prisma/seed.ts`, because the module cannot work without one of them: confirming
 a transfer assigns the category whose kind is `TRANSFER`, and with none present
 `transferCategoryId()` throws rather than writing a movement into the one bucket
@@ -321,20 +331,20 @@ Three things, on the owner's call, none of them planned in a document:
 
 In dependency order. Each needs its own plan; none has one yet.
 
-### 0. The Intesa and Satispay readers, against real files
+### 0. The Intesa reader, against a real file
 
-The one thing with a date on it. The owner exports one statement per provider;
-the two guessed column maps in
-`lib/services/finance/parsers/{intesa,satispay}.ts` get corrected against them,
-and those files become the fixtures. Small — a list of strings and a test — but
-until it happens **two thirds of the import has never read a real file**, and
-the module's value is nil for those two accounts.
+The one thing with a date on it. **Two thirds of this was done on 2026-08-25**,
+when the Revolut and Satispay exports arrived and both readers turned out to be
+wrong — see the note under «In flight» above. Intesa is what is left: its guessed
+column map in `lib/services/finance/parsers/intesa.ts` gets corrected against a
+real statement, which becomes the fixture. Small — a list of strings and a test —
+but until it happens **that account's third of the import has never read a real
+file**, and the module's value is nil for it.
 
-Two questions only the files can answer: whether Intesa exports CSV at all or
-only XLSX — and therefore whether this repository takes on a spreadsheet
-dependency, which is a decision and not a detail — and whether Satispay's export
-carries a transaction id, which decides whether its import leans on the
-occurrence counting or never needs it.
+One question only the file can answer, and it is no longer the expensive one:
+whether Intesa exports CSV at all or only XLSX. The spreadsheet dependency the
+question used to guard is already here — Satispay's export forced it — so this is
+now a detail rather than a decision.
 
 ### 1. Regenerating one slot or one day — spec §6.2
 
