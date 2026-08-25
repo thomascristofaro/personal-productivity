@@ -5,9 +5,8 @@ and state** — nothing else does. The design authority stays
 `docs/superpowers/specs/2026-08-13-menu-spesa-design.md`, and the decisions live
 in `docs/conventions/`. Do not restate either here; point at them.
 
-Last updated: 2026-08-23. `main` is deployed. The finance module is in flight on
-`feat/finance-foundation` — see below. Work normally happens on a branch per
-plan; that branch is the stated exception and says why.
+Last updated: 2026-08-23. `main` is deployed, and nothing is in flight. Work
+normally happens on a branch per plan.
 
 ## Shipped
 
@@ -27,19 +26,16 @@ plan; that branch is the stated exception and says why.
 | [`2026-08-20-page-primitives`](superpowers/plans/2026-08-20-page-primitives.md), design in [`2026-08-20-page-primitives-design`](superpowers/specs/2026-08-20-page-primitives-design.md) | one form contract instead of six — `lib/form.ts`, `useFormState`, four typed fields and `FormField` — `FormDrawer` replacing four hand-rolled close-on-success effects, one page shell instead of thirteen `<main>`s, `ListSection`, `SearchField`, `FilterChips`, and `MessagePage` for the three "does not exist" screens. Two things a user sees: «Svuota» is gone from the slot drawer, and `/catalogo` gained its search field |
 | [`2026-08-21-menu-generation`](superpowers/plans/2026-08-21-menu-generation.md), design in [`2026-08-21-menu-generation-design`](superpowers/specs/2026-08-21-menu-generation-design.md) | the LLM half of the menu: `lib/services/llm.ts` — the only file that may import an SDK — `proposeMenu`, candidates as numbered lines the model answers with integers, recency derived from past `MenuSlot` rows, and a waiting dialog that turns into the failure. Runs on **Google Gemini**, not Anthropic                                                                                                                         |
 | [`2026-08-21-llm-registry`](superpowers/plans/2026-08-21-llm-registry.md)                                                                                                                | `LlmFunction` and `LlmExecution`, `requireOwner()` over `OWNER_EMAIL`, the prompt moving into the database with `lib/prompts/menu-proposal.ts` as the fallback, and the four owner-only screens under `/settings/llm`. The prompt file is the default and the row is the tuning — **editing the file changes nothing once the row exists**                                                                                          |
+| [`2026-08-23-module-fork`](superpowers/plans/2026-08-23-module-fork.md)                                                                                                                  | `lib/modules.ts` — a module is one entry in one list, and the fork, the nav and what `/` does all read it. `/` moved inside `(app)`; with one visible module it redirects, so nothing changed on screen until the second arrived                                                                                                                                                                                                  |
+| [`2026-08-23-finance-core`](superpowers/plans/2026-08-23-finance-core.md)                                                                                                                | `FinanceAccount`, `Movement`, `ImportBatch`, `visibleAccountIds`, the three readers, and the import — its preview, and the **duplicate counting** that stops two identical coffees on one day from becoming one. Plus the accounts, movements and import screens, and the balance derived from an opening balance rather than stored                                                                                              |
+| [`2026-08-23-finance-meaning`](superpowers/plans/2026-08-23-finance-meaning.md)                                                                                                          | `Category`, `CategoryRule`, `TransferLink`, the three sieves, the one-tap rule and its backfill — which never overrules a `MANUAL` choice — the pairing with its confirmation, and the summary with the three-month comparison that stands in for a budget. All three designed in [`2026-08-23-finance-design`](superpowers/specs/2026-08-23-finance-design.md)                                                                    |
 
 ## In flight
 
-**The finance module, on `feat/finance-foundation`.** One branch carrying three
-plans, because each builds on the one before and squash merges make a stack of
-three painful. Design:
-[`2026-08-23-finance-design`](superpowers/specs/2026-08-23-finance-design.md).
-
-| Plan                                                                                        | What it leaves behind                                                                                                                                                                                                                                                                                                                                       |
-| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`2026-08-23-module-fork`](superpowers/plans/2026-08-23-module-fork.md)                     | `lib/modules.ts` — a module is one entry in one list — and `/` moving inside `(app)` to become a fork. With one visible module it redirects, so nothing changed on screen until the second arrived                                                                                                                                                          |
-| [`2026-08-23-finance-core`](superpowers/plans/2026-08-23-finance-core.md)                   | `FinanceAccount`, `Movement`, `ImportBatch`, `visibleAccountIds`, the three readers, the import with its preview and its **duplicate counting**, and the accounts, movements and import screens                                                                                                                                                            |
-| [`2026-08-23-finance-meaning`](superpowers/plans/2026-08-23-finance-meaning.md)             | `Category`, `CategoryRule`, `TransferLink`, the three sieves, the one-tap rule with its backfill, the pairing and its confirmation, and the summary with the three-month comparison                                                                                                                                                                        |
+Nothing. **The finance module merged on 2026-08-23 (#26)** — three plans on one
+branch, because each built on the one before and a stack of three squash merges
+is the situation that cost a morning on 2026-08-16. What is left of it that
+somebody needs to know:
 
 **Two readers are checked against a real export, one is still a guess.**
 Corrected on 2026-08-25 against the owner's own July–August files:
@@ -58,7 +54,7 @@ A file whose header does not match is refused with the columns it wanted printed
 beside the columns it found, so the first real export diagnoses itself. Both
 verified readers reproduce their statement's own closing balance to the cent.
 
-**Deploying it needs nothing by hand.** Four migrations. One inserts the
+**Deploying needs nothing by hand.** Four migrations. One inserts the
 thirteen starting categories — data in a migration and not in
 `prisma/seed.ts`, because the module cannot work without one of them: confirming
 a transfer assigns the category whose kind is `TRANSFER`, and with none present
@@ -76,9 +72,11 @@ recipes once already. It is a development convenience, not a deploy step.
 been confirming a save in red since it shipped. It now takes the tone from
 `state.ok`. Alongside: `DetailSection` and `CardList` extracted from
 `ListSection` and `DataList`, a new `DataRow`, `DataListRow` with an optional
-`href`, and `Alert` added from shadcn.
+`href`, and `Alert` added from shadcn. **Reach for these before writing markup
+in a screen** — the refactor exists because the finance screens were built
+without them first.
 
-Nothing else. The recipe import merged on 2026-08-21 (#19) — `share_target` points at
+Before that, the recipe import merged on 2026-08-21 (#19) — `share_target` points at
 a `/import` that exists, `lib/json-ld.ts` reads the broken JSON real sites
 publish, `lib/url-guard.ts` refuses the addresses a fetcher must not reach, and a
 save creates the catalogue entries the recipe names instead of refusing over
@@ -90,8 +88,11 @@ fallback earns its cost is a question about real pages, and now there is a way t
 find out. Deferred with it: the LLM fallback for ingredient lines the Italian
 parser cannot read, and `guessAisles`.
 
-**Next up:** the finance module or the news reader — the first real test of
-whether the page primitives carry to a section that is not menu-and-shopping.
+**Next up was the finance module**, and it went in on 2026-08-23. It was the
+first real test of whether the page primitives carry to a section that is not
+menu-and-shopping: they did, but only after a refactor, because the first pass
+rebuilt three of them by hand. The news reader is what is left of the three
+modules the parent spec names.
 
 **Merged on 2026-08-22:**
 
@@ -329,6 +330,21 @@ Three things, on the owner's call, none of them planned in a document:
 ## Not started
 
 In dependency order. Each needs its own plan; none has one yet.
+
+### 0. The Intesa reader, against a real file
+
+The one thing with a date on it. **Two thirds of this was done on 2026-08-25**,
+when the Revolut and Satispay exports arrived and both readers turned out to be
+wrong — see the note under «In flight» above. Intesa is what is left: its guessed
+column map in `lib/services/finance/parsers/intesa.ts` gets corrected against a
+real statement, which becomes the fixture. Small — a list of strings and a test —
+but until it happens **that account's third of the import has never read a real
+file**, and the module's value is nil for it.
+
+One question only the file can answer, and it is no longer the expensive one:
+whether Intesa exports CSV at all or only XLSX. The spreadsheet dependency the
+question used to guard is already here — Satispay's export forced it — so this is
+now a detail rather than a decision.
 
 ### 1. Regenerating one slot or one day — spec §6.2
 
