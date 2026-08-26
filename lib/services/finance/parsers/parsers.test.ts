@@ -29,16 +29,22 @@ const revolutInEnglish = bytes(
   ].join("\n")
 )
 
-const intesaFile = bytes(
-  [
-    "Elenco movimenti",
-    "Conto: IT00X0000000000000000000000",
-    "",
-    "Data,Operazione,Dettagli,Conto o carta,Contabilizzazione,Categoria,Valuta,Importo",
-    '15/07/2026,Pagamento POS,"ESSELUNGA SPA, MILANO",Conto,15/07/2026,Spesa,EUR,"-42,30"',
-    '16/07/2026,Bonifico,Stipendio,Conto,16/07/2026,Entrate,EUR,"1.850,00"',
-  ].join("\n")
+// The owner's own «Lista Operazioni» of August 2026, with the counterparties,
+// the account numbers and the salary replaced, plus two rows added: one not yet
+// booked and one whose amount is text. Its five rows:
+//
+//   22/08  Revolut**0000* Dublin              -200,00  contabilizzato
+//   17/08  Bonifico disposto da ROSSI MARIO   +500,00  contabilizzato
+//   30/07  Stipendio O Pensione             +1.900,00  contabilizzato
+//   25/07  ESSELUNGA SPA MILANO                -42,30  NON contabilizzato
+//   24/07  Riga rotta                             n/d  contabilizzato
+const intesaFile = new Uint8Array(
+  readFileSync(new URL("./__fixtures__/intesa.xlsx", import.meta.url))
 )
+
+// Not an export of anything: what the readers are handed when the file is a CSV
+// and they wanted a workbook, or the other way round.
+const notAStatement = bytes(["Nome,Cognome", "Mario,Rossi"].join("\n"))
 
 // A workbook of the shape Satispay exports — two sheets, an emoji in the state
 // and in the kind, an instruction inside the id column's name. Its five rows:
@@ -55,11 +61,19 @@ const satispayFile = new Uint8Array(
 describe("the Revolut reader", () => {
   const read = readerFor("REVOLUT")
 
-  it("reads a card payment as a negative amount on its completed date", async () => {
+  it("reads a card payment as a negative amount on the day it was made", async () => {
     const first = (await read(revolutFile)).movements[0]
     expect(first?.amountCents).toBe(-4230)
     expect(first?.description).toBe("Esselunga")
     expect(first?.date.toISOString()).toBe("2026-07-15T00:00:00.000Z")
+  })
+
+  it("dates a payment that settled the next day on the day it was made", async () => {
+    const abroad = (await read(revolutFile)).movements.find(
+      (m) => m.description === "Servizio estero"
+    )
+    // Started on the 18th, completed on the 19th.
+    expect(abroad?.date.toISOString()).toBe("2026-07-18T00:00:00.000Z")
   })
 
   it("takes the row's Tipo as the category the provider declared", async () => {
@@ -71,8 +85,8 @@ describe("the Revolut reader", () => {
   it("skips a cancelled row, because it may still be reverted", async () => {
     const result = await read(revolutFile)
     expect(result.movements.some((m) => m.description === "Bar")).toBe(false)
-    // Not counted as unreadable either: a cancelled row carries no completion
-    // date, and calling that a broken file would put a warning on every import.
+    // Not counted as unreadable either: nothing about it is broken, and a
+    // warning on every import would train the owner to ignore the count.
     expect(result.unreadable).toBe(0)
   })
 
@@ -102,30 +116,50 @@ describe("the Revolut reader", () => {
 describe("the Intesa reader", () => {
   const read = readerFor("INTESA")
 
-  it("finds the header under the export's preamble", async () => {
-    expect((await read(intesaFile)).rowsRead).toBe(2)
+  it("finds the header under the export's eighteen rows of preamble", async () => {
+    expect((await read(intesaFile)).rowsRead).toBe(5)
   })
 
-  it("reads an Italian amount and date", async () => {
+  it("reads the amount and the day the movement was made", async () => {
     const first = (await read(intesaFile)).movements[0]
-    expect(first?.amountCents).toBe(-4230)
-    expect(first?.date.toISOString()).toBe("2026-07-15T00:00:00.000Z")
+    expect(first?.amountCents).toBe(-20000)
+    expect(first?.date.toISOString()).toBe("2026-08-22T00:00:00.000Z")
   })
 
-  it("joins the operation and its details into one description", async () => {
+  it("takes the description from Operazione, which carries the counterparty", async () => {
     expect((await read(intesaFile)).movements[0]?.description).toBe(
-      "Pagamento POS — ESSELUNGA SPA, MILANO"
+      "Revolut**0000* Dublin"
     )
   })
 
   it("keeps the declared category verbatim", async () => {
     expect((await read(intesaFile)).movements[0]?.providerCategory).toBe(
-      "Spesa"
+      "Addebiti vari"
     )
   })
 
-  it("reads a thousands separator as thousands", async () => {
-    expect((await read(intesaFile)).movements[1]?.amountCents).toBe(185000)
+  it("reads an amount the workbook stored as a number", async () => {
+    const salary = (await read(intesaFile)).movements.find(
+      (m) => m.description === "Stipendio O Pensione"
+    )
+    expect(salary?.amountCents).toBe(190000)
+  })
+
+  it("skips a movement that is not booked yet, because its date can still move", async () => {
+    const result = await read(intesaFile)
+    expect(
+      result.movements.some((m) => m.description === "ESSELUNGA SPA MILANO")
+    ).toBe(false)
+    // Not unreadable: the row is fine, it is simply not final.
+    expect(result.movements).toHaveLength(3)
+  })
+
+  it("counts a row whose amount is not a number", async () => {
+    expect((await read(intesaFile)).unreadable).toBe(1)
+  })
+
+  it("refuses a file that is not a workbook at all", async () => {
+    await expect(read(notAStatement)).rejects.toThrow(UnrecognisedFileError)
   })
 })
 
@@ -193,7 +227,16 @@ describe("the Satispay reader", () => {
   })
 
   it("refuses a file that is not a workbook at all", async () => {
-    await expect(read(intesaFile)).rejects.toThrow(UnrecognisedFileError)
+    await expect(read(notAStatement)).rejects.toThrow(UnrecognisedFileError)
+  })
+
+  // The message is how the first export of a format nobody has seen diagnoses
+  // itself, so it has to name the header the file really has — not the row of
+  // empty cells an export with a preamble opens on.
+  it("names the header it found when the workbook is another provider's", async () => {
+    await expect(read(intesaFile)).rejects.toMatchObject({
+      found: expect.arrayContaining(["Data", "Operazione", "Importo"]),
+    })
   })
 })
 
