@@ -38,10 +38,12 @@ export const MODULES: readonly AppModule[] = [
     label: "Finanza",
     description: "I movimenti dei conti, in un posto solo.",
     href: "/finance",
+    // No entry for /finance/import: importing is something you do to the
+    // movements, and the button that starts it is on their screen. A section
+    // in the panel would be a third way in to the same page.
     nav: [
       { href: "/finance", label: "Riepilogo" },
       { href: "/finance/movements", label: "Movimenti" },
-      { href: "/finance/import", label: "Importa" },
     ],
   },
 ]

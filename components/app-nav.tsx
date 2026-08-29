@@ -1,13 +1,13 @@
 "use client"
 
-import { Menu, X } from "lucide-react"
+import { House, Menu, X } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
 
 import { SignOut } from "@/components/auth/sign-out"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import {
   Sheet,
   SheetClose,
@@ -23,6 +23,9 @@ import { cn } from "@/lib/utils"
 // the menu then reads as the icon changing rather than the page moving.
 const ROW = "flex h-14 items-center justify-between gap-2 px-2"
 const TRIGGER = "gap-2 px-2 text-base font-medium"
+// The pair on the right of both rows. Whatever sits here has to sit in both,
+// or the icons jump sideways the moment the panel opens.
+const ACTIONS = "flex items-center gap-1"
 
 // The name and the modules arrive as props: this is a client component, so it
 // can neither read the session nor ask the database which accounts exist. The
@@ -59,7 +62,18 @@ export function AppNav({
             <Menu aria-hidden="true" />
             Menu
           </SheetTrigger>
-          <ThemeToggle />
+          <div className={ACTIONS}>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Home"
+              render={<Link href="/" />}
+              nativeButton={false}
+            >
+              <House aria-hidden="true" />
+            </Button>
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 
@@ -78,7 +92,20 @@ export function AppNav({
             <X aria-hidden="true" />
             Menu
           </SheetClose>
-          <ThemeToggle />
+          <div className={ACTIONS}>
+            {/* Styled with buttonVariants rather than rendered into a Button:
+                this one has to close the panel as well as navigate, and
+                SheetClose already owns the element's render prop. */}
+            <SheetClose
+              render={<Link href="/" />}
+              nativeButton={false}
+              aria-label="Home"
+              className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
+            >
+              <House aria-hidden="true" />
+            </SheetClose>
+            <ThemeToggle />
+          </div>
         </div>
 
         <nav className="flex flex-col gap-8 px-6 py-10">
