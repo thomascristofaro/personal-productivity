@@ -1,12 +1,10 @@
-import readXlsxFile from "read-excel-file/node"
-
 import {
   type ParsedMovement,
   type ReadResult,
   type StatementFile,
-  UnrecognisedFileError,
 } from "@/lib/services/finance/parsers/types"
 import { cellToUtcMidnight, numberToCents } from "@/lib/services/finance/values"
+import { isBlank, tableOf, text } from "@/lib/services/finance/xlsx"
 
 // Satispay exports a real workbook, not a CSV, and its transactions sit in one
 // sheet beside a legend. Verified against an export of August 2026.
@@ -38,48 +36,38 @@ export const VOUCHER_CATEGORY = "Buono"
  * @throws UnrecognisedFileError when the file is not a Satispay workbook
  */
 export async function readSatispay(file: StatementFile): Promise<ReadResult> {
-  const sheets = await sheetsOf(file)
-
-  // The transactions sheet is found by its columns and not by its name or its
+  // The transactions are found by their columns and not by a sheet's name or
   // position: the workbook also holds a legend, and either of those would be
   // the thing that breaks when Satispay adds a third sheet.
-  const found = sheets
-    .map((sheet) => ({ sheet, header: headerOf(sheet.data) }))
-    .find(({ header }) => REQUIRED.every((name) => header.has(name)))
-
-  if (found === undefined) {
-    throw new UnrecognisedFileError(REQUIRED, [
-      ...headerOf(sheets[0]?.data ?? []).keys(),
-    ])
-  }
-
-  const { sheet, header } = found
-  const at = (row: Row, name: string) => row[header.get(name) ?? -1] ?? null
+  const table = await tableOf(file, REQUIRED)
 
   const movements: ParsedMovement[] = []
   let unreadable = 0
-  const data = sheet.data.slice(1)
+  let rowsRead = 0
 
-  for (const row of data) {
-    const state = text(at(row, STATE))
+  for (const row of table.rows) {
+    if (isBlank(row)) continue
+    rowsRead++
+
+    const state = text(table.at(row, STATE))
     if (state !== "" && !SETTLED.test(state)) continue
 
-    const date = cellToUtcMidnight(at(row, "Data"))
-    const amountCents = numberToCents(at(row, "Importo"))
-    const name = text(at(row, "Nome"))
+    const date = cellToUtcMidnight(table.at(row, "Data"))
+    const amountCents = numberToCents(table.at(row, "Importo"))
+    const name = text(table.at(row, "Nome"))
 
     if (date === null || amountCents === null || name === "") {
       unreadable++
       continue
     }
 
-    const providerRef = text(at(row, ID)) || null
+    const providerRef = text(table.at(row, ID)) || null
 
     movements.push({
       date,
       amountCents,
       description: name,
-      providerCategory: text(at(row, KIND)) || null,
+      providerCategory: text(table.at(row, KIND)) || null,
       // The only one of the three that carries an id. It makes a movement
       // unique on its own, so the occurrence counting of fingerprint.ts never
       // has to engage.
@@ -90,7 +78,7 @@ export async function readSatispay(file: StatementFile): Promise<ReadResult> {
     // what some voucher paid, and it is taken as a difference rather than by
     // adding up the voucher columns so that the two rows sum to the balance
     // movement even if a column we do not know about appears.
-    const availabilityCents = numberToCents(at(row, AVAILABILITY))
+    const availabilityCents = numberToCents(table.at(row, AVAILABILITY))
     if (availabilityCents === null || availabilityCents === amountCents) {
       continue
     }
@@ -108,38 +96,5 @@ export async function readSatispay(file: StatementFile): Promise<ReadResult> {
     })
   }
 
-  return { movements, rowsRead: data.length, unreadable }
-}
-
-type Cell = string | number | boolean | Date | null
-type Row = Cell[]
-type Sheet = { sheet: string; data: Row[] }
-
-async function sheetsOf(file: StatementFile): Promise<Sheet[]> {
-  try {
-    // A Buffer and not the Uint8Array we were handed: the library passes the
-    // argument to fs when it is not one, and a Uint8Array is read as a path.
-    return (await readXlsxFile(Buffer.from(file))) as unknown as Sheet[]
-  } catch {
-    // Anything the library refuses to open is a file that is not this export —
-    // a CSV, an empty upload, the wrong statement — and the screen says so the
-    // same way it does for a workbook with the wrong columns.
-    throw new UnrecognisedFileError(REQUIRED, [])
-  }
-}
-
-// Satispay writes an instruction inside a column name — the id column is headed
-// «ID (Comunicalo all'Assistenza Clienti in caso di problemi)». The note is
-// dropped so the reader can ask for the column by its name.
-function headerOf(data: Row[]): Map<string, number> {
-  return new Map(
-    (data[0] ?? []).map((cell, position) => [
-      text(cell).replace(/\s*\(.*$/, ""),
-      position,
-    ])
-  )
-}
-
-function text(cell: Cell): string {
-  return cell === null || cell === undefined ? "" : String(cell).trim()
+  return { movements, rowsRead, unreadable }
 }

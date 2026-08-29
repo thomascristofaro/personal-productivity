@@ -88,10 +88,10 @@ primitive; it becomes one if a third module ever needs the same shape.
 `components/app-nav.tsx` holds a flat `NAV_ITEMS` of four entries. It becomes two
 named groups plus the owner's entry:
 
-| Group          | Entries                                       |
-| -------------- | --------------------------------------------- |
-| Menù e spesa   | Menù, Spesa, Ricettario, Catalogo             |
-| Finanza        | Riepilogo, Movimenti, Importa                 |
+| Group        | Entries                           |
+| ------------ | --------------------------------- |
+| Menù e spesa | Menù, Spesa, Ricettario, Catalogo |
+| Finanza      | Riepilogo, Movimenti, Importa     |
 
 Seven entries, not nine: **accounts and rules deliberately have no nav entry.**
 They are reached from the summary and from the movement they concern, which is
@@ -154,14 +154,14 @@ Six tables. Names in English, values in Italian, as everywhere else.
 
 A place money sits.
 
-| Field              | Meaning                                                          |
-| ------------------ | ---------------------------------------------------------------- |
-| `name`             | as the owner calls it — «Revolut», «Conto Intesa»                |
-| `provider`         | `SATISPAY` \| `REVOLUT` \| `INTESA`, and it selects the reader   |
-| `ownerId`          | the user it belongs to                                           |
-| `shared`           | when true, both users see it                                     |
-| `openingBalanceCents` | the balance on `openingBalanceAt`, in integer cents           |
-| `openingBalanceAt` | the date that balance was true, `@db.Date`                       |
+| Field                 | Meaning                                                        |
+| --------------------- | -------------------------------------------------------------- |
+| `name`                | as the owner calls it — «Revolut», «Conto Intesa»              |
+| `provider`            | `SATISPAY` \| `REVOLUT` \| `INTESA`, and it selects the reader |
+| `ownerId`             | the user it belongs to                                         |
+| `shared`              | when true, both users see it                                   |
+| `openingBalanceCents` | the balance on `openingBalanceAt`, in integer cents            |
+| `openingBalanceAt`    | the date that balance was true, `@db.Date`                     |
 
 **The name carries the module prefix because `Account` is already taken** by
 better-auth's core schema. That is a collision, not a stylistic choice.
@@ -173,20 +173,20 @@ uploaded file, so an unknown value has no behaviour.
 
 One line of a statement. Never edited after import — see §9.3.
 
-| Field              | Meaning                                                                 |
-| ------------------ | ----------------------------------------------------------------------- |
-| `accountId`        |                                                                         |
-| `date`             | `@db.Date`, the same date-only convention as `Menu.weekStart`            |
-| `amountCents`      | integer cents, **negative for an outgoing**. One column, not two         |
-| `description`      | as the file wrote it, normalised only for whitespace                     |
-| `providerCategory` | the category the file declared, verbatim, or null                        |
-| `providerRef`      | the provider's own transaction id when the file carries one, else null   |
-| `fingerprint`      | see §5.3                                                                |
-| `occurrence`       | see §5.3                                                                |
-| `categoryId`       | nullable — null means «Da categorizzare»                                 |
-| `categorySource`   | `MANUAL` \| `RULE` \| `PROVIDER_MAP` \| `TRANSFER_LINK` \| `NONE`        |
-| `note`             | the owner's own text, nullable                                          |
-| `importBatchId`    | which import wrote it                                                   |
+| Field              | Meaning                                                                |
+| ------------------ | ---------------------------------------------------------------------- |
+| `accountId`        |                                                                        |
+| `date`             | `@db.Date`, the same date-only convention as `Menu.weekStart`          |
+| `amountCents`      | integer cents, **negative for an outgoing**. One column, not two       |
+| `description`      | as the file wrote it, normalised only for whitespace                   |
+| `providerCategory` | the category the file declared, verbatim, or null                      |
+| `providerRef`      | the provider's own transaction id when the file carries one, else null |
+| `fingerprint`      | see §5.3                                                               |
+| `occurrence`       | see §5.3                                                               |
+| `categoryId`       | nullable — null means «Da categorizzare»                               |
+| `categorySource`   | `MANUAL` \| `RULE` \| `PROVIDER_MAP` \| `TRANSFER_LINK` \| `NONE`      |
+| `note`             | the owner's own text, nullable                                         |
+| `importBatchId`    | which import wrote it                                                  |
 
 Integer cents rather than `Decimal`, for the reason already recorded on
 `Purchase.totalCents`: a Prisma `Decimal` does not survive the server-to-client
@@ -203,12 +203,12 @@ the uniqueness constraint of §5.3.
 
 ### 4.3 `Category`
 
-| Field       | Meaning                                     |
-| ----------- | ------------------------------------------- |
-| `name`      | Italian, because it is data — «Ristoranti»  |
-| `kind`      | `EXPENSE` \| `INCOME` \| `TRANSFER`         |
-| `sortOrder` | the order the owner thinks in               |
-| `archived`  | hidden from pickers, kept on old movements  |
+| Field       | Meaning                                    |
+| ----------- | ------------------------------------------ |
+| `name`      | Italian, because it is data — «Ristoranti» |
+| `kind`      | `EXPENSE` \| `INCOME` \| `TRANSFER`        |
+| `sortOrder` | the order the owner thinks in              |
+| `archived`  | hidden from pickers, kept on old movements |
 
 **Exactly one category has `kind = TRANSFER`**, seeded as «Trasferimento». It is
 an ordinary category in every list and picker; the only thing that treats it
@@ -220,13 +220,13 @@ recategorise history, and both rewrite the past.
 
 ### 4.4 `CategoryRule`
 
-| Field        | Meaning                                                              |
-| ------------ | -------------------------------------------------------------------- |
-| `kind`       | `DESCRIPTION_CONTAINS` \| `PROVIDER_CATEGORY_IS`                      |
-| `pattern`    | the substring, or the provider's category verbatim                    |
-| `categoryId` | what it assigns                                                       |
-| `priority`   | lower runs first; **the first match wins and matching stops**         |
-| `accountId`  | nullable — null means every account                                   |
+| Field        | Meaning                                                       |
+| ------------ | ------------------------------------------------------------- |
+| `kind`       | `DESCRIPTION_CONTAINS` \| `PROVIDER_CATEGORY_IS`              |
+| `pattern`    | the substring, or the provider's category verbatim            |
+| `categoryId` | what it assigns                                               |
+| `priority`   | lower runs first; **the first match wins and matching stops** |
+| `accountId`  | nullable — null means every account                           |
 
 Matching is case-insensitive and whitespace-tolerant. It is a substring test, not
 a regular expression: a regex in this field is a foot-gun the owner would have to
@@ -237,11 +237,11 @@ general rule written in March without anyone rewriting the general one.
 
 ### 4.5 `TransferLink`
 
-| Field             | Meaning                            |
-| ----------------- | ---------------------------------- |
-| `fromMovementId`  | `@unique`                          |
-| `toMovementId`    | `@unique`                          |
-| `confirmedAt`     |                                    |
+| Field            | Meaning   |
+| ---------------- | --------- |
+| `fromMovementId` | `@unique` |
+| `toMovementId`   | `@unique` |
+| `confirmedAt`    |           |
 
 A row per pair, not a column on each movement. Both sides unique, so a movement
 can belong to at most one link, and unlinking is deleting one row — which frees
@@ -249,12 +249,12 @@ both legs at once and cannot leave a half-broken pair behind.
 
 ### 4.6 `ImportBatch`
 
-| Field                     | Meaning                                     |
-| ------------------------- | ------------------------------------------- |
-| `accountId`, `userId`     | what was loaded, and by whom                |
-| `fileName`                | for the history, not for parsing            |
-| `rowsRead`, `rowsWritten`, `rowsSkipped` | what the preview promised    |
-| `periodFrom`, `periodTo`  | the range the file covered                  |
+| Field                                    | Meaning                          |
+| ---------------------------------------- | -------------------------------- |
+| `accountId`, `userId`                    | what was loaded, and by whom     |
+| `fileName`                               | for the history, not for parsing |
+| `rowsRead`, `rowsWritten`, `rowsSkipped` | what the preview promised        |
+| `periodFrom`, `periodTo`                 | the range the file covered       |
 
 It answers «from when is this account covered». It is **not** an undo: undoing an
 import was considered and left out, because the duplicate counting of §5.3 makes
@@ -280,7 +280,7 @@ Recorded so nobody adds them as an oversight:
 2. The reader for that account's `provider` parses it into `ParsedMovement[]`.
 3. The service compares against what is stored and computes what is new.
 4. **A preview is shown before anything is written**: account, period covered,
-   *«42 nuovi, 18 già presenti, 1 riga illeggibile»*.
+   _«42 nuovi, 18 già presenti, 1 riga illeggibile»_.
 5. The user confirms. Only then are rows written, inside one transaction, with an
    `ImportBatch`.
 6. The rules of §6 run over the new rows.
@@ -329,6 +329,21 @@ thing in the repository.
 A generic column-mapping importer, configurable from the app, was considered and
 rejected: three accounts are known, and the generality would be paid for now
 against a problem already solved by exporting a file.
+
+**Correction of 2026-08-27, on seeing the Intesa export.** It is an `.xlsx`
+workbook too, not a CSV, so two of the three readers are now workbook readers and
+only Revolut's is a CSV one. What they shared moved into
+`lib/services/finance/xlsx.ts`, beside `csv.ts`: both exports bury their table —
+Satispay beside a legend sheet, Intesa under eighteen rows of account and period
+— so neither reader may assume a sheet or a row, and `tableOf` finds the header
+by its columns for both.
+
+Two facts about the Intesa file that the guessed reader had wrong:
+`Contabilizzazione` is a yes-or-no and not a second date, and `Operazione`
+already carries the counterparty — «Revolut\*\*6069\* Dublin», «Bonifico
+disposto da …» — while `Dettagli` is a hundred characters of card number around
+the same name. The description is therefore `Operazione` alone; the guessed
+reader joined the two, which would have made every row unreadable on a phone.
 
 **A reader that does not recognise its file stops.** If the expected columns are
 absent it throws, the import writes nothing, and the screen says the file does
@@ -393,6 +408,21 @@ gets a named test of its own rather than a branch of another.
 does it. A statement row has a calendar date, not an instant; storing it as an
 instant would make a purchase at 23:40 land on the previous day for half the year.
 
+**Which of the file's dates.** A movement belongs to the day it was made, never
+to the day it cleared. Owner's decision of 2026-08-27, and it decides one reader:
+
+- **Revolut** writes both. The reader takes `Data di inizio`, not `Data di
+completamento`; a foreign payment settles up to a day later, and until this
+  date it was filed on the wrong day. The `COMPLETATO` filter is unaffected — it
+  is about whether the payment is final, not about when it happened.
+- **Intesa** writes one, `Data`, and it is the day it was made: the export
+  repeats it inside `Dettagli` as «EFFETTUATO IL …». `Contabilizzazione` is a
+  yes-or-no beside it, and a row that says no is **skipped, not imported**. It is
+  still provisional, its date can move when it clears, and the fingerprint of
+  §5.3 is built from that date — so importing it would land the same payment
+  twice under two days.
+- **Satispay** writes one. Nothing to choose.
+
 ### 5.5 Currency
 
 Everything is euro cents. The household has no non-euro account; a card payment
@@ -418,7 +448,7 @@ Every movement written by an import passes:
 1. **`DESCRIPTION_CONTAINS` rules**, by priority, first match wins.
    `categorySource = RULE`.
 2. **`PROVIDER_CATEGORY_IS` rules** — the map from what the file declared to what
-   we call it: *Satispay says `🏬 a un Negozio` → «Spesa»*.
+   we call it: _Satispay says `🏬 a un Negozio` → «Spesa»_.
    `categorySource = PROVIDER_MAP`.
 3. **Nothing.** `categoryId = null`, `categorySource = NONE`, and it appears
    under the «Da categorizzare» filter.
@@ -445,7 +475,7 @@ what would make the summary untrustworthy.
 ### 6.2 The one-tap rule
 
 From an uncategorised movement, choosing a category also offers the rule:
-*«la descrizione contiene ESSELUNGA → Spesa»*, with the token already extracted
+_«la descrizione contiene ESSELUNGA → Spesa»_, with the token already extracted
 from the description and editable before saving.
 
 On saving, the app asks whether to apply it backwards.
@@ -559,7 +589,7 @@ a total calls it.
 
 Per category, for the chosen month: the amount spent, and the **mean of the same
 category over the previous three months**, ignoring months with no data at all.
-*«Ristoranti 180 €, di solito 110»*.
+_«Ristoranti 180 €, di solito 110»_.
 
 This answers «how much can I still spend» without a single ceiling to invent
 before knowing what the baseline is. Ceilings remain a possible later project,
@@ -573,8 +603,8 @@ and when they come the app can propose them from these same means.
 
 Top to bottom:
 
-1. **Calls to action, when there are any**: *31 movimenti da categorizzare*,
-   *3 trasferimenti da confermare*. Both links. Absent when zero — a zero badge
+1. **Calls to action, when there are any**: _31 movimenti da categorizzare_,
+   _3 trasferimenti da confermare_. Both links. Absent when zero — a zero badge
    is noise.
 2. **Balances**: one tile per visible account, plus the total.
 3. **The month**: income, outgoings, the difference. The month is navigable
@@ -681,17 +711,17 @@ with a written, ordered manual checklist, which an agent may drive through the
 
 Each of these was raised and left out on purpose. Do not add one as an oversight.
 
-| Not building                       | Why                                                                                     |
-| ---------------------------------- | --------------------------------------------------------------------------------------- |
-| LLM categorisation                 | Decided against in §6.1. Rules are deterministic; the summary depends on that            |
-| Spending ceilings                  | §8.3 answers the question without them, and a ceiling invented before the baseline is ignored by the second month |
-| Movements created by hand          | Cash is categorised at the withdrawal, not tracked euro by euro                          |
-| Declared recurring expenses        | Nothing needs them until ceilings exist                                                  |
-| Attachments, receipts, file archive | Not a document store                                                                    |
-| Undoing an import                  | §4.6                                                                                     |
-| Any link to `Purchase`             | The supermarket payment arrives from the account like any other and gets «Spesa» from a rule. Generating a movement from a `Purchase` would double the grocery movements and make finance depend on the menu module — the coupling the layering exists to prevent |
-| Bank APIs, PSD2, open banking      | Not available for these accounts on an individual basis; the file export is the interface |
-| Multi-currency arithmetic          | §5.5                                                                                     |
+| Not building                        | Why                                                                                                                                                                                                                                                               |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| LLM categorisation                  | Decided against in §6.1. Rules are deterministic; the summary depends on that                                                                                                                                                                                     |
+| Spending ceilings                   | §8.3 answers the question without them, and a ceiling invented before the baseline is ignored by the second month                                                                                                                                                 |
+| Movements created by hand           | Cash is categorised at the withdrawal, not tracked euro by euro                                                                                                                                                                                                   |
+| Declared recurring expenses         | Nothing needs them until ceilings exist                                                                                                                                                                                                                           |
+| Attachments, receipts, file archive | Not a document store                                                                                                                                                                                                                                              |
+| Undoing an import                   | §4.6                                                                                                                                                                                                                                                              |
+| Any link to `Purchase`              | The supermarket payment arrives from the account like any other and gets «Spesa» from a rule. Generating a movement from a `Purchase` would double the grocery movements and make finance depend on the menu module — the coupling the layering exists to prevent |
+| Bank APIs, PSD2, open banking       | Not available for these accounts on an individual basis; the file export is the interface                                                                                                                                                                         |
+| Multi-currency arithmetic           | §5.5                                                                                                                                                                                                                                                              |
 
 ---
 
@@ -750,3 +780,15 @@ its import leans on the counting of §5.3 or never needs it.
 - **Revolut translates its header** into the account's language, leaving `State`
   in English while translating its values to `COMPLETATO`. The reader accepts
   both spellings of every column.
+
+**Settled on 2026-08-27**, by the Intesa export, which was the last one unseen:
+
+- **Intesa exports `.xlsx` too.** The dependency now carries two of the three
+  readers rather than one, and the question this section asked — spreadsheet
+  library or conversion by hand — is closed for good.
+- **Intesa's export carries no transaction id.** Two of three lean on the
+  counting of §5.3.
+- **One file can hold two accounts.** `Conto o carta` says «Conto 1000/…» on one
+  row and «Carta 5411/…» on the next, and the import writes both into whichever
+  account the upload chose. Left as it is until the owner says whether the credit
+  card is an account of its own.

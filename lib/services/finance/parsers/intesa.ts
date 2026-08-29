@@ -1,55 +1,56 @@
-import { decodeText, splitCsv } from "@/lib/services/finance/csv"
 import {
   type ParsedMovement,
   type ReadResult,
   type StatementFile,
-  UnrecognisedFileError,
 } from "@/lib/services/finance/parsers/types"
-import { amountToCents, dateToUtcMidnight } from "@/lib/services/finance/values"
+import { cellToUtcMidnight, numberToCents } from "@/lib/services/finance/values"
+import { isBlank, tableOf, text } from "@/lib/services/finance/xlsx"
 
-// UNVERIFIED against a real export — see the plan of 2026-08-23, "the state of
-// the three formats". Correcting this reader is editing these lists and the
-// fixture in the test.
+// Verified against a real export of August 2026. The «Lista Operazioni» comes
+// out of the app as an .xlsx workbook and not as a CSV, which is what the first
+// version of this reader was written against and why it read nothing at all.
 const REQUIRED = ["Data", "Operazione", "Importo"] as const
-const DETAILS = "Dettagli"
+
+const BOOKED = "Contabilizzazione"
 const CATEGORY = "Categoria"
 
+// `Contabilizzazione` is a yes-or-no and not a second date: it says whether the
+// movement has reached the account yet. A row that has not is provisional, its
+// date can still move, and importing it would land the same payment twice under
+// two dates — the fingerprint is built from one. Skipped, not counted as
+// unreadable.
+//
+// Matched on the no rather than on the yes so that a value we have not seen is
+// imported. A wording change would then show a movement to look at, where the
+// other way round it would show an import of nothing and say why nowhere.
+const NOT_BOOKED = /^no$/i
+
 /**
- * Reads an Intesa Sanpaolo statement export.
+ * Reads an Intesa Sanpaolo «Lista Operazioni» export.
  *
- * The export opens with a preamble of title and account rows, so the header is
- * looked for rather than assumed to be first.
+ * The export carries one date, `Data`, and it is the day the movement was made:
+ * the same day is repeated inside `Dettagli` as «EFFETTUATO IL …».
  *
- * @param file - the whole CSV file, as bytes
+ * @param file - the whole .xlsx file, as bytes
  * @returns the movements it holds, with what was read and what could not be
- * @throws UnrecognisedFileError when no row in the file is Intesa's header
+ * @throws UnrecognisedFileError when the file is not an Intesa workbook
  */
 export async function readIntesa(file: StatementFile): Promise<ReadResult> {
-  const rows = splitCsv(decodeText(file))
-
-  const headerAt = rows.findIndex((row) => {
-    const names = row.map((name) => name.trim())
-    return REQUIRED.every((name) => names.includes(name))
-  })
-
-  if (headerAt === -1) {
-    throw new UnrecognisedFileError(REQUIRED, rows[0] ?? [])
-  }
-
-  const header = rows[headerAt] ?? []
-  const index = new Map(header.map((name, position) => [name.trim(), position]))
-  const at = (row: string[], name: string) =>
-    (row[index.get(name) ?? -1] ?? "").trim()
+  const table = await tableOf(file, REQUIRED)
 
   const movements: ParsedMovement[] = []
   let unreadable = 0
-  const data = rows.slice(headerAt + 1)
+  let rowsRead = 0
 
-  for (const row of data) {
-    const date = dateToUtcMidnight(at(row, "Data"))
-    const amountCents = amountToCents(at(row, "Importo"))
-    const operation = at(row, "Operazione")
-    const details = at(row, DETAILS)
+  for (const row of table.rows) {
+    if (isBlank(row)) continue
+    rowsRead++
+
+    if (NOT_BOOKED.test(text(table.at(row, BOOKED)))) continue
+
+    const date = cellToUtcMidnight(table.at(row, "Data"))
+    const amountCents = numberToCents(table.at(row, "Importo"))
+    const operation = text(table.at(row, "Operazione"))
 
     if (date === null || amountCents === null || operation === "") {
       unreadable++
@@ -59,13 +60,17 @@ export async function readIntesa(file: StatementFile): Promise<ReadResult> {
     movements.push({
       date,
       amountCents,
-      // Both, because on its own the operation says "Pagamento POS" for
-      // everything and the details say a shop with no verb.
-      description: details === "" ? operation : `${operation} — ${details}`,
-      providerCategory: at(row, CATEGORY) || null,
+      // `Operazione` alone. In the real export it already carries the
+      // counterparty — «Revolut**6069* Dublin», «Bonifico disposto da …» —
+      // while `Dettagli` is a hundred characters of card number and internal
+      // reference around the same name. Joining them, as this reader did while
+      // it was a guess, would make every row unreadable on a phone and every
+      // description rule harder to write.
+      description: operation,
+      providerCategory: text(table.at(row, CATEGORY)) || null,
       providerRef: null,
     })
   }
 
-  return { movements, rowsRead: data.length, unreadable }
+  return { movements, rowsRead, unreadable }
 }
