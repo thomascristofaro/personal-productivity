@@ -1,7 +1,7 @@
 "use client"
 
 import { Plus } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import { IngredientPicker } from "@/components/ingredients/ingredient-picker"
 import { NumberField, SelectField, TextField } from "@/components/page/fields"
@@ -55,6 +55,24 @@ export function AddItemDrawer({
   const [name, setName] = useState("")
   const [aisle, setAisle] = useState(AISLE_UNKNOWN)
   const [unit, setUnit] = useState("")
+  const quantity = useRef<HTMLInputElement>(null)
+  // Counts settled names rather than holding one: choosing the same name twice
+  // still has to move the focus, and a value would not change.
+  const [named, setNamed] = useState(0)
+
+  // Naming the thing is the whole question this drawer asks; what follows is
+  // how much of it. The number is what gets typed next, so go there — and
+  // select what is there, so a second thought overwrites rather than appends.
+  useEffect(() => {
+    if (named === 0) return
+    // Deferred: Base UI puts the focus back on the combobox input when the
+    // popup closes, which happens after this handler and would win the race.
+    const timer = setTimeout(() => {
+      quantity.current?.focus()
+      quantity.current?.select()
+    }, 0)
+    return () => clearTimeout(timer)
+  }, [named])
 
   // FormDrawer closes itself on a successful save, but it knows nothing of
   // `name`, `aisle` and `unit` — they live here. Adjusting them during render
@@ -85,10 +103,18 @@ export function AddItemDrawer({
   // this is a shopping line, not a change to the catalogue.
   const choose = (chosen: string) => {
     setName(chosen)
+    setNamed((count) => count + 1)
     const entry = catalog.find((item) => item.name === chosen)
     if (entry === undefined) return
     setAisle(entry.aisle)
     setUnit(entry.defaultUnit ?? "")
+  }
+
+  // A name the catalogue does not hold brings nothing with it, but it settles
+  // the same question, so the focus moves the same way.
+  const create = (typed: string) => {
+    setName(typed)
+    setNamed((count) => count + 1)
   }
 
   return (
@@ -137,32 +163,40 @@ export function AddItemDrawer({
             names={catalog.map((entry) => entry.name)}
             value={name === "" ? null : name}
             onSelect={choose}
-            onCreate={setName}
+            onCreate={create}
             aria-label="Che cosa serve"
           />
         </FormField>
 
-        <div className="flex gap-2">
-          <NumberField
-            {...form.fieldProps("quantity")}
-            label="Quantità"
-            error={form.errorOf("quantity")}
-            // Not min={0}: the schema rejects a quantity of zero, and the
-            // browser can refuse it before the drawer has to explain it.
-            min={0.01}
-            step="any"
-            inputMode="decimal"
-            autoComplete="off"
-          />
-          <TextField
-            {...form.fieldProps("unit", { controlled: true })}
-            label="Unità"
-            error={form.errorOf("unit")}
-            value={unit}
-            onChange={(event) => setUnit(event.target.value)}
-            autoComplete="off"
-            spellCheck={false}
-          />
+        {/* Not two equal halves: identical fields side by side is why the
+            number kept being typed into the unit. The number is the one being
+            filled in, so it gets the room. */}
+        <div className="flex items-start gap-2">
+          <div className="flex-1">
+            <NumberField
+              {...form.fieldProps("quantity")}
+              ref={quantity}
+              label="Quantità"
+              error={form.errorOf("quantity")}
+              // Not min={0}: the schema rejects a quantity of zero, and the
+              // browser can refuse it before the drawer has to explain it.
+              min={0.01}
+              step="any"
+              inputMode="decimal"
+              autoComplete="off"
+            />
+          </div>
+          <div className="w-24 shrink-0">
+            <TextField
+              {...form.fieldProps("unit", { controlled: true })}
+              label="Unità"
+              error={form.errorOf("unit")}
+              value={unit}
+              onChange={(event) => setUnit(event.target.value)}
+              autoComplete="off"
+              spellCheck={false}
+            />
+          </div>
         </div>
 
         <SelectField

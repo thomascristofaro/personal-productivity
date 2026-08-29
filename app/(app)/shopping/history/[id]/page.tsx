@@ -4,9 +4,8 @@ import { saveTotal } from "@/app/(app)/shopping/history/actions"
 import { ListSection } from "@/components/page/list-section"
 import { DetailBody } from "@/components/page/page-body"
 import { PageHeader } from "@/components/page/page-header"
-import { PurchaseTotalForm } from "@/components/shopping/purchase-total-form"
+import { PurchaseTotal } from "@/components/shopping/purchase-total"
 import { APP_TIMEZONE } from "@/lib/config"
-import { formatEuro } from "@/lib/money"
 import { PurchaseIdSchema } from "@/lib/schemas/shopping"
 import { getPurchase } from "@/lib/services/purchases"
 import { groupByAisle } from "@/lib/services/shopping-view"
@@ -20,10 +19,6 @@ const dayFormat = new Intl.DateTimeFormat("it-IT", {
   month: "long",
   year: "numeric",
 })
-
-// For the field, not for reading: "12,34" and not "12,34 €".
-const forEditing = (cents: number | null) =>
-  cents === null ? "" : (cents / 100).toFixed(2).replace(".", ",")
 
 export default async function PurchasePage({
   params,
@@ -44,19 +39,16 @@ export default async function PurchasePage({
 
   return (
     <DetailBody>
+      {/* No amount in the subtitle: PurchaseTotal says it, and a heading that
+          repeats the row under it makes the row look like something else. */}
       <PageHeader
         title={dayFormat.format(purchase.purchasedAt)}
         back={{ href: "/shopping/history", label: "Storico spesa" }}
-        subtitle={
-          purchase.totalCents === null
-            ? "Importo non ancora inserito."
-            : formatEuro(purchase.totalCents)
-        }
       />
 
-      <PurchaseTotalForm
+      <PurchaseTotal
         id={purchase.id}
-        total={forEditing(purchase.totalCents)}
+        totalCents={purchase.totalCents}
         action={saveTotal}
       />
 
