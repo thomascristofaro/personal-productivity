@@ -1,6 +1,7 @@
 import { z } from "zod"
 
 import { RecipeIngredientRowSchema } from "@/lib/schemas/catalog"
+import { CourseSchema } from "@/lib/schemas/course"
 
 export const RECIPE_TITLE_MAX = 200
 export const RECIPE_NOTES_MAX = 2000
@@ -43,6 +44,7 @@ export const RecipeInputSchema = z.object({
       RECIPE_TITLE_MAX,
       `Il nome può avere al massimo ${RECIPE_TITLE_MAX} caratteri.`
     ),
+  course: CourseSchema,
   sourceUrl,
   servings,
   totalMinutes: z

@@ -4,6 +4,7 @@ import { RECIPE_NOTES_MAX, RecipeInputSchema } from "@/lib/schemas/recipe"
 
 const valid = {
   title: "Spaghetti al pomodoro",
+  course: "SECOND",
   sourceUrl: "",
   servings: 4,
   totalMinutes: 25,
@@ -26,6 +27,21 @@ describe("RecipeInputSchema", () => {
 
   it("rejects an empty title, because a recipe with no name cannot be found again", () => {
     expect(parse({ title: "   " }).success).toBe(false)
+  })
+
+  it("refuses a recipe with no course, in Italian", () => {
+    const parsed = parse({ course: "" })
+
+    expect(parsed.success).toBe(false)
+    expect(parsed.error?.issues[0].message).toBe(
+      "Scegli se è un primo, un secondo o un contorno."
+    )
+  })
+
+  it("accepts each of the three courses", () => {
+    for (const course of ["FIRST", "SECOND", "SIDE"]) {
+      expect(parse({ course }).success).toBe(true)
+    }
   })
 
   it("trims the title rather than storing the user's stray spaces", () => {

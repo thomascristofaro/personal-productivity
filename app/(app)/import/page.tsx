@@ -23,6 +23,7 @@ function sharedLink(url: string | undefined, text: string | undefined) {
 
 const empty = (sourceUrl: string) => ({
   title: "",
+  course: "",
   sourceUrl,
   servings: "",
   totalMinutes: "",
@@ -34,6 +35,7 @@ const empty = (sourceUrl: string) => ({
 
 const filled = (draft: RecipeDraft) => ({
   title: draft.title,
+  course: "",
   sourceUrl: draft.sourceUrl,
   servings: draft.servings === null ? "" : String(draft.servings),
   totalMinutes: draft.totalMinutes === null ? "" : String(draft.totalMinutes),

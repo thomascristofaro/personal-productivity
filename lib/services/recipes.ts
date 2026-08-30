@@ -1,3 +1,4 @@
+import type { Course } from "@/lib/courses"
 import { db } from "@/lib/db"
 import type { RecipeInput } from "@/lib/schemas/recipe"
 
@@ -46,6 +47,7 @@ async function ensureIngredients(input: RecipeInput): Promise<void> {
 export type RecipeSummary = {
   id: string
   title: string
+  course: Course
   servings: number | null
   totalMinutes: number | null
   tags: string[]
@@ -66,6 +68,7 @@ export type RecipeDetail = RecipeSummary & {
 const summaryFields = {
   id: true,
   title: true,
+  course: true,
   servings: true,
   totalMinutes: true,
   tags: true,
@@ -75,6 +78,7 @@ const summaryFields = {
 function toColumns(input: RecipeInput) {
   return {
     title: input.title,
+    course: input.course,
     sourceUrl: input.sourceUrl === "" ? null : input.sourceUrl,
     servings: input.servings ?? null,
     totalMinutes: input.totalMinutes ?? null,

@@ -35,9 +35,21 @@ model User {
   importBatches   ImportBatch[]
 }
 
+// The Italian courses of a meal. FIRST is a primo — pasta, risotto, a soup, an
+// insalatona; SECOND a secondo — meat, fish, eggs; SIDE a contorno.
+enum Course {
+  FIRST
+  SECOND
+  SIDE
+}
+
 model Recipe {
   id           String             @id @default(cuid())
   title        String
+  // No @default: one would make every recipe saved without a choice a secondo
+  // in silence, and the tag being right is the whole point of the column. The
+  // migration fills the existing rows and then drops the default it used.
+  course       Course
   sourceUrl    String?
   servings     Int?
   totalMinutes Int?
@@ -139,23 +151,23 @@ model ShoppingList {
 }
 
 model ShoppingListItem {
-  id          String       @id @default(cuid())
-  listId      String
-  list        ShoppingList @relation(fields: [listId], references: [id], onDelete: Cascade)
-  name        String
-  quantity    Float?
-  unit        String?
-  aisle       String
+  id            String       @id @default(cuid())
+  listId        String
+  list          ShoppingList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  name          String
+  quantity      Float?
+  unit          String?
+  aisle         String
   // Which days of the week the line is needed for, 0 Monday through 6 Sunday.
   // Empty for a line added by hand: no menu asked for it. Recomputed on every
   // regeneration rather than carried across like the ticks are — days are a
   // fact about the current menu, not about the shopper.
-  days        Int[]
-  checked     Boolean      @default(false)
-  checkedById String?
-  checkedBy   User?        @relation(fields: [checkedById], references: [id], onDelete: SetNull)
-  checkedAt   DateTime?
-  manual      Boolean      @default(false)
+  days          Int[]
+  checked       Boolean      @default(false)
+  checkedById   String?
+  checkedBy     User?        @relation(fields: [checkedById], references: [id], onDelete: SetNull)
+  checkedAt     DateTime?
+  manual        Boolean      @default(false)
   // How much of `quantity` is actually going in the trolley. Null means all of
   // it, which is the ordinary case: the field is only written when the shop had
   // one burrata and the menu asked for two. Closing the shop records this amount
@@ -166,7 +178,7 @@ model ShoppingListItem {
   // the next regeneration, so the flag is what lets the bin work on a row the
   // menu owns. Survives a regeneration the way the tick does, and falls for the
   // same reason, when the menu starts asking for more than it did.
-  dismissed     Boolean    @default(false)
+  dismissed     Boolean      @default(false)
 
   @@index([listId])
 }
@@ -217,22 +229,22 @@ enum FinanceProvider {
 // A place money sits. "FinanceAccount" and not "Account": the latter is
 // better-auth's, and renaming that one needs a mapping in lib/auth/better-auth.ts.
 model FinanceAccount {
-  id       String          @id @default(cuid())
-  name     String
+  id                  String          @id @default(cuid())
+  name                String
   // An enum and not free text: it selects which reader parses an upload, so an
   // unknown value would have no behaviour.
-  provider FinanceProvider
-  ownerId  String
-  owner    User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  provider            FinanceProvider
+  ownerId             String
+  owner               User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   // Visible to both users. Ownership is the module's only authorisation rule —
   // design document section 3.
-  shared   Boolean         @default(false)
+  shared              Boolean         @default(false)
   // The balance is derived, never stored: opening balance plus every movement
   // from that date on. A stored balance diverges from the truth in silence.
-  openingBalanceCents Int      @default(0)
-  openingBalanceAt    DateTime @db.Date
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @default(now()) @updatedAt
+  openingBalanceCents Int             @default(0)
+  openingBalanceAt    DateTime        @db.Date
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @default(now()) @updatedAt
 
   movements Movement[]
   imports   ImportBatch[]
@@ -245,14 +257,14 @@ model FinanceAccount {
 // would make the next import of that period write it again beside the
 // correction. `note` is where a human remark goes.
 model Movement {
-  id          String         @id @default(cuid())
-  accountId   String
-  account     FinanceAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  date        DateTime       @db.Date
+  id               String         @id @default(cuid())
+  accountId        String
+  account          FinanceAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  date             DateTime       @db.Date
   // Integer cents, negative for an outgoing. One column and not two: a dare and
   // an avere column would let a row be both or neither.
-  amountCents Int
-  description String
+  amountCents      Int
+  description      String
   // What the file declared as its own category, verbatim. Null when it declares
   // none.
   providerCategory String?
@@ -263,15 +275,15 @@ model Movement {
   categorySource   CategorySource @default(NONE)
   // See lib/services/finance/fingerprint.ts. Two identical rows on one day share
   // this, which is why `occurrence` exists.
-  fingerprint String
-  occurrence  Int    @default(0)
-  note        String?
+  fingerprint      String
+  occurrence       Int            @default(0)
+  note             String?
   // Nullable with SetNull rather than a required parent: deleting an import must
   // never take its movements with it, and it removes the delete-ordering problem
   // when an account cascades both.
-  importBatchId String?
-  importBatch   ImportBatch? @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
-  createdAt     DateTime     @default(now())
+  importBatchId    String?
+  importBatch      ImportBatch?   @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
+  createdAt        DateTime       @default(now())
 
   transferFrom TransferLink? @relation("TransferFrom")
   transferTo   TransferLink? @relation("TransferTo")
@@ -348,19 +360,19 @@ model Category {
 // Ordered, first match wins: a specific rule written today has to beat a general
 // one written in March without anyone rewriting the general one.
 model CategoryRule {
-  id         String   @id @default(cuid())
+  id         String          @id @default(cuid())
   kind       RuleKind
   // A substring for DESCRIPTION_CONTAINS, the provider's own category verbatim
   // for PROVIDER_CATEGORY_IS. Never a regular expression: one in this field is
   // something the owner would have to debug from a phone.
   pattern    String
   categoryId String
-  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  priority   Int      @default(0)
+  category   Category        @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  priority   Int             @default(0)
   // Null means every account.
   accountId  String?
   account    FinanceAccount? @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  createdAt  DateTime @default(now())
+  createdAt  DateTime        @default(now())
 
   @@index([priority])
   @@index([accountId])
@@ -458,20 +470,20 @@ model LlmFunction {
 // attached to the result it produced — design document 2026-08-21 section 7.3.
 // Kept to the most recent twenty per function.
 model LlmExecution {
-  id         String      @id @default(cuid())
-  functionId String
-  function   LlmFunction @relation(fields: [functionId], references: [id], onDelete: Cascade)
-  prompt     String
-  model      String
+  id           String      @id @default(cuid())
+  functionId   String
+  function     LlmFunction @relation(fields: [functionId], references: [id], onDelete: Cascade)
+  prompt       String
+  model        String
   // Null when the call never returned one — a timeout reports no usage.
   inputTokens  Int?
   outputTokens Int?
   durationMs   Int
   // The raw text the model answered, kept verbatim so a bad week can be read
   // back rather than guessed at.
-  output    String?
-  error     String?
-  createdAt DateTime @default(now())
+  output       String?
+  error        String?
+  createdAt    DateTime    @default(now())
 
   // Every read is "the last twenty of this function", in this order.
   @@index([functionId, createdAt])

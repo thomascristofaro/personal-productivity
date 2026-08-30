@@ -42,6 +42,7 @@ export default async function EditRecipePage({
         values={{
           id: recipe.id,
           title: recipe.title,
+          course: recipe.course,
           sourceUrl: recipe.sourceUrl ?? "",
           servings: recipe.servings?.toString() ?? "",
           totalMinutes: recipe.totalMinutes?.toString() ?? "",

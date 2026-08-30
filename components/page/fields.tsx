@@ -96,12 +96,16 @@ export function SelectField({
   id,
   name,
   defaultValue,
+  placeholder,
   "aria-invalid": invalid,
   "aria-describedby": describedBy,
   ...rest
 }: Ours & {
   name: string
   defaultValue?: string
+  // Shown until something is chosen. Needs `defaultValue` to be empty or absent
+  // — see the mapping to null below.
+  placeholder?: string
   "aria-invalid"?: true
   "aria-describedby"?: string
   // A list when the value and the label are the same string — the aisles. A map
@@ -120,7 +124,14 @@ export function SelectField({
 
   return (
     <FormField name={id} label={label} description={description} error={error}>
-      <Select name={name} defaultValue={defaultValue} items={items} {...rest}>
+      <Select
+        name={name}
+        // `fieldProps` gives an unfilled field "", and Base UI reads that as a
+        // chosen value: the placeholder shows for null and for nothing else.
+        defaultValue={defaultValue === "" ? null : defaultValue}
+        items={items}
+        {...rest}
+      >
         <SelectTrigger
           id={id}
           aria-invalid={invalid}
@@ -130,7 +141,7 @@ export function SelectField({
             describedBy
           )}
         >
-          <SelectValue />
+          <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
           {entries.map(([value, optionLabel]) => (

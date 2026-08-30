@@ -10,6 +10,7 @@ import { SearchField } from "@/components/page/search-field"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { countLabel } from "@/lib/count-label"
+import { COURSE_LABELS } from "@/lib/courses"
 import { firstOf } from "@/lib/search-params"
 import { listRecipes } from "@/lib/services/recipes"
 
@@ -68,6 +69,7 @@ export default async function RecipesPage({
             {recipe.totalMinutes === null ? null : (
               <span>{recipe.totalMinutes} min</span>
             )}
+            <Badge>{COURSE_LABELS[recipe.course]}</Badge>
             {recipe.tags.map((tag) => (
               <Badge key={tag} variant="secondary">
                 {tag}

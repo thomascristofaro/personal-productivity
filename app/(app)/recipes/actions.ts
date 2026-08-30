@@ -29,6 +29,7 @@ const RecipeIdSchema = z.cuid()
 // the hidden id comes from the form's props rather than from the state.
 const FORM_FIELDS = [
   "title",
+  "course",
   "sourceUrl",
   "servings",
   "totalMinutes",
@@ -76,6 +77,7 @@ export const saveRecipe: FormAction = async (_state, formData) => {
 
   const parsed = RecipeInputSchema.safeParse({
     title: formData.get("title"),
+    course: formData.get("course"),
     sourceUrl: formData.get("sourceUrl") ?? "",
     servings: optionalNumber(formData.get("servings")),
     totalMinutes: optionalNumber(formData.get("totalMinutes")),

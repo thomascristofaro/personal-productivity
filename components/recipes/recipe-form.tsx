@@ -7,16 +7,23 @@ import {
   IngredientRows,
   type IngredientRowValue,
 } from "@/components/ingredients/ingredient-rows"
-import { NumberField, TextareaField, TextField } from "@/components/page/fields"
+import {
+  NumberField,
+  SelectField,
+  TextareaField,
+  TextField,
+} from "@/components/page/fields"
 import { PageForm } from "@/components/page/page-form"
 import { TagPicker } from "@/components/recipes/tag-picker"
 import { useFormState } from "@/hooks/use-form-state"
 import { useUnsavedChanges } from "@/hooks/use-unsaved-changes"
+import { COURSE_LABELS } from "@/lib/courses"
 import type { FormAction } from "@/lib/form"
 
 export type RecipeFormValues = {
   id?: string
   title: string
+  course: string
   sourceUrl: string
   servings: string
   totalMinutes: string
@@ -31,6 +38,7 @@ export type RecipeFormValues = {
 // absent on purpose: neither has a single element carrying that id.
 const FIELD_ORDER = [
   "title",
+  "course",
   "servings",
   "totalMinutes",
   "instructions",
@@ -54,6 +62,7 @@ export function RecipeForm({
 }) {
   const form = useFormState(action, FIELD_ORDER, {
     title: values.title,
+    course: values.course,
     sourceUrl: values.sourceUrl,
     servings: values.servings,
     totalMinutes: values.totalMinutes,
@@ -95,6 +104,16 @@ export function RecipeForm({
         // completing. Without it "Nome" gets offered a saved identity.
         autoComplete="off"
         required
+      />
+
+      <SelectField
+        key={form.fieldKey("course")}
+        {...form.fieldProps("course")}
+        label="Tipo"
+        error={form.errorOf("course")}
+        description="Decide in quale slot del menù la ricetta si può mettere."
+        options={COURSE_LABELS}
+        placeholder="Scegli…"
       />
 
       {/* A fieldset rather than a Field: the rows are a group of controls,

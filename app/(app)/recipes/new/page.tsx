@@ -30,6 +30,7 @@ export default async function NewRecipePage() {
         onCreateIngredient={addIngredient}
         values={{
           title: "",
+          course: "",
           sourceUrl: "",
           servings: "",
           totalMinutes: "",

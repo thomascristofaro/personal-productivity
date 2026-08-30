@@ -9,6 +9,7 @@ import { DeleteRecipeDialog } from "@/components/recipes/delete-recipe-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
+import { COURSE_LABELS } from "@/lib/courses"
 import { getRecipe } from "@/lib/services/recipes"
 import { amountOf } from "@/lib/units"
 
@@ -51,6 +52,7 @@ export default async function RecipePage({
               {recipe.totalMinutes === null ? null : (
                 <span>{recipe.totalMinutes} min</span>
               )}
+              <Badge>{COURSE_LABELS[recipe.course]}</Badge>
               {recipe.tags.map((tag) => (
                 <Badge key={tag} variant="secondary">
                   {tag}
