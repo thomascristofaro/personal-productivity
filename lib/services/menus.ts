@@ -1,6 +1,6 @@
-import { DAYS_IN_WEEK } from "@/lib/config"
+import { courseRank, type Course } from "@/lib/courses"
 import { db } from "@/lib/db"
-import { MEAL_TYPES, type Meal, type SlotInput } from "@/lib/schemas/menu"
+import type { Meal, SlotAddress, SlotInput } from "@/lib/schemas/menu"
 
 /** Thrown when a slot names a recipe that is no longer in the database. */
 export class UnknownRecipeError extends Error {
@@ -13,6 +13,7 @@ export class UnknownRecipeError extends Error {
 export type MenuSlotView = {
   day: number
   meal: Meal
+  course: Course
   recipeId: string | null
   recipeTitle: string | null
   freeText: string | null
@@ -30,38 +31,30 @@ function isForeignKeyError(error: unknown): boolean {
   )
 }
 
-const keyOf = (day: number, meal: Meal) => `${day}-${meal}`
+const MEAL_RANK: Record<Meal, number> = { LUNCH: 0, DINNER: 1 }
 
 /**
- * Expands the stored slots into the fourteen the screen always shows.
+ * Orders a week's slots the way the grid reads them.
  *
- * Exported for its own test: the database holds only the slots that have
- * content, so this is where a sparse week becomes a dense grid, and it is the
- * one piece of logic here that needs no database.
+ * Exported for its own test, and a copy rather than a sort in place: the array
+ * comes straight from a query, and callers do not expect it to move underneath
+ * them.
  *
- * @param stored The slots that exist, in any order.
- * @returns Fourteen slots, day 0 to 6, lunch before dinner.
+ * The ranks are explicit rather than an `orderBy` on the two enum columns.
+ * Postgres does order an enum by its declaration order, so the query would
+ * work — but that would make the grid's order depend on the order of three
+ * lines in the schema, with nothing on screen to say so.
+ *
+ * @param stored The slots the week holds, in any order.
+ * @returns The same slots, by day, then lunch before dinner, then by course.
  */
-export function buildWeekSlots(
-  stored: readonly MenuSlotView[]
-): MenuSlotView[] {
-  const byKey = new Map(
-    stored.map((slot) => [keyOf(slot.day, slot.meal), slot])
+export function sortSlots(stored: readonly MenuSlotView[]): MenuSlotView[] {
+  return [...stored].sort(
+    (a, b) =>
+      a.day - b.day ||
+      MEAL_RANK[a.meal] - MEAL_RANK[b.meal] ||
+      courseRank(a.course) - courseRank(b.course)
   )
-
-  return Array.from({ length: DAYS_IN_WEEK }, (_, day) =>
-    MEAL_TYPES.map(
-      (meal): MenuSlotView =>
-        byKey.get(keyOf(day, meal)) ?? {
-          day,
-          meal,
-          recipeId: null,
-          recipeTitle: null,
-          freeText: null,
-          servings: null,
-        }
-    )
-  ).flat()
 }
 
 /**
@@ -79,13 +72,16 @@ export function isListStale(slotsUpdatedAt: Date, generatedAt: Date): boolean {
 }
 
 /**
- * Reads one week as fourteen slots.
+ * Reads the slots one week holds.
  *
- * A week nobody has touched has no `Menu` row at all; it comes back as fourteen
- * empty slots rather than as an error, because an empty week is a normal state.
+ * Sparse by design: a meal has three courses and rarely three dishes, so only
+ * the rows that exist come back. Every one of them is a filled row, because
+ * `setSlot` deletes a slot whose fields are all empty. A week nobody has touched
+ * has no `Menu` row at all and comes back empty, which is a normal state and not
+ * an error.
  *
  * @param weekStart The Monday naming the week, at UTC midnight.
- * @returns Fourteen slots, day 0 to 6, lunch before dinner.
+ * @returns The week's slots, by day, then lunch before dinner, then by course.
  */
 export async function getMenuWeek(weekStart: Date): Promise<MenuSlotView[]> {
   const menu = await db.menu.findUnique({
@@ -95,6 +91,7 @@ export async function getMenuWeek(weekStart: Date): Promise<MenuSlotView[]> {
         select: {
           day: true,
           meal: true,
+          course: true,
           recipeId: true,
           freeText: true,
           servings: true,
@@ -104,7 +101,7 @@ export async function getMenuWeek(weekStart: Date): Promise<MenuSlotView[]> {
     },
   })
 
-  return buildWeekSlots(
+  return sortSlots(
     (menu?.slots ?? []).map(({ recipe, ...slot }) => ({
       ...slot,
       recipeTitle: recipe?.title ?? null,
@@ -122,16 +119,14 @@ export async function getMenuWeek(weekStart: Date): Promise<MenuSlotView[]> {
  * `clearSlot`: an empty slot and an absent slot must mean the same thing.
  *
  * @param weekStart The Monday naming the week, at UTC midnight.
- * @param day 0 for Monday through 6 for Sunday.
- * @param meal Which of the day's two meals.
+ * @param address Which day, meal and course the slot occupies.
  * @param input The validated slot contents.
  * @returns Nothing.
  * @throws UnknownRecipeError When the recipe was deleted between the picker and the save.
  */
 export async function setSlot(
   weekStart: Date,
-  day: number,
-  meal: Meal,
+  address: SlotAddress,
   input: SlotInput
 ): Promise<void> {
   // An empty slot and an absent slot must mean the same thing — see clearSlot's
@@ -142,7 +137,7 @@ export async function setSlot(
     input.freeText === null &&
     input.servings === null
   ) {
-    return clearSlot(weekStart, day, meal)
+    return clearSlot(weekStart, address)
   }
 
   const menu = await db.menu.upsert({
@@ -159,8 +154,8 @@ export async function setSlot(
 
   try {
     await db.menuSlot.upsert({
-      where: { menuId_day_meal: { menuId: menu.id, day, meal } },
-      create: { menuId: menu.id, day, meal, ...input },
+      where: { menuId_day_meal_course: { menuId: menu.id, ...address } },
+      create: { menuId: menu.id, ...address, ...input },
       update: input,
     })
   } catch (error) {
@@ -173,19 +168,17 @@ export async function setSlot(
  * Empties one slot.
  *
  * Deletes the row rather than blanking its columns: an empty slot and an absent
- * slot must mean the same thing, and `buildWeekSlots` already makes them look
+ * slot must mean the same thing, and the sparse grid already makes them look
  * identical on screen. Uses `deleteMany` so clearing an already-empty slot is
  * not an error.
  *
  * @param weekStart The Monday naming the week, at UTC midnight.
- * @param day 0 for Monday through 6 for Sunday.
- * @param meal Which of the day's two meals.
+ * @param address Which day, meal and course the slot occupies.
  * @returns Nothing.
  */
 export async function clearSlot(
   weekStart: Date,
-  day: number,
-  meal: Meal
+  address: SlotAddress
 ): Promise<void> {
   const menu = await db.menu.findUnique({
     where: { weekStart },
@@ -197,7 +190,7 @@ export async function clearSlot(
   // One transaction: a delete that landed without its touch would leave the
   // shopping list claiming to be current while an item had just left the menu.
   await db.$transaction([
-    db.menuSlot.deleteMany({ where: { menuId: menu.id, day, meal } }),
+    db.menuSlot.deleteMany({ where: { menuId: menu.id, ...address } }),
     db.menu.update({
       where: { id: menu.id },
       data: { slotsUpdatedAt: new Date() },
@@ -208,8 +201,8 @@ export async function clearSlot(
 /**
  * Replaces a whole week's slots in one transaction.
  *
- * Written for the generated proposal, which arrives as fourteen slots at once.
- * Fourteen separate `setSlot` calls would not be atomic, and a failure halfway
+ * Written for the generated proposal, which arrives as a whole week at once.
+ * One `setSlot` call per slot would not be atomic, and a failure halfway
  * leaves a half-filled week — which the caller then cannot tell apart from a
  * week somebody built by hand.
  *
@@ -224,7 +217,12 @@ export async function clearSlot(
  */
 export async function replaceWeekSlots(
   weekStart: Date,
-  slots: readonly { day: number; meal: Meal; recipeId: string }[]
+  slots: readonly {
+    day: number
+    meal: Meal
+    course: Course
+    recipeId: string
+  }[]
 ): Promise<void> {
   const menu = await db.menu.upsert({
     where: { weekStart },
@@ -241,6 +239,7 @@ export async function replaceWeekSlots(
           menuId: menu.id,
           day: slot.day,
           meal: slot.meal,
+          course: slot.course,
           recipeId: slot.recipeId,
         })),
       }),

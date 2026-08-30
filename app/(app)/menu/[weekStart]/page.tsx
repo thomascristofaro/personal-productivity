@@ -56,11 +56,10 @@ export default async function MenuWeekPage({
   )
 
   // Generating replaces the week, so the button asks first when there is
-  // something to lose. The count is what the confirmation names; the server
+  // something to lose. Every stored slot is a filled one — setSlot deletes a
+  // slot whose fields are all empty — so the count is the length. The server
   // re-reads it regardless, because a hidden or disabled button guards nothing.
-  const filledSlots = slots.filter(
-    (slot) => slot.recipeId !== null || slot.freeText !== null
-  ).length
+  const filledSlots = slots.length
 
   const isCurrentWeek = iso(weekStartFor(new Date())) === iso(weekStart)
   const todayIndex = isCurrentWeek ? dayIndexFor(new Date()) : -1
@@ -111,7 +110,11 @@ export default async function MenuWeekPage({
         slots={slots}
         dayLabels={dayLabels}
         todayIndex={todayIndex}
-        recipes={recipes.map(({ id, title }) => ({ id, title }))}
+        recipes={recipes.map(({ id, title, course }) => ({
+          id,
+          title,
+          course,
+        }))}
         saveAction={saveSlot}
       />
     </ListBody>

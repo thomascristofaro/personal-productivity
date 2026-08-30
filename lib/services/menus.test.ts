@@ -1,14 +1,15 @@
 import { describe, expect, it } from "vitest"
 
 import {
-  buildWeekSlots,
   isListStale,
+  sortSlots,
   type MenuSlotView,
 } from "@/lib/services/menus"
 
 const stored = (over: Partial<MenuSlotView>): MenuSlotView => ({
   day: 0,
   meal: "LUNCH",
+  course: "SECOND",
   recipeId: null,
   recipeTitle: null,
   freeText: null,
@@ -16,52 +17,48 @@ const stored = (over: Partial<MenuSlotView>): MenuSlotView => ({
   ...over,
 })
 
-describe("buildWeekSlots", () => {
-  it("always returns fourteen slots, even for an untouched week", () => {
-    expect(buildWeekSlots([])).toHaveLength(14)
+describe("sortSlots", () => {
+  it("orders by day first", () => {
+    const sorted = sortSlots([stored({ day: 3 }), stored({ day: 1 })])
+
+    expect(sorted.map((slot) => slot.day)).toEqual([1, 3])
   })
 
-  it("orders them day by day, lunch before dinner", () => {
-    const slots = buildWeekSlots([])
-    expect(slots.slice(0, 3).map((slot) => [slot.day, slot.meal])).toEqual([
-      [0, "LUNCH"],
-      [0, "DINNER"],
-      [1, "LUNCH"],
-    ])
-    expect(slots[13]).toMatchObject({ day: 6, meal: "DINNER" })
-  })
-
-  it("puts a stored slot in its own place and leaves the rest empty", () => {
-    const slots = buildWeekSlots([
-      stored({ day: 2, meal: "DINNER", recipeId: "abc", recipeTitle: "Ragù" }),
+  it("puts lunch before dinner within a day", () => {
+    const sorted = sortSlots([
+      stored({ meal: "DINNER" }),
+      stored({ meal: "LUNCH" }),
     ])
 
-    expect(slots.find((s) => s.day === 2 && s.meal === "DINNER")).toMatchObject(
-      {
-        recipeId: "abc",
-        recipeTitle: "Ragù",
-      }
-    )
-    expect(slots.filter((s) => s.recipeId !== null)).toHaveLength(1)
+    expect(sorted.map((slot) => slot.meal)).toEqual(["LUNCH", "DINNER"])
   })
 
-  it("keeps a free-text slot as text, with no recipe", () => {
-    const slots = buildWeekSlots([
-      stored({ day: 5, meal: "DINNER", freeText: "fuori a cena" }),
+  it("orders a meal the way it is eaten, not alphabetically", () => {
+    // Alphabetically it would be FIRST, SECOND, SIDE — which happens to be
+    // right. Written with the courses shuffled so the test would still catch a
+    // sort that fell back to comparing the strings.
+    const sorted = sortSlots([
+      stored({ course: "SIDE" }),
+      stored({ course: "SECOND" }),
+      stored({ course: "FIRST" }),
     ])
 
-    expect(slots.find((s) => s.day === 5 && s.meal === "DINNER")).toMatchObject(
-      {
-        freeText: "fuori a cena",
-        recipeId: null,
-      }
-    )
+    expect(sorted.map((slot) => slot.course)).toEqual([
+      "FIRST",
+      "SECOND",
+      "SIDE",
+    ])
   })
 
-  it("drops a row outside the week rather than growing the grid", () => {
-    // Nothing in the database constrains `day` to 0..6, so a bad row must not
-    // reach the screen as an eighth day.
-    expect(buildWeekSlots([stored({ day: 9 })])).toHaveLength(14)
+  it("returns only what it was given — an empty week is empty, not fourteen", () => {
+    expect(sortSlots([])).toEqual([])
+  })
+
+  it("does not mutate its argument", () => {
+    const input = [stored({ day: 3 }), stored({ day: 1 })]
+    sortSlots(input)
+
+    expect(input[0].day).toBe(3)
   })
 })
 

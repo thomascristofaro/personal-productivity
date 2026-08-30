@@ -125,12 +125,16 @@ model MenuSlot {
   menu     Menu     @relation(fields: [menuId], references: [id], onDelete: Cascade)
   day      Int
   meal     MealType
+  // Which of the meal's three courses this row occupies. Authoritative for the
+  // grid: the recipe's own course only filters the picker, so the insalatona can
+  // be tonight's contorno. See the 2026-08-30 design document, section 3.1.
+  course   Course
   recipeId String?
   recipe   Recipe?  @relation(fields: [recipeId], references: [id], onDelete: SetNull)
   freeText String?
   servings Int?
 
-  @@unique([menuId, day, meal])
+  @@unique([menuId, day, meal, course])
 }
 
 enum MealType {

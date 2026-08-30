@@ -8,8 +8,9 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/components/ui/combobox"
+import type { Course } from "@/lib/courses"
 
-export type RecipeOption = { id: string; title: string }
+export type RecipeOption = { id: string; title: string; course: Course }
 
 // Unlike the ingredient picker, this one carries objects rather than plain
 // strings: two recipes may share a title, so the title cannot identify the row.

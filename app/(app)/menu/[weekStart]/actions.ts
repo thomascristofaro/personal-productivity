@@ -6,8 +6,7 @@ import { requireSession } from "@/lib/auth"
 import { failure, success, type FormAction } from "@/lib/form"
 import { valuesFrom } from "@/lib/form-errors"
 import {
-  DaySchema,
-  MealSchema,
+  SlotAddressSchema,
   SlotInputSchema,
   WeekStartSchema,
 } from "@/lib/schemas/menu"
@@ -38,13 +37,16 @@ function optionalText(value: FormDataEntryValue | null) {
   return text.trim() === "" ? null : text
 }
 
-// The three fields that address the slot, parsed together: none of them is
+// The four fields that address the slot, parsed together: none of them is
 // meaningful without the others.
 function addressFrom(formData: FormData) {
   return {
     weekStart: WeekStartSchema.safeParse(formData.get("weekStart")),
-    day: DaySchema.safeParse(optionalNumber(formData.get("day"))),
-    meal: MealSchema.safeParse(formData.get("meal")),
+    address: SlotAddressSchema.safeParse({
+      day: optionalNumber(formData.get("day")),
+      meal: formData.get("meal"),
+      course: formData.get("course"),
+    }),
   }
 }
 
@@ -58,11 +60,7 @@ export const saveSlot: FormAction = async (_state, formData) => {
 
   const values = valuesFrom(formData, ["freeText", "servings"])
 
-  if (
-    !address.weekStart.success ||
-    !address.day.success ||
-    !address.meal.success
-  ) {
+  if (!address.weekStart.success || !address.address.success) {
     return failure("Questo slot non esiste.", { values })
   }
 
@@ -73,12 +71,7 @@ export const saveSlot: FormAction = async (_state, formData) => {
   await requireSession()
 
   try {
-    await setSlot(
-      address.weekStart.data,
-      address.day.data,
-      address.meal.data,
-      input.data
-    )
+    await setSlot(address.weekStart.data, address.address.data, input.data)
   } catch (error) {
     if (error instanceof UnknownRecipeError) {
       return failure("Questa ricetta non esiste più.", { values })

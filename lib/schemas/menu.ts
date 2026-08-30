@@ -1,5 +1,7 @@
 import { z } from "zod"
 
+import { CourseSchema } from "@/lib/schemas/course"
+
 export const FREE_TEXT_MAX = 80
 export const SERVINGS_MAX = 20
 
@@ -28,6 +30,16 @@ export const WeekStartSchema = z
     (date) => date.getUTCDay() === 1,
     "La settimana deve iniziare di lunedì."
   )
+
+// The three fields that address a slot inside its week. One object because none
+// of them means anything without the others.
+export const SlotAddressSchema = z.object({
+  day: DaySchema,
+  meal: MealSchema,
+  course: CourseSchema,
+})
+
+export type SlotAddress = z.infer<typeof SlotAddressSchema>
 
 export const SlotInputSchema = z
   .object({
