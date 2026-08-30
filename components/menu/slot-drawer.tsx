@@ -89,18 +89,14 @@ export function SlotDrawer({
       <FormField
         name="recipe"
         label="Ricetta"
-        description="Scrivi per filtrare il ricettario. La ✕ la toglie."
+        description="Il ricettario è filtrato per il tipo di questo slot. Scrivi per cercare; la ✕ toglie la scelta."
       >
-        <RecipePicker
-          id="recipe"
-          recipes={offered}
-          value={picked}
-          onSelect={setPicked}
-          aria-describedby="recipe-description"
-        />
-        {/* The escape hatch the filter needs. A slot that could only ever hold
+        {/* The escape hatch the filter needs: a slot that could only ever hold
             its own course would be the same trap as one dish per meal, only
-            smaller — 2026-08-30 design document section 3.1. */}
+            smaller — 2026-08-30 design document section 3.1.
+            Above the picker and not below it, because the popup opens downward
+            over everything that follows the input — so when the filter emptied
+            the list, the control for widening it was the one thing covered. */}
         <div className="flex items-center gap-2">
           <Checkbox
             id="show-all"
@@ -111,6 +107,14 @@ export function SlotDrawer({
             Mostra tutte le ricette
           </Label>
         </div>
+
+        <RecipePicker
+          id="recipe"
+          recipes={offered}
+          value={picked}
+          onSelect={setPicked}
+          aria-describedby="recipe-description"
+        />
       </FormField>
 
       <TextField

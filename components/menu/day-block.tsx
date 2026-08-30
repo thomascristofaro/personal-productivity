@@ -120,7 +120,10 @@ function MealBlock({
 
   return (
     <section aria-label={`${mealLabel} — ${dayLabel}`}>
-      <h3 className="px-3 pt-2 text-xs font-medium text-muted-foreground">
+      {/* Upper case rather than heavier: the course label below it is also
+          small and muted, and at 390px the two read as the same level unless
+          the meal is marked as a section rather than as another line. */}
+      <h3 className="px-3 pt-2 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
         {mealLabel}
       </h3>
       {slots.map((slot) => (
