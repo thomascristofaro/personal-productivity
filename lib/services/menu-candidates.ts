@@ -1,3 +1,5 @@
+import { COURSE_LABELS, type Course } from "@/lib/courses"
+
 /**
  * A recipe as the proposal sees it. Deliberately not the Prisma model: the
  * instructions are most of a recipe's tokens and play no part in deciding
@@ -6,6 +8,7 @@
 export type CandidateRecipe = {
   id: string
   title: string
+  course: Course
   totalMinutes: number | null
   tags: string[]
   ingredients: string[]
@@ -13,13 +16,17 @@ export type CandidateRecipe = {
 }
 
 export type CandidateIndex = {
-  byNumber: Map<number, string>
+  byNumber: Map<number, { id: string; course: Course }>
   count: number
 }
 
 function describeRecipe(recipe: CandidateRecipe, position: number): string {
   const parts = [`${position}. ${recipe.title}`]
 
+  // Lower case, so it reads as one of the line's details rather than as a
+  // heading. The prompt is not told to balance the courses yet — that is the
+  // 2026-08-30 design document section 7 — but the model can now see them.
+  parts.push(COURSE_LABELS[recipe.course].toLowerCase())
   if (recipe.totalMinutes !== null) parts.push(`${recipe.totalMinutes}min`)
   if (recipe.tags.length > 0) parts.push(recipe.tags.join(", "))
   if (recipe.ingredients.length > 0) parts.push(recipe.ingredients.join(", "))
@@ -48,11 +55,16 @@ export function buildCandidateLines(recipes: CandidateRecipe[]): string {
  * Builds the lookup from the numbers in the prompt back to recipe ids.
  *
  * @param recipes The same array, in the same order, as `buildCandidateLines`.
- * @returns The number-to-id map and how many candidates there are.
+ * @returns The number-to-recipe map, carrying the id and the course, and how many candidates there are.
  */
 export function indexCandidates(recipes: CandidateRecipe[]): CandidateIndex {
   return {
-    byNumber: new Map(recipes.map((recipe, i) => [i + 1, recipe.id])),
+    byNumber: new Map(
+      recipes.map((recipe, i) => [
+        i + 1,
+        { id: recipe.id, course: recipe.course },
+      ])
+    ),
     count: recipes.length,
   }
 }

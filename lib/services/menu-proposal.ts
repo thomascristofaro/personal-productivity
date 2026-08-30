@@ -1,4 +1,5 @@
 import { HOUSEHOLD_SERVINGS, RECENCY_WINDOW_WEEKS } from "@/lib/config"
+import type { Course } from "@/lib/courses"
 import { db } from "@/lib/db"
 import { buildMenuProposalRequest } from "@/lib/prompts/menu-proposal"
 import type { MenuProposal } from "@/lib/schemas/menu-proposal"
@@ -19,6 +20,7 @@ import {
 export type ProposedMenuSlot = {
   day: number
   meal: "LUNCH" | "DINNER"
+  course: Course
   recipeId: string
 }
 
@@ -48,13 +50,13 @@ const FUNCTION_ID = "menu-proposal"
  * the one rule the prompt is not trusted with.
  *
  * @param proposal The parsed response.
- * @param byNumber The number-to-id map the prompt was numbered against.
+ * @param byNumber The number-to-recipe map the prompt was numbered against.
  * @returns One entry per filled slot; empty slots are dropped.
  * @throws DuplicateProposalError When a recipe appears more than once.
  */
 export function resolveProposal(
   proposal: MenuProposal,
-  byNumber: Map<number, string>
+  byNumber: Map<number, { id: string; course: Course }>
 ): ProposedMenuSlot[] {
   const slots: ProposedMenuSlot[] = []
   const used = new Set<string>()
@@ -62,15 +64,23 @@ export function resolveProposal(
   for (const slot of proposal.slots) {
     if (slot.candidate === null) continue
 
-    const recipeId = byNumber.get(slot.candidate)
-    if (recipeId === undefined) {
+    const candidate = byNumber.get(slot.candidate)
+    if (candidate === undefined) {
       throw new Error(`Candidate ${slot.candidate} is not in the index.`)
     }
 
-    if (used.has(recipeId)) throw new DuplicateProposalError()
-    used.add(recipeId)
+    if (used.has(candidate.id)) throw new DuplicateProposalError()
+    used.add(candidate.id)
 
-    slots.push({ day: slot.day, meal: slot.meal, recipeId })
+    // The slot takes the recipe's own course. The prompt still answers one
+    // recipe per meal, so a generated week fills whichever of the three each
+    // recipe belongs to and leaves the rest empty.
+    slots.push({
+      day: slot.day,
+      meal: slot.meal,
+      course: candidate.course,
+      recipeId: candidate.id,
+    })
   }
 
   return slots
@@ -86,6 +96,7 @@ async function loadCandidates(weekStart: Date): Promise<CandidateRecipe[]> {
       select: {
         id: true,
         title: true,
+        course: true,
         totalMinutes: true,
         tags: true,
         ingredients: {
@@ -127,6 +138,7 @@ async function loadCandidates(weekStart: Date): Promise<CandidateRecipe[]> {
     return {
       id: recipe.id,
       title: recipe.title,
+      course: recipe.course,
       totalMinutes: recipe.totalMinutes,
       tags: recipe.tags,
       ingredients: recipe.ingredients.map((row) => row.ingredientName),

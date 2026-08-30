@@ -9,6 +9,7 @@ import {
 const recipe = (over: Partial<CandidateRecipe> = {}): CandidateRecipe => ({
   id: "r1",
   title: "Spaghetti aglio e olio",
+  course: "SECOND",
   totalMinutes: 15,
   tags: ["veloce", "vegetariano"],
   ingredients: ["spaghetti", "aglio fresco", "peperoncino"],
@@ -33,6 +34,12 @@ describe("buildCandidateLines", () => {
     expect(lines).toContain("15min")
     expect(lines).toContain("veloce")
     expect(lines).toContain("spaghetti")
+  })
+
+  it("carries the course, so the model can see what it is choosing", () => {
+    const lines = buildCandidateLines([recipe({ course: "SIDE" })])
+
+    expect(lines).toContain("contorno")
   })
 
   it("never carries the instructions", () => {
@@ -79,11 +86,14 @@ describe("buildCandidateLines", () => {
 })
 
 describe("indexCandidates", () => {
-  it("maps each number back to its recipe id", () => {
-    const index = indexCandidates([recipe(), recipe({ id: "r2" })])
+  it("maps each number back to its recipe id and course", () => {
+    const index = indexCandidates([
+      recipe({ course: "FIRST" }),
+      recipe({ id: "r2", course: "SIDE" }),
+    ])
 
-    expect(index.byNumber.get(1)).toBe("r1")
-    expect(index.byNumber.get(2)).toBe("r2")
+    expect(index.byNumber.get(1)).toEqual({ id: "r1", course: "FIRST" })
+    expect(index.byNumber.get(2)).toEqual({ id: "r2", course: "SIDE" })
     expect(index.count).toBe(2)
   })
 
@@ -97,6 +107,6 @@ describe("indexCandidates", () => {
     const index = indexCandidates(recipes)
 
     expect(lines[1]).toMatch(/^2\./)
-    expect(index.byNumber.get(2)).toBe("r2")
+    expect(index.byNumber.get(2)?.id).toBe("r2")
   })
 })

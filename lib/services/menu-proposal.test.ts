@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest"
 import { DuplicateProposalError, resolveProposal } from "./menu-proposal"
 
 const byNumber = new Map([
-  [1, "recipe-one"],
-  [2, "recipe-two"],
+  [1, { id: "recipe-one", course: "FIRST" as const }],
+  [2, { id: "recipe-two", course: "SECOND" as const }],
 ])
 
 describe("resolveProposal", () => {
@@ -14,7 +14,9 @@ describe("resolveProposal", () => {
       byNumber
     )
 
-    expect(slots).toEqual([{ day: 0, meal: "LUNCH", recipeId: "recipe-two" }])
+    expect(slots).toEqual([
+      { day: 0, meal: "LUNCH", course: "SECOND", recipeId: "recipe-two" },
+    ])
   })
 
   it("drops an empty slot instead of inventing a recipe for it", () => {
