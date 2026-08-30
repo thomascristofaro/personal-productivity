@@ -12,6 +12,7 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/components/ui/combobox"
+import { matchesQuery } from "@/lib/search"
 
 export function TagPicker({
   suggestions,
@@ -48,6 +49,11 @@ export function TagPicker({
       <Combobox
         autoComplete="off"
         multiple
+        // In place of Base UI's own, which matches the query as a single
+        // string. Here it mostly buys the partial word: «veget» finds
+        // «vegetariano», which the collator filter would too — but a tag typed
+        // as two words would have needed them adjacent, and now does not.
+        filter={(tag: string, query: string) => matchesQuery(tag, query)}
         items={suggestions}
         value={tags}
         onValueChange={setTags}
@@ -68,7 +74,7 @@ export function TagPicker({
             {isNew ? (
               <button
                 type="button"
-                className="w-full rounded-md px-2 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground"
+                className="w-full rounded-md px-2 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:outline-none"
                 onClick={() => add(trimmed)}
               >
                 Crea «{trimmed}»

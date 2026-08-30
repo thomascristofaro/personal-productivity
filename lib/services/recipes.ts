@@ -1,5 +1,6 @@
 import { db } from "@/lib/db"
 import type { RecipeInput } from "@/lib/schemas/recipe"
+import { matchesFirst, matchesQuery, searchTokens } from "@/lib/search"
 
 /**
  * Thrown by `updateRecipe` and `deleteRecipe` when the target id no longer
@@ -98,19 +99,60 @@ function toIngredientRows(input: RecipeInput) {
 /**
  * Lists recipes for the recipe book, newest first.
  *
- * @param query An optional case-insensitive fragment of the title.
+ * Every word of the query has to appear — in the title, in a tag, or in the
+ * name of an ingredient — but nowhere in particular and in no order, so
+ * «insalata zucchine» finds «Insalata con zucchine» and «zucchine» finds
+ * everything that uses them. Matches on the title come first.
+ *
+ * Case-insensitive; accent-sensitive, because `mode: "insensitive"` is ILIKE.
+ * «ragu» will not find «Ragù» here, though it does in the comboboxes, which
+ * filter in the browser. Known, and cheap to live with until it bites.
+ *
+ * @param query An optional set of words, separated by spaces.
  * @returns Every matching recipe, as summaries.
  */
 export async function listRecipes(query?: string): Promise<RecipeSummary[]> {
-  const trimmed = query?.trim()
+  const tokens = searchTokens(query ?? "")
 
-  return db.recipe.findMany({
-    where: trimmed
-      ? { title: { contains: trimmed, mode: "insensitive" } }
-      : undefined,
+  if (tokens.length === 0) {
+    return db.recipe.findMany({
+      select: summaryFields,
+      orderBy: { createdAt: "desc" },
+    })
+  }
+
+  // Prisma can only compare a whole element of a String[] — `has`, `hasSome` —
+  // never a piece of one. So the tags are matched here instead, against the
+  // short list the book already keeps, and only the survivors reach the query.
+  const tags = await listTags()
+
+  const clauseFor = (token: string) => {
+    const matching = tags.filter((tag) => matchesQuery(tag, token))
+
+    return {
+      OR: [
+        { title: { contains: token, mode: "insensitive" as const } },
+        {
+          ingredients: {
+            some: {
+              ingredientName: { contains: token, mode: "insensitive" as const },
+            },
+          },
+        },
+        // Left out rather than passed empty: an empty `hasSome` is a filter
+        // whose meaning nobody should have to look up.
+        ...(matching.length === 0 ? [] : [{ tags: { hasSome: matching } }]),
+      ],
+    }
+  }
+
+  const recipes = await db.recipe.findMany({
+    where: { AND: tokens.map(clauseFor) },
     select: summaryFields,
     orderBy: { createdAt: "desc" },
   })
+
+  return matchesFirst(recipes, query ?? "", (recipe) => recipe.title)
 }
 
 /**
