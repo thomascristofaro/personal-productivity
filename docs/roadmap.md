@@ -5,7 +5,7 @@ and state** — nothing else does. The design authority stays
 `docs/superpowers/specs/2026-08-13-menu-spesa-design.md`, and the decisions live
 in `docs/conventions/`. Do not restate either here; point at them.
 
-Last updated: 2026-08-23. `main` is deployed, and nothing is in flight. Work
+Last updated: 2026-08-30. `main` is deployed, and nothing is in flight. Work
 normally happens on a branch per plan.
 
 ## Shipped
@@ -26,9 +26,10 @@ normally happens on a branch per plan.
 | [`2026-08-20-page-primitives`](superpowers/plans/2026-08-20-page-primitives.md), design in [`2026-08-20-page-primitives-design`](superpowers/specs/2026-08-20-page-primitives-design.md) | one form contract instead of six — `lib/form.ts`, `useFormState`, four typed fields and `FormField` — `FormDrawer` replacing four hand-rolled close-on-success effects, one page shell instead of thirteen `<main>`s, `ListSection`, `SearchField`, `FilterChips`, and `MessagePage` for the three "does not exist" screens. Two things a user sees: «Svuota» is gone from the slot drawer, and `/catalogo` gained its search field |
 | [`2026-08-21-menu-generation`](superpowers/plans/2026-08-21-menu-generation.md), design in [`2026-08-21-menu-generation-design`](superpowers/specs/2026-08-21-menu-generation-design.md) | the LLM half of the menu: `lib/services/llm.ts` — the only file that may import an SDK — `proposeMenu`, candidates as numbered lines the model answers with integers, recency derived from past `MenuSlot` rows, and a waiting dialog that turns into the failure. Runs on **Google Gemini**, not Anthropic                                                                                                                         |
 | [`2026-08-21-llm-registry`](superpowers/plans/2026-08-21-llm-registry.md)                                                                                                                | `LlmFunction` and `LlmExecution`, `requireOwner()` over `OWNER_EMAIL`, the prompt moving into the database with `lib/prompts/menu-proposal.ts` as the fallback, and the four owner-only screens under `/settings/llm`. The prompt file is the default and the row is the tuning — **editing the file changes nothing once the row exists**                                                                                          |
-| [`2026-08-23-module-fork`](superpowers/plans/2026-08-23-module-fork.md)                                                                                                                  | `lib/modules.ts` — a module is one entry in one list, and the fork, the nav and what `/` does all read it. `/` moved inside `(app)`; with one visible module it redirects, so nothing changed on screen until the second arrived                                                                                                                                                                                                  |
-| [`2026-08-23-finance-core`](superpowers/plans/2026-08-23-finance-core.md)                                                                                                                | `FinanceAccount`, `Movement`, `ImportBatch`, `visibleAccountIds`, the three readers, and the import — its preview, and the **duplicate counting** that stops two identical coffees on one day from becoming one. Plus the accounts, movements and import screens, and the balance derived from an opening balance rather than stored                                                                                              |
-| [`2026-08-23-finance-meaning`](superpowers/plans/2026-08-23-finance-meaning.md)                                                                                                          | `Category`, `CategoryRule`, `TransferLink`, the three sieves, the one-tap rule and its backfill — which never overrules a `MANUAL` choice — the pairing with its confirmation, and the summary with the three-month comparison that stands in for a budget. All three designed in [`2026-08-23-finance-design`](superpowers/specs/2026-08-23-finance-design.md)                                                                    |
+| [`2026-08-23-module-fork`](superpowers/plans/2026-08-23-module-fork.md)                                                                                                                  | `lib/modules.ts` — a module is one entry in one list, and the fork, the nav and what `/` does all read it. `/` moved inside `(app)`; with one visible module it redirects, so nothing changed on screen until the second arrived                                                                                                                                                                                                    |
+| [`2026-08-23-finance-core`](superpowers/plans/2026-08-23-finance-core.md)                                                                                                                | `FinanceAccount`, `Movement`, `ImportBatch`, `visibleAccountIds`, the three readers, and the import — its preview, and the **duplicate counting** that stops two identical coffees on one day from becoming one. Plus the accounts, movements and import screens, and the balance derived from an opening balance rather than stored                                                                                                |
+| [`2026-08-23-finance-meaning`](superpowers/plans/2026-08-23-finance-meaning.md)                                                                                                          | `Category`, `CategoryRule`, `TransferLink`, the three sieves, the one-tap rule and its backfill — which never overrules a `MANUAL` choice — the pairing with its confirmation, and the summary with the three-month comparison that stands in for a budget. All three designed in [`2026-08-23-finance-design`](superpowers/specs/2026-08-23-finance-design.md)                                                                     |
+| [`2026-08-30-menu-courses`](superpowers/plans/2026-08-30-menu-courses.md), design in [`2026-08-30-menu-courses-design`](superpowers/specs/2026-08-30-menu-courses-design.md)             | `Course` on the recipe and on the slot, a meal that holds a primo, a secondo and a contorno, the grid gone sparse with one chip per gap, the picker filtered to the slot's course with a way out, and `sortSlots` in place of `buildWeekSlots`                                                                                                                                                                                      |
 
 ## In flight
 
@@ -63,7 +64,7 @@ the totals ignore.
 
 **Do not move that list back into the seed**, and do not wire `pnpm db:seed`
 into the build to solve a problem like this again. The seed also upserts the
-users on their email — see the warning under item 3 below — and re-inserts the
+users on their email — see the warning under item 4 below — and re-inserts the
 108 catalogue rows, which is what resurrected nineteen ingredients and four
 recipes once already. It is a development convenience, not a deploy step.
 
@@ -346,13 +347,20 @@ whether Intesa exports CSV at all or only XLSX. The spreadsheet dependency the
 question used to guard is already here — Satispay's export forced it — so this is
 now a detail rather than a decision.
 
-### 1. Regenerating one slot or one day — spec §6.2
+### 1. Teach the proposal to compose three courses — 2026-08-30 design §7
+
+`proposeMenu` still answers one recipe per meal and writes it into the slot of
+its own course, so a generated week can come out all contorni. The candidate
+lines already carry the course and the prompt lives in the `LlmFunction` row, so
+this is a prompt change plus a wider `menuProposalSchema` — not a rewrite.
+
+### 2. Regenerating one slot or one day — spec §6.2
 
 **Deliberately left out** of menu generation, not forgotten. The week is the
 unit that shipped; a slot-level call is the same call with a different candidate
 set and one slot of output. Do not record it as debt.
 
-### 2. Recipe import — nothing left that needs an LLM
+### 3. Recipe import — nothing left that needs an LLM
 
 The import **shipped in #19** and works from JSON-LD alone. The owner excluded
 the LLM fallback on 2026-08-21: it works well enough as it is, so
@@ -363,7 +371,7 @@ the LLM fallback on 2026-08-21: it works well enough as it is, so
 still called by the import, so the note that once protected them from being
 deleted as dead code no longer applies.
 
-### 3. PWA and deployment — spec §9, §10
+### 4. PWA and deployment — spec §9, §10
 
 **The manifest shipped on 2026-08-16**, with `app/manifest.ts` and icons drawn by
 `ImageResponse` in `app/icons/[icon]/route.tsx`. What is left here is the
@@ -400,7 +408,7 @@ abilitato." The message points at `disableSignUp`, which is not what happened �
 the account _is_ allowed, the link is what was refused. The seed now sets the
 flag; rows created before it need a one-off `UPDATE`.
 
-### 4. Continuous integration on pull requests
+### 5. Continuous integration on pull requests
 
 Outside the dependency chain above — it blocks nothing and nothing blocks it.
 
@@ -457,7 +465,7 @@ or `docs/conventions/` as it was decided.
 - **No git hooks — 2026-08-17.** `simple-git-hooks` and `lint-staged` are gone,
   along with the `pre-commit` (`lint-staged`) and `pre-push` (`pnpm verify`)
   hooks. The owner does not want checks firing on their own at commit time: they
-  are run by hand during development, and by CI on pull requests once item 4
+  are run by hand during development, and by CI on pull requests once item 5
   above exists. Do not reintroduce a hook to close that gap — it is the same
   automatic-at-commit behaviour that was rejected.
 - **The LLM is Google Gemini, not Anthropic — 2026-08-21.** Through the Vercel
