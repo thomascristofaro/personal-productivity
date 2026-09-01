@@ -45,7 +45,7 @@ model Recipe {
   notes        String?
   tags         String[]
   ingredients  RecipeIngredient[]
-  slots        MenuSlot[]
+  entries      MenuEntry[]
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
 }
@@ -96,29 +96,38 @@ model RecipeIngredient {
 }
 
 model Menu {
-  id             String        @id @default(cuid())
-  weekStart      DateTime      @unique @db.Date
-  slots          MenuSlot[]
-  list           ShoppingList?
-  createdAt      DateTime      @default(now())
-  // Written deliberately by setSlot and clearSlot. Not `@updatedAt`: writing a
-  // MenuSlot does not update its Menu, so `@updatedAt` would never fire for the
-  // change that actually matters — the one the shopping list needs to see.
-  slotsUpdatedAt DateTime      @default(now())
+  id               String        @id @default(cuid())
+  weekStart        DateTime      @unique @db.Date
+  entries          MenuEntry[]
+  list             ShoppingList?
+  createdAt        DateTime      @default(now())
+  // Written deliberately by every write that touches an entry. Not `@updatedAt`:
+  // writing a MenuEntry does not update its Menu, so `@updatedAt` would never
+  // fire for the change that actually matters — the one the shopping list needs
+  // to see.
+  entriesUpdatedAt DateTime      @default(now())
 }
 
-model MenuSlot {
+// One dish of one meal. "Entry" and not "Slot": a slot is a position that exists
+// whether or not it is filled, and a meal now holds a list of any length rather
+// than two fixed holes. See docs/superpowers/specs/2026-09-01-menu-multiple-dishes-design.md.
+model MenuEntry {
   id       String   @id @default(cuid())
   menuId   String
   menu     Menu     @relation(fields: [menuId], references: [id], onDelete: Cascade)
   day      Int
   meal     MealType
+  // Where it sits in its meal's list, assigned as max + 1 within that meal.
+  // Deliberately not unique: two entries added in the same instant would then
+  // make one of them fail, and a shared position costs nothing — the sort breaks
+  // the tie on the id and the order stays stable.
+  position Int
   recipeId String?
   recipe   Recipe?  @relation(fields: [recipeId], references: [id], onDelete: SetNull)
   freeText String?
   servings Int?
 
-  @@unique([menuId, day, meal])
+  @@index([menuId, day, meal])
 }
 
 enum MealType {
@@ -139,23 +148,23 @@ model ShoppingList {
 }
 
 model ShoppingListItem {
-  id          String       @id @default(cuid())
-  listId      String
-  list        ShoppingList @relation(fields: [listId], references: [id], onDelete: Cascade)
-  name        String
-  quantity    Float?
-  unit        String?
-  aisle       String
+  id            String       @id @default(cuid())
+  listId        String
+  list          ShoppingList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  name          String
+  quantity      Float?
+  unit          String?
+  aisle         String
   // Which days of the week the line is needed for, 0 Monday through 6 Sunday.
   // Empty for a line added by hand: no menu asked for it. Recomputed on every
   // regeneration rather than carried across like the ticks are — days are a
   // fact about the current menu, not about the shopper.
-  days        Int[]
-  checked     Boolean      @default(false)
-  checkedById String?
-  checkedBy   User?        @relation(fields: [checkedById], references: [id], onDelete: SetNull)
-  checkedAt   DateTime?
-  manual      Boolean      @default(false)
+  days          Int[]
+  checked       Boolean      @default(false)
+  checkedById   String?
+  checkedBy     User?        @relation(fields: [checkedById], references: [id], onDelete: SetNull)
+  checkedAt     DateTime?
+  manual        Boolean      @default(false)
   // How much of `quantity` is actually going in the trolley. Null means all of
   // it, which is the ordinary case: the field is only written when the shop had
   // one burrata and the menu asked for two. Closing the shop records this amount
@@ -166,7 +175,7 @@ model ShoppingListItem {
   // the next regeneration, so the flag is what lets the bin work on a row the
   // menu owns. Survives a regeneration the way the tick does, and falls for the
   // same reason, when the menu starts asking for more than it did.
-  dismissed     Boolean    @default(false)
+  dismissed     Boolean      @default(false)
 
   @@index([listId])
 }
@@ -217,22 +226,22 @@ enum FinanceProvider {
 // A place money sits. "FinanceAccount" and not "Account": the latter is
 // better-auth's, and renaming that one needs a mapping in lib/auth/better-auth.ts.
 model FinanceAccount {
-  id       String          @id @default(cuid())
-  name     String
+  id                  String          @id @default(cuid())
+  name                String
   // An enum and not free text: it selects which reader parses an upload, so an
   // unknown value would have no behaviour.
-  provider FinanceProvider
-  ownerId  String
-  owner    User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  provider            FinanceProvider
+  ownerId             String
+  owner               User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   // Visible to both users. Ownership is the module's only authorisation rule —
   // design document section 3.
-  shared   Boolean         @default(false)
+  shared              Boolean         @default(false)
   // The balance is derived, never stored: opening balance plus every movement
   // from that date on. A stored balance diverges from the truth in silence.
-  openingBalanceCents Int      @default(0)
-  openingBalanceAt    DateTime @db.Date
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @default(now()) @updatedAt
+  openingBalanceCents Int             @default(0)
+  openingBalanceAt    DateTime        @db.Date
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @default(now()) @updatedAt
 
   movements Movement[]
   imports   ImportBatch[]
@@ -245,14 +254,14 @@ model FinanceAccount {
 // would make the next import of that period write it again beside the
 // correction. `note` is where a human remark goes.
 model Movement {
-  id          String         @id @default(cuid())
-  accountId   String
-  account     FinanceAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  date        DateTime       @db.Date
+  id               String         @id @default(cuid())
+  accountId        String
+  account          FinanceAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  date             DateTime       @db.Date
   // Integer cents, negative for an outgoing. One column and not two: a dare and
   // an avere column would let a row be both or neither.
-  amountCents Int
-  description String
+  amountCents      Int
+  description      String
   // What the file declared as its own category, verbatim. Null when it declares
   // none.
   providerCategory String?
@@ -263,15 +272,15 @@ model Movement {
   categorySource   CategorySource @default(NONE)
   // See lib/services/finance/fingerprint.ts. Two identical rows on one day share
   // this, which is why `occurrence` exists.
-  fingerprint String
-  occurrence  Int    @default(0)
-  note        String?
+  fingerprint      String
+  occurrence       Int            @default(0)
+  note             String?
   // Nullable with SetNull rather than a required parent: deleting an import must
   // never take its movements with it, and it removes the delete-ordering problem
   // when an account cascades both.
-  importBatchId String?
-  importBatch   ImportBatch? @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
-  createdAt     DateTime     @default(now())
+  importBatchId    String?
+  importBatch      ImportBatch?   @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
+  createdAt        DateTime       @default(now())
 
   transferFrom TransferLink? @relation("TransferFrom")
   transferTo   TransferLink? @relation("TransferTo")
@@ -348,19 +357,19 @@ model Category {
 // Ordered, first match wins: a specific rule written today has to beat a general
 // one written in March without anyone rewriting the general one.
 model CategoryRule {
-  id         String   @id @default(cuid())
+  id         String          @id @default(cuid())
   kind       RuleKind
   // A substring for DESCRIPTION_CONTAINS, the provider's own category verbatim
   // for PROVIDER_CATEGORY_IS. Never a regular expression: one in this field is
   // something the owner would have to debug from a phone.
   pattern    String
   categoryId String
-  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  priority   Int      @default(0)
+  category   Category        @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  priority   Int             @default(0)
   // Null means every account.
   accountId  String?
   account    FinanceAccount? @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  createdAt  DateTime @default(now())
+  createdAt  DateTime        @default(now())
 
   @@index([priority])
   @@index([accountId])
@@ -458,20 +467,20 @@ model LlmFunction {
 // attached to the result it produced — design document 2026-08-21 section 7.3.
 // Kept to the most recent twenty per function.
 model LlmExecution {
-  id         String      @id @default(cuid())
-  functionId String
-  function   LlmFunction @relation(fields: [functionId], references: [id], onDelete: Cascade)
-  prompt     String
-  model      String
+  id           String      @id @default(cuid())
+  functionId   String
+  function     LlmFunction @relation(fields: [functionId], references: [id], onDelete: Cascade)
+  prompt       String
+  model        String
   // Null when the call never returned one — a timeout reports no usage.
   inputTokens  Int?
   outputTokens Int?
   durationMs   Int
   // The raw text the model answered, kept verbatim so a bad week can be read
   // back rather than guessed at.
-  output    String?
-  error     String?
-  createdAt DateTime @default(now())
+  output       String?
+  error        String?
+  createdAt    DateTime    @default(now())
 
   // Every read is "the last twenty of this function", in this order.
   @@index([functionId, createdAt])
