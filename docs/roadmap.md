@@ -5,7 +5,7 @@ and state** — nothing else does. The design authority stays
 `docs/superpowers/specs/2026-08-13-menu-spesa-design.md`, and the decisions live
 in `docs/conventions/`. Do not restate either here; point at them.
 
-Last updated: 2026-08-30. `main` is deployed, and nothing is in flight. Work
+Last updated: 2026-09-01. `main` is deployed, and nothing is in flight. Work
 normally happens on a branch per plan.
 
 ## Shipped
@@ -38,29 +38,45 @@ branch, because each built on the one before and a stack of three squash merges
 is the situation that cost a morning on 2026-08-16. What is left of it that
 somebody needs to know:
 
-**Two readers are checked against a real export, one is still a guess.**
-Corrected on 2026-08-25 against the owner's own July–August files:
+**All three readers are checked against a real export.** Corrected on 2026-08-25
+and 2026-08-27 against the owner's own July–August files:
 
 - **Revolut** — reads them. Its header is translated into the account's language,
   so the reader accepts both spellings of every column; `State` stays English
   while its values do not. A cancelled row is skipped, not counted as broken.
+  **It dates a movement on `Data di inizio` since 2026-08-27** — the day it was
+  made, not the day it cleared.
 - **Satispay** — reads them. The export is an `.xlsx` workbook and not a CSV, so
   the module now depends on `read-excel-file`. A payment part-paid by meal
   vouchers becomes two movements, which is why there is a fourth migration.
-- **Intesa Sanpaolo** — still written against a guess, and the file says so at
-  the top. **Do not treat it as working until a real export has gone through
-  it.**
+- **Intesa Sanpaolo** — reads them **since 2026-08-27**, and did not before: the
+  guessed reader was written for a CSV and the «Lista Operazioni» is an `.xlsx`
+  workbook, so it recognised nothing at all. The guess was also wrong about the
+  two things that mattered — `Contabilizzazione` is a yes-or-no and not a second
+  date, and `Operazione` already carries the counterparty, so `Dettagli` is
+  dropped rather than joined to it. A row that is not booked yet is skipped.
+
+The workbook plumbing the two `.xlsx` readers share lives in
+`lib/services/finance/xlsx.ts`, beside `csv.ts`.
 
 A file whose header does not match is refused with the columns it wanted printed
 beside the columns it found, so the first real export diagnoses itself. Both
 verified readers reproduce their statement's own closing balance to the cent.
 
-**Deploying needs nothing by hand.** Four migrations. One inserts the
+**Deploying needs nothing by hand.** Five migrations. One inserts the
 thirteen starting categories — data in a migration and not in
 `prisma/seed.ts`, because the module cannot work without one of them: confirming
 a transfer assigns the category whose kind is `TRANSFER`, and with none present
 `transferCategoryId()` throws rather than writing a movement into the one bucket
 the totals ignore.
+
+The fifth, of 2026-08-27, seeds the four provider categories that mean one thing
+only — «Stipendi e pensioni», «Bonifici ricevuti», «Ricarica», `FEE`. **Four and
+not forty on purpose**: `PROVIDER_CATEGORY_IS` matches the whole declared value,
+so a rule written from a string nobody has read off a real export is a row that
+never fires and that everybody afterwards believes is working. Every other
+mapping is the owner's own, one tap at a time, after the first big import — their
+call of 2026-08-27.
 
 **Do not move that list back into the seed**, and do not wire `pnpm db:seed`
 into the build to solve a problem like this again. The seed also upserts the
