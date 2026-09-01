@@ -8,6 +8,7 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/components/ui/combobox"
+import { matchesQuery } from "@/lib/search"
 
 export type RecipeOption = { id: string; title: string }
 
@@ -32,6 +33,11 @@ export function RecipePicker({
       // Off: a recipe is not a field a password manager has any business
       // completing.
       autoComplete="off"
+      // In place of Base UI's own, which matches the query as a single string:
+      // «insalata zucchine» would never find «Insalata con zucchine».
+      filter={(recipe: RecipeOption, query: string) =>
+        matchesQuery(recipe.title, query)
+      }
       items={recipes}
       itemToStringLabel={(recipe: RecipeOption) => recipe.title}
       isItemEqualToValue={(a: RecipeOption, b: RecipeOption) => a.id === b.id}

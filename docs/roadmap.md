@@ -5,7 +5,7 @@ and state** — nothing else does. The design authority stays
 `docs/superpowers/specs/2026-08-13-menu-spesa-design.md`, and the decisions live
 in `docs/conventions/`. Do not restate either here; point at them.
 
-Last updated: 2026-08-27. `main` is deployed, and nothing is in flight. Work
+Last updated: 2026-09-01. `main` is deployed, and nothing is in flight. Work
 normally happens on a branch per plan.
 
 ## Shipped
@@ -29,6 +29,7 @@ normally happens on a branch per plan.
 | [`2026-08-23-module-fork`](superpowers/plans/2026-08-23-module-fork.md)                                                                                                                  | `lib/modules.ts` — a module is one entry in one list, and the fork, the nav and what `/` does all read it. `/` moved inside `(app)`; with one visible module it redirects, so nothing changed on screen until the second arrived                                                                                                                                                                                                    |
 | [`2026-08-23-finance-core`](superpowers/plans/2026-08-23-finance-core.md)                                                                                                                | `FinanceAccount`, `Movement`, `ImportBatch`, `visibleAccountIds`, the three readers, and the import — its preview, and the **duplicate counting** that stops two identical coffees on one day from becoming one. Plus the accounts, movements and import screens, and the balance derived from an opening balance rather than stored                                                                                                |
 | [`2026-08-23-finance-meaning`](superpowers/plans/2026-08-23-finance-meaning.md)                                                                                                          | `Category`, `CategoryRule`, `TransferLink`, the three sieves, the one-tap rule and its backfill — which never overrules a `MANUAL` choice — the pairing with its confirmation, and the summary with the three-month comparison that stands in for a budget. All three designed in [`2026-08-23-finance-design`](superpowers/specs/2026-08-23-finance-design.md)                                                                     |
+| `feat/smarter-search` — bounded, so no plan document                                                                                                                                     | `lib/search.ts`. Every search in the app now matches word by word instead of as one string, so «insalata zucchine» finds «Insalata con zucchine»; the recipe book reads the tags and the ingredient names as well as the title, and lifts title matches to the top. Accents are still folded in the comboboxes and not in Postgres — deliberate, and recorded in `listRecipes`' TSDoc                                               |
 
 ## In flight
 

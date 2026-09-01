@@ -1,6 +1,7 @@
 import { AISLE_ORDER } from "@/lib/aisles"
 import { db } from "@/lib/db"
 import type { CatalogItemInput, CatalogItemKind } from "@/lib/schemas/catalog"
+import { searchTokens } from "@/lib/search"
 
 /** Thrown when the name is already in the catalogue. */
 export class CatalogItemExistsError extends Error {
@@ -232,7 +233,7 @@ export async function createIngredient(
  * The count is what tells the user which entries are safe to delete, so it is
  * part of the list rather than something the detail screen reveals later.
  *
- * @param query An optional case-insensitive fragment of the name.
+ * @param query An optional set of words, each of which must appear in the name.
  * @param kind An optional kind to filter by; undefined lists both.
  * @returns Every matching entry, ordered by name.
  */
@@ -240,11 +241,17 @@ export async function listCatalogItems(
   query?: string,
   kind?: CatalogItemKind
 ): Promise<CatalogRow[]> {
-  const trimmed = query?.trim()
+  const tokens = searchTokens(query ?? "")
 
   const rows = await db.catalogItem.findMany({
     where: {
-      ...(trimmed ? { name: { contains: trimmed, mode: "insensitive" } } : {}),
+      ...(tokens.length === 0
+        ? {}
+        : {
+            AND: tokens.map((token) => ({
+              name: { contains: token, mode: "insensitive" as const },
+            })),
+          }),
       ...(kind === undefined ? {} : { kind }),
     },
     select: {

@@ -10,6 +10,7 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/components/ui/combobox"
+import { matchesQuery } from "@/lib/search"
 
 export type IngredientOption = {
   name: string
@@ -56,6 +57,9 @@ export function IngredientPicker({
       // Off: a recipe ingredient is not a field a password
       // manager or an address autofill has any business completing.
       autoComplete="off"
+      // In place of Base UI's own, which matches the query as a single string:
+      // «pomodori pelati» would never find «Pelati di pomodoro».
+      filter={(name: string, query: string) => matchesQuery(name, query)}
       items={names}
       value={value}
       onValueChange={(name) => {
@@ -76,7 +80,7 @@ export function IngredientPicker({
           {isNew ? (
             <button
               type="button"
-              className="w-full rounded-md px-2 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground"
+              className="w-full rounded-md px-2 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:outline-none"
               onClick={() => {
                 onCreate(trimmed)
                 setOpen(false)

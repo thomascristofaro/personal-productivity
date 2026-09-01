@@ -1,4 +1,5 @@
 import { db } from "@/lib/db"
+import { searchTokens } from "@/lib/search"
 import { visibleAccountIds, visibleTo } from "@/lib/services/finance/access"
 
 // Three accounts produce roughly two thousand movements a year, and every
@@ -103,14 +104,21 @@ export async function listMovements(
     return { rows: [], hasMore: false, nextOffset: offset }
   }
 
-  const query = filters.q?.trim() ?? ""
+  const tokens = searchTokens(filters.q ?? "")
 
   const rows = await db.movement.findMany({
     where: {
       accountId: { in: accountIds },
-      ...(query === ""
+      // Every word, anywhere in the description. Stays in SQL rather than being
+      // ranked afterwards the way the recipe book is: this list is a page, and
+      // reordering a page reorders only what already came back.
+      ...(tokens.length === 0
         ? {}
-        : { description: { contains: query, mode: "insensitive" as const } }),
+        : {
+            AND: tokens.map((token) => ({
+              description: { contains: token, mode: "insensitive" as const },
+            })),
+          }),
       ...(filters.category === undefined
         ? {}
         : filters.category === UNCATEGORISED_FILTER
