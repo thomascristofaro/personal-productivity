@@ -14,8 +14,12 @@ import { amountToCents, dateToUtcMidnight } from "@/lib/services/finance/values"
 //
 // `State` is not a mistake in this list. It is the one column Revolut leaves in
 // English in the Italian export, while translating its values — see SETTLED.
+//
+// The date is the one the payment was *made*, not the one it settled on: the
+// two differ by up to a day on a foreign payment, and a movement belongs to the
+// day it happened. Owner's decision of 2026-08-27.
 const COLUMNS = {
-  date: ["Data di completamento", "Completed Date"],
+  date: ["Data di inizio", "Started Date"],
   description: ["Descrizione", "Description"],
   amount: ["Importo", "Amount"],
   fee: ["Costo", "Fee"],
@@ -62,9 +66,7 @@ export async function readRevolut(file: StatementFile): Promise<ReadResult> {
 
   for (const row of data) {
     // Anything else may still be reverted, and a reverted payment that was
-    // imported is money the summary says was spent and never was. Checked
-    // before the date, because a cancelled row carries no completion date and
-    // would otherwise be counted as unreadable rather than as skipped.
+    // imported is money the summary says was spent and never was.
     if (!SETTLED.includes(at(row, "state").toUpperCase())) continue
 
     const date = dateToUtcMidnight(at(row, "date"))

@@ -44,6 +44,15 @@ describe("MODULES", () => {
     expect(new Set(ids).size).toBe(ids.length)
   })
 
+  it("keeps the import page out of the finance navigation", () => {
+    // Reached from the button on /finance/movements and from the summary, and
+    // from nowhere else: it is a thing you do to the movements, not a section.
+    const finance = MODULES.find((entry) => entry.id === "finance")
+    expect(finance?.nav.map((item) => item.href)).not.toContain(
+      "/finance/import"
+    )
+  })
+
   it("sends the fork somewhere for every module", () => {
     // `entry` and not `module`: a `const module` is a Next lint error, because
     // assigning that name breaks the bundler's module wrapper.
