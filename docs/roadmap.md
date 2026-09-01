@@ -80,7 +80,7 @@ call of 2026-08-27.
 
 **Do not move that list back into the seed**, and do not wire `pnpm db:seed`
 into the build to solve a problem like this again. The seed also upserts the
-users on their email — see the warning under item 4 below — and re-inserts the
+users on their email — see the warning under item 3 below — and re-inserts the
 108 catalogue rows, which is what resurrected nineteen ingredients and four
 recipes once already. It is a development convenience, not a deploy step.
 
@@ -348,35 +348,20 @@ Three things, on the owner's call, none of them planned in a document:
 
 In dependency order. Each needs its own plan; none has one yet.
 
-### 0. The Intesa reader, against a real file
-
-The one thing with a date on it. **Two thirds of this was done on 2026-08-25**,
-when the Revolut and Satispay exports arrived and both readers turned out to be
-wrong — see the note under «In flight» above. Intesa is what is left: its guessed
-column map in `lib/services/finance/parsers/intesa.ts` gets corrected against a
-real statement, which becomes the fixture. Small — a list of strings and a test —
-but until it happens **that account's third of the import has never read a real
-file**, and the module's value is nil for it.
-
-One question only the file can answer, and it is no longer the expensive one:
-whether Intesa exports CSV at all or only XLSX. The spreadsheet dependency the
-question used to guard is already here — Satispay's export forced it — so this is
-now a detail rather than a decision.
-
-### 1. Teach the proposal to compose three courses — 2026-08-30 design §7
+### 0. Teach the proposal to compose three courses — 2026-08-30 design §7
 
 `proposeMenu` still answers one recipe per meal and writes it into the slot of
 its own course, so a generated week can come out all contorni. The candidate
 lines already carry the course and the prompt lives in the `LlmFunction` row, so
 this is a prompt change plus a wider `menuProposalSchema` — not a rewrite.
 
-### 2. Regenerating one slot or one day — spec §6.2
+### 1. Regenerating one slot or one day — spec §6.2
 
 **Deliberately left out** of menu generation, not forgotten. The week is the
 unit that shipped; a slot-level call is the same call with a different candidate
 set and one slot of output. Do not record it as debt.
 
-### 3. Recipe import — nothing left that needs an LLM
+### 2. Recipe import — nothing left that needs an LLM
 
 The import **shipped in #19** and works from JSON-LD alone. The owner excluded
 the LLM fallback on 2026-08-21: it works well enough as it is, so
@@ -387,7 +372,7 @@ the LLM fallback on 2026-08-21: it works well enough as it is, so
 still called by the import, so the note that once protected them from being
 deleted as dead code no longer applies.
 
-### 4. PWA and deployment — spec §9, §10
+### 3. PWA and deployment — spec §9, §10
 
 **The manifest shipped on 2026-08-16**, with `app/manifest.ts` and icons drawn by
 `ImageResponse` in `app/icons/[icon]/route.tsx`. What is left here is the
@@ -424,7 +409,7 @@ abilitato." The message points at `disableSignUp`, which is not what happened �
 the account _is_ allowed, the link is what was refused. The seed now sets the
 flag; rows created before it need a one-off `UPDATE`.
 
-### 5. Continuous integration on pull requests
+### 4. Continuous integration on pull requests
 
 Outside the dependency chain above — it blocks nothing and nothing blocks it.
 
@@ -481,7 +466,7 @@ or `docs/conventions/` as it was decided.
 - **No git hooks — 2026-08-17.** `simple-git-hooks` and `lint-staged` are gone,
   along with the `pre-commit` (`lint-staged`) and `pre-push` (`pnpm verify`)
   hooks. The owner does not want checks firing on their own at commit time: they
-  are run by hand during development, and by CI on pull requests once item 5
+  are run by hand during development, and by CI on pull requests once item 4
   above exists. Do not reintroduce a hook to close that gap — it is the same
   automatic-at-commit behaviour that was rejected.
 - **The LLM is Google Gemini, not Anthropic — 2026-08-21.** Through the Vercel
