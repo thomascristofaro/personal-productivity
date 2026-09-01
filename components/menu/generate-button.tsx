@@ -18,7 +18,7 @@ type Props = {
   weekStart: string
   // How many slots already hold something. Zero means generating overwrites
   // nothing and can go straight ahead.
-  filledSlots: number
+  filledEntries: number
   action: (
     weekStart: string,
     overwrite?: boolean
@@ -31,7 +31,7 @@ type Stage = "idle" | "confirming" | "error"
 // then, and while it animates out it must keep showing whatever it showed last.
 type View = "pending" | "confirming" | "error"
 
-export function GenerateButton({ weekStart, filledSlots, action }: Props) {
+export function GenerateButton({ weekStart, filledEntries, action }: Props) {
   const [pending, startTransition] = useTransition()
   const [stage, setStage] = useState<Stage>("idle")
   const [error, setError] = useState<string | null>(null)
@@ -57,7 +57,7 @@ export function GenerateButton({ weekStart, filledSlots, action }: Props) {
   }
 
   function start() {
-    if (filledSlots > 0) {
+    if (filledEntries > 0) {
       setStage("confirming")
       return
     }
@@ -114,9 +114,9 @@ export function GenerateButton({ weekStart, filledSlots, action }: Props) {
               <AlertDialogHeader>
                 <AlertDialogTitle>Sovrascrivo la settimana?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  {filledSlots === 1
-                    ? "C’è già un pasto in questa settimana e verrà sostituito."
-                    : `Ci sono già ${filledSlots} pasti in questa settimana e verranno sostituiti.`}
+                  {filledEntries === 1
+                    ? "C’è già un piatto in questa settimana e verrà sostituito."
+                    : `Ci sono già ${filledEntries} piatti in questa settimana e verranno sostituiti.`}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -138,7 +138,7 @@ export function GenerateButton({ weekStart, filledSlots, action }: Props) {
                 <AlertDialogCancel onClick={() => setStage("idle")}>
                   Chiudi
                 </AlertDialogCancel>
-                <AlertDialogAction onClick={() => run(filledSlots > 0)}>
+                <AlertDialogAction onClick={() => run(filledEntries > 0)}>
                   Riprova
                 </AlertDialogAction>
               </AlertDialogFooter>

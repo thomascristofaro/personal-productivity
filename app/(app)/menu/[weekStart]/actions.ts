@@ -6,9 +6,9 @@ import { requireSession } from "@/lib/auth"
 import { failure, success, type FormAction } from "@/lib/form"
 import { valuesFrom } from "@/lib/form-errors"
 import {
-  DaySchema,
-  MealSchema,
-  SlotInputSchema,
+  EntryAddressSchema,
+  EntryIdSchema,
+  EntryInputSchema,
   WeekStartSchema,
 } from "@/lib/schemas/menu"
 import {
@@ -18,10 +18,12 @@ import {
   proposeMenu,
 } from "@/lib/services/menu-proposal"
 import {
+  addEntry,
   isWeekEmpty,
-  replaceWeekSlots,
-  setSlot,
+  replaceWeekEntries,
+  UnknownEntryError,
   UnknownRecipeError,
+  updateEntry,
 } from "@/lib/services/menus"
 
 const iso = (date: Date) => date.toISOString().slice(0, 10)
@@ -38,19 +40,12 @@ function optionalText(value: FormDataEntryValue | null) {
   return text.trim() === "" ? null : text
 }
 
-// The three fields that address the slot, parsed together: none of them is
-// meaningful without the others.
-function addressFrom(formData: FormData) {
-  return {
-    weekStart: WeekStartSchema.safeParse(formData.get("weekStart")),
-    day: DaySchema.safeParse(optionalNumber(formData.get("day"))),
-    meal: MealSchema.safeParse(formData.get("meal")),
-  }
-}
-
-export const saveSlot: FormAction = async (_state, formData) => {
-  const address = addressFrom(formData)
-  const input = SlotInputSchema.safeParse({
+// One action for both, because the drawer is one panel: an `entryId` means a
+// dish already on the menu, its absence means one being added to a meal.
+export const saveEntry: FormAction = async (_state, formData) => {
+  const weekStart = WeekStartSchema.safeParse(formData.get("weekStart"))
+  const entryId = optionalText(formData.get("entryId"))
+  const input = EntryInputSchema.safeParse({
     recipeId: optionalText(formData.get("recipeId")),
     freeText: optionalText(formData.get("freeText")),
     servings: optionalNumber(formData.get("servings")),
@@ -58,12 +53,8 @@ export const saveSlot: FormAction = async (_state, formData) => {
 
   const values = valuesFrom(formData, ["freeText", "servings"])
 
-  if (
-    !address.weekStart.success ||
-    !address.day.success ||
-    !address.meal.success
-  ) {
-    return failure("Questo slot non esiste.", { values })
+  if (!weekStart.success) {
+    return failure("Questa settimana non esiste.", { values })
   }
 
   if (!input.success) {
@@ -73,15 +64,30 @@ export const saveSlot: FormAction = async (_state, formData) => {
   await requireSession()
 
   try {
-    await setSlot(
-      address.weekStart.data,
-      address.day.data,
-      address.meal.data,
-      input.data
-    )
+    if (entryId === null) {
+      const at = EntryAddressSchema.safeParse({
+        day: optionalNumber(formData.get("day")),
+        meal: formData.get("meal"),
+      })
+
+      if (!at.success) return failure("Questo pasto non esiste.", { values })
+
+      await addEntry(weekStart.data, at.data, input.data)
+    } else {
+      const id = EntryIdSchema.safeParse(entryId)
+
+      if (!id.success) return failure(id.error.issues[0].message, { values })
+
+      await updateEntry(id.data, input.data)
+    }
   } catch (error) {
     if (error instanceof UnknownRecipeError) {
       return failure("Questa ricetta non esiste più.", { values })
+    }
+    if (error instanceof UnknownEntryError) {
+      return failure("Questo piatto è stato tolto. Ricarica la pagina.", {
+        values,
+      })
     }
     throw error
   }
@@ -90,7 +96,7 @@ export const saveSlot: FormAction = async (_state, formData) => {
   // Redirecting would throw away the scroll position on a page that is two and
   // a half screens tall. The path is built from the validated date, never from
   // the raw field — that string reaches the cache key.
-  revalidatePath(`/menu/${iso(address.weekStart.data)}`)
+  revalidatePath(`/menu/${iso(weekStart.data)}`)
   return success()
 }
 
@@ -119,11 +125,11 @@ export async function generateWeek(
   }
 
   try {
-    const slots = await proposeMenu(parsed.data)
+    const entries = await proposeMenu(parsed.data)
 
-    // One transaction rather than fourteen writes: a failure halfway would
+    // One transaction rather than a write per dish: a failure halfway would
     // leave a week that is neither the old one nor the new one.
-    await replaceWeekSlots(parsed.data, slots)
+    await replaceWeekEntries(parsed.data, entries)
   } catch (error) {
     if (error instanceof NoCandidatesError) {
       return { error: "Aggiungi qualche ricetta prima di generare un menù." }

@@ -16,7 +16,7 @@ import {
   type CandidateRecipe,
 } from "./menu-candidates"
 
-export type ProposedMenuSlot = {
+export type ProposedMenuEntry = {
   day: number
   meal: "LUNCH" | "DINNER"
   recipeId: string
@@ -49,14 +49,14 @@ const FUNCTION_ID = "menu-proposal"
  *
  * @param proposal The parsed response.
  * @param byNumber The number-to-id map the prompt was numbered against.
- * @returns One entry per filled slot; empty slots are dropped.
+ * @returns One entry per dish proposed; empty slots are dropped.
  * @throws DuplicateProposalError When a recipe appears more than once.
  */
 export function resolveProposal(
   proposal: MenuProposal,
   byNumber: Map<number, string>
-): ProposedMenuSlot[] {
-  const slots: ProposedMenuSlot[] = []
+): ProposedMenuEntry[] {
+  const entries: ProposedMenuEntry[] = []
   const used = new Set<string>()
 
   for (const slot of proposal.slots) {
@@ -70,10 +70,10 @@ export function resolveProposal(
     if (used.has(recipeId)) throw new DuplicateProposalError()
     used.add(recipeId)
 
-    slots.push({ day: slot.day, meal: slot.meal, recipeId })
+    entries.push({ day: slot.day, meal: slot.meal, recipeId })
   }
 
-  return slots
+  return entries
 }
 
 async function loadCandidates(weekStart: Date): Promise<CandidateRecipe[]> {
@@ -81,7 +81,7 @@ async function loadCandidates(weekStart: Date): Promise<CandidateRecipe[]> {
     weekStart.getTime() - RECENCY_WINDOW_WEEKS * 7 * MS_PER_DAY
   )
 
-  const [recipes, pastSlots] = await Promise.all([
+  const [recipes, pastEntries] = await Promise.all([
     db.recipe.findMany({
       select: {
         id: true,
@@ -95,7 +95,7 @@ async function loadCandidates(weekStart: Date): Promise<CandidateRecipe[]> {
       },
       orderBy: { title: "asc" },
     }),
-    db.menuSlot.findMany({
+    db.menuEntry.findMany({
       where: {
         recipeId: { not: null },
         menu: { weekStart: { gte: since, lt: weekStart } },
@@ -108,16 +108,16 @@ async function loadCandidates(weekStart: Date): Promise<CandidateRecipe[]> {
     }),
   ])
 
-  // A slot that appeared in a past week counts as cooked — design document
+  // An entry that appeared in a past week counts as cooked — design document
   // 2026-08-21 section 6 takes that proxy knowingly. The day within the week is
   // added back so two recipes from the same week do not read as equally recent.
   const lastCooked = new Map<string, number>()
-  for (const slot of pastSlots) {
-    if (slot.recipeId === null) continue
-    const cookedAt = slot.menu.weekStart.getTime() + slot.day * MS_PER_DAY
-    const previous = lastCooked.get(slot.recipeId)
+  for (const entry of pastEntries) {
+    if (entry.recipeId === null) continue
+    const cookedAt = entry.menu.weekStart.getTime() + entry.day * MS_PER_DAY
+    const previous = lastCooked.get(entry.recipeId)
     if (previous === undefined || cookedAt > previous) {
-      lastCooked.set(slot.recipeId, cookedAt)
+      lastCooked.set(entry.recipeId, cookedAt)
     }
   }
 
@@ -145,14 +145,14 @@ async function loadCandidates(weekStart: Date): Promise<CandidateRecipe[]> {
  * stays the source of truth with the proposal only pre-filling it.
  *
  * @param weekStart The Monday naming the week, at UTC midnight.
- * @returns One entry per proposed slot, empty slots omitted.
+ * @returns One entry per proposed dish, empty slots omitted.
  * @throws NoCandidatesError When the recipe book is empty.
  * @throws LlmError When the model is unreachable or answers unusably.
  * @throws DuplicateProposalError When the answer repeats a recipe.
  */
 export async function proposeMenu(
   weekStart: Date
-): Promise<ProposedMenuSlot[]> {
+): Promise<ProposedMenuEntry[]> {
   const candidates = await loadCandidates(weekStart)
   if (candidates.length === 0) throw new NoCandidatesError()
 
@@ -194,7 +194,7 @@ export async function proposeMenu(
   // Resolved before the record is written: a proposal rejected for repeating a
   // dish is a failure, and filing it as a success with token counts is exactly
   // the case the history exists to explain.
-  let resolved: ProposedMenuSlot[] | undefined
+  let resolved: ProposedMenuEntry[] | undefined
   if (failure === undefined) {
     try {
       resolved = resolveProposal(result!.proposal, index.byNumber)

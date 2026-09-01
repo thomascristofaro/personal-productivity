@@ -29,7 +29,18 @@ export const WeekStartSchema = z
     "La settimana deve iniziare di lunedì."
   )
 
-export const SlotInputSchema = z
+// The two fields that say which meal a dish joins. One object because neither
+// means anything without the other.
+export const EntryAddressSchema = z.object({
+  day: DaySchema,
+  meal: MealSchema,
+})
+
+export type EntryAddress = z.infer<typeof EntryAddressSchema>
+
+export const EntryIdSchema = z.cuid("Questo piatto non esiste.")
+
+export const EntryInputSchema = z
   .object({
     recipeId: z.cuid("Questa ricetta non è valida.").nullable(),
     // An empty note is absent, not blank — the same rule the ingredient unit
@@ -50,12 +61,11 @@ export const SlotInputSchema = z
       .max(SERVINGS_MAX, `Le porzioni non possono superare ${SERVINGS_MAX}.`)
       .nullable(),
   })
-  // The shopping list reads the recipe and ignores the note, so a slot holding
-  // both would shop for a meal the note says you are not cooking.
-  .refine((slot) => slot.recipeId === null || slot.freeText === null, {
-    message:
-      "Uno slot può contenere una ricetta oppure una nota, non entrambe.",
+  // The shopping list reads the recipe and ignores the note, so an entry
+  // holding both would shop for a meal the note says you are not cooking.
+  .refine((entry) => entry.recipeId === null || entry.freeText === null, {
+    message: "Un piatto può essere una ricetta oppure una nota, non entrambe.",
     path: ["freeText"],
   })
 
-export type SlotInput = z.infer<typeof SlotInputSchema>
+export type EntryInput = z.infer<typeof EntryInputSchema>

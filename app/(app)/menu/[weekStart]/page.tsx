@@ -2,10 +2,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
-import {
-  generateWeek,
-  saveSlot,
-} from "@/app/(app)/menu/[weekStart]/actions"
+import { generateWeek, saveEntry } from "@/app/(app)/menu/[weekStart]/actions"
 import { GenerateButton } from "@/components/menu/generate-button"
 import { WeekGrid } from "@/components/menu/week-grid"
 import { ListBody } from "@/components/page/page-body"
@@ -46,7 +43,7 @@ export default async function MenuWeekPage({
   if (!parsed.success) notFound()
 
   const weekStart = parsed.data
-  const [slots, recipes] = await Promise.all([
+  const [entries, recipes] = await Promise.all([
     getMenuWeek(weekStart),
     listRecipes(),
   ])
@@ -56,11 +53,10 @@ export default async function MenuWeekPage({
   )
 
   // Generating replaces the week, so the button asks first when there is
-  // something to lose. The count is what the confirmation names; the server
+  // something to lose. Every stored entry is a real dish — updateEntry deletes
+  // one whose fields are all empty — so the count is the length. The server
   // re-reads it regardless, because a hidden or disabled button guards nothing.
-  const filledSlots = slots.filter(
-    (slot) => slot.recipeId !== null || slot.freeText !== null
-  ).length
+  const filledEntries = entries.length
 
   const isCurrentWeek = iso(weekStartFor(new Date())) === iso(weekStart)
   const todayIndex = isCurrentWeek ? dayIndexFor(new Date()) : -1
@@ -76,7 +72,7 @@ export default async function MenuWeekPage({
       <PageHeader title="Menù" subtitle={range}>
         <GenerateButton
           weekStart={iso(weekStart)}
-          filledSlots={filledSlots}
+          filledEntries={filledEntries}
           action={generateWeek}
         />
         <Button
@@ -108,11 +104,11 @@ export default async function MenuWeekPage({
 
       <WeekGrid
         weekStart={iso(weekStart)}
-        slots={slots}
+        entries={entries}
         dayLabels={dayLabels}
         todayIndex={todayIndex}
         recipes={recipes.map(({ id, title }) => ({ id, title }))}
-        saveAction={saveSlot}
+        saveAction={saveEntry}
       />
     </ListBody>
   )

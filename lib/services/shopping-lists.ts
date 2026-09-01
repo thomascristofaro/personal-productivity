@@ -60,7 +60,7 @@ export async function getShoppingList(
   const menu = await db.menu.findUnique({
     where: { weekStart },
     select: {
-      slotsUpdatedAt: true,
+      entriesUpdatedAt: true,
       list: {
         select: { generatedAt: true, items: { select: itemFields } },
       },
@@ -72,7 +72,7 @@ export async function getShoppingList(
   return {
     items: menu.list.items,
     generatedAt: menu.list.generatedAt,
-    stale: isListStale(menu.slotsUpdatedAt, menu.list.generatedAt),
+    stale: isListStale(menu.entriesUpdatedAt, menu.list.generatedAt),
   }
 }
 
@@ -93,7 +93,7 @@ export async function regenerateShoppingList(weekStart: Date): Promise<void> {
     where: { weekStart },
     select: {
       id: true,
-      slots: {
+      entries: {
         select: {
           day: true,
           servings: true,
@@ -129,15 +129,15 @@ export async function regenerateShoppingList(weekStart: Date): Promise<void> {
 
   if (menu === null) throw new NoMenuError()
 
-  const slots: AggregatorSlot[] = menu.slots.map((slot) => ({
-    day: slot.day,
-    servings: slot.servings,
+  const slots: AggregatorSlot[] = menu.entries.map((entry) => ({
+    day: entry.day,
+    servings: entry.servings,
     recipe:
-      slot.recipe === null
+      entry.recipe === null
         ? null
         : {
-            servings: slot.recipe.servings,
-            ingredients: slot.recipe.ingredients.map((row) => ({
+            servings: entry.recipe.servings,
+            ingredients: entry.recipe.ingredients.map((row) => ({
               name: row.ingredient.name,
               aisle: row.ingredient.aisle,
               quantity: row.quantity,

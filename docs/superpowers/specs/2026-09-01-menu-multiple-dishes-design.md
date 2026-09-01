@@ -144,11 +144,17 @@ has asked for.
 
 ## 6. What does not change
 
-**The shopping list.** `shopping-aggregate.ts` groups by ingredient name and
-unit, scales by servings, and records the days a line is needed for. It has
-never read `meal` and does not read `position`. Three entries on Monday reach it
-as three rows with `day: 0`, which is what a lunch and a dinner have always
-been. No file under `lib/services/shopping-*` is touched.
+**The shopping list's arithmetic.** `shopping-aggregate.ts` groups by ingredient
+name and unit, scales by servings, and records the days a line is needed for. It
+has never read `meal` and does not read `position`. Three entries on Monday reach
+it as three rows with `day: 0`, which is what a lunch and a dinner have always
+been, so not one line of it changes — and its `AggregatorSlot` keeps its name,
+because that module's vocabulary is its own and its tests are the most heavily
+exercised in the repository.
+
+`shopping-lists.ts` is touched, but only by the renames: it reads
+`entriesUpdatedAt` instead of `slotsUpdatedAt` and `menu.entries` instead of
+`menu.slots`. What it does with them is unchanged.
 
 **The LLM proposal.** `proposeMenu` still answers one recipe per meal. Each
 becomes that meal's only entry, at position 0. The prompt, which lives in the

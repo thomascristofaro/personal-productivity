@@ -1,8 +1,7 @@
-import { DAYS_IN_WEEK } from "@/lib/config"
 import { db } from "@/lib/db"
-import { MEAL_TYPES, type Meal, type SlotInput } from "@/lib/schemas/menu"
+import type { EntryAddress, EntryInput, Meal } from "@/lib/schemas/menu"
 
-/** Thrown when a slot names a recipe that is no longer in the database. */
+/** Thrown when an entry names a recipe that is no longer in the database. */
 export class UnknownRecipeError extends Error {
   constructor() {
     super("No recipe with this id.")
@@ -10,9 +9,19 @@ export class UnknownRecipeError extends Error {
   }
 }
 
-export type MenuSlotView = {
+/** Thrown when the entry being edited has been removed by another session. */
+export class UnknownEntryError extends Error {
+  constructor() {
+    super("No menu entry with this id.")
+    this.name = "UnknownEntryError"
+  }
+}
+
+export type MenuEntryView = {
+  id: string
   day: number
   meal: Meal
+  position: number
   recipeId: string | null
   recipeTitle: string | null
   freeText: string | null
@@ -30,38 +39,44 @@ function isForeignKeyError(error: unknown): boolean {
   )
 }
 
-const keyOf = (day: number, meal: Meal) => `${day}-${meal}`
+const MEAL_RANK: Record<Meal, number> = { LUNCH: 0, DINNER: 1 }
 
 /**
- * Expands the stored slots into the fourteen the screen always shows.
+ * Orders a week's entries the way the grid reads them.
  *
- * Exported for its own test: the database holds only the slots that have
- * content, so this is where a sparse week becomes a dense grid, and it is the
- * one piece of logic here that needs no database.
+ * Exported for its own test, and a copy rather than a sort in place: the array
+ * comes straight from a query and callers do not expect it to move underneath
+ * them.
  *
- * @param stored The slots that exist, in any order.
- * @returns Fourteen slots, day 0 to 6, lunch before dinner.
+ * The tie on `position` is broken by the id, because two entries added in the
+ * same instant may share one — see the column's comment in the schema. Without
+ * that last comparison the same data could come back in two different orders.
+ *
+ * @param stored The entries the week holds, in any order.
+ * @returns The same entries, by day, then lunch before dinner, then position.
  */
-export function buildWeekSlots(
-  stored: readonly MenuSlotView[]
-): MenuSlotView[] {
-  const byKey = new Map(
-    stored.map((slot) => [keyOf(slot.day, slot.meal), slot])
+export function sortEntries(stored: readonly MenuEntryView[]): MenuEntryView[] {
+  return [...stored].sort(
+    (a, b) =>
+      a.day - b.day ||
+      MEAL_RANK[a.meal] - MEAL_RANK[b.meal] ||
+      a.position - b.position ||
+      a.id.localeCompare(b.id)
   )
+}
 
-  return Array.from({ length: DAYS_IN_WEEK }, (_, day) =>
-    MEAL_TYPES.map(
-      (meal): MenuSlotView =>
-        byKey.get(keyOf(day, meal)) ?? {
-          day,
-          meal,
-          recipeId: null,
-          recipeTitle: null,
-          freeText: null,
-          servings: null,
-        }
-    )
-  ).flat()
+/**
+ * Says where the next dish of a meal goes.
+ *
+ * Exported for its own test. Past the end rather than into the first gap: a gap
+ * is what a removal leaves behind, and filling it would drop the new dish into
+ * the middle of a list being read top to bottom.
+ *
+ * @param taken The positions the meal already holds.
+ * @returns Zero for an empty meal, otherwise one past the highest.
+ */
+export function nextPosition(taken: readonly number[]): number {
+  return taken.length === 0 ? 0 : Math.max(...taken) + 1
 }
 
 /**
@@ -70,98 +85,94 @@ export function buildWeekSlots(
  * Exported for its own test. Equal instants are not stale: generating the list
  * straight after editing the menu is the normal case, not a warning.
  *
- * @param slotsUpdatedAt When a slot of the week last changed.
+ * @param entriesUpdatedAt When an entry of the week last changed.
  * @param generatedAt When the list was last built.
  * @returns True when the menu moved after the list was built.
  */
-export function isListStale(slotsUpdatedAt: Date, generatedAt: Date): boolean {
-  return slotsUpdatedAt.getTime() > generatedAt.getTime()
+export function isListStale(
+  entriesUpdatedAt: Date,
+  generatedAt: Date
+): boolean {
+  return entriesUpdatedAt.getTime() > generatedAt.getTime()
 }
 
+const entryFields = {
+  id: true,
+  day: true,
+  meal: true,
+  position: true,
+  recipeId: true,
+  freeText: true,
+  servings: true,
+  recipe: { select: { title: true } },
+} as const
+
 /**
- * Reads one week as fourteen slots.
+ * Reads the dishes one week holds.
  *
- * A week nobody has touched has no `Menu` row at all; it comes back as fourteen
- * empty slots rather than as an error, because an empty week is a normal state.
+ * Sparse by design: a meal holds a list, and most meals hold nothing. A week
+ * nobody has touched has no `Menu` row at all and comes back empty, which is a
+ * normal state and not an error.
  *
  * @param weekStart The Monday naming the week, at UTC midnight.
- * @returns Fourteen slots, day 0 to 6, lunch before dinner.
+ * @returns The week's entries, by day, then lunch before dinner, then position.
  */
-export async function getMenuWeek(weekStart: Date): Promise<MenuSlotView[]> {
+export async function getMenuWeek(weekStart: Date): Promise<MenuEntryView[]> {
   const menu = await db.menu.findUnique({
     where: { weekStart },
-    select: {
-      slots: {
-        select: {
-          day: true,
-          meal: true,
-          recipeId: true,
-          freeText: true,
-          servings: true,
-          recipe: { select: { title: true } },
-        },
-      },
-    },
+    select: { entries: { select: entryFields } },
   })
 
-  return buildWeekSlots(
-    (menu?.slots ?? []).map(({ recipe, ...slot }) => ({
-      ...slot,
+  return sortEntries(
+    (menu?.entries ?? []).map(({ recipe, ...entry }) => ({
+      ...entry,
       recipeTitle: recipe?.title ?? null,
     }))
   )
 }
 
 /**
- * Writes one slot, creating the week the first time anything is saved into it.
+ * Adds a dish to the end of a meal, creating the week the first time.
  *
- * The `Menu` row is upserted with an empty update: browsing forward must not
- * leave a trail of empty weeks, so the row appears only when it earns one.
- *
- * An input with all three fields empty deletes the row instead, delegating to
- * `clearSlot`: an empty slot and an absent slot must mean the same thing.
+ * The `Menu` row is upserted: browsing forward must not leave a trail of empty
+ * weeks, so the row appears only when it earns one.
  *
  * @param weekStart The Monday naming the week, at UTC midnight.
- * @param day 0 for Monday through 6 for Sunday.
- * @param meal Which of the day's two meals.
- * @param input The validated slot contents.
+ * @param at Which day and meal the dish joins.
+ * @param input The validated entry contents.
  * @returns Nothing.
  * @throws UnknownRecipeError When the recipe was deleted between the picker and the save.
  */
-export async function setSlot(
+export async function addEntry(
   weekStart: Date,
-  day: number,
-  meal: Meal,
-  input: SlotInput
+  at: EntryAddress,
+  input: EntryInput
 ): Promise<void> {
-  // An empty slot and an absent slot must mean the same thing — see clearSlot's
-  // reasoning below. Writing a row with three nulls would break that, and the
-  // drawer now reaches this path every time somebody clears a slot by hand.
-  if (
-    input.recipeId === null &&
-    input.freeText === null &&
-    input.servings === null
-  ) {
-    return clearSlot(weekStart, day, meal)
-  }
-
   const menu = await db.menu.upsert({
     where: { weekStart },
     create: { weekStart },
-    // The week itself has not changed, but its slots are about to, and the
-    // shopping list needs to know. Touched before the slot write on purpose: a
+    // The week itself has not changed, but its entries are about to, and the
+    // shopping list needs to know. Touched before the write on purpose: a
     // failed write then leaves the list claiming to be stale when it is not,
     // which costs one needless regeneration. The opposite error sends someone
     // to the shop with a list that quietly no longer matches.
-    update: { slotsUpdatedAt: new Date() },
+    update: { entriesUpdatedAt: new Date() },
     select: { id: true },
   })
 
+  const siblings = await db.menuEntry.findMany({
+    where: { menuId: menu.id, day: at.day, meal: at.meal },
+    select: { position: true },
+  })
+
   try {
-    await db.menuSlot.upsert({
-      where: { menuId_day_meal: { menuId: menu.id, day, meal } },
-      create: { menuId: menu.id, day, meal, ...input },
-      update: input,
+    await db.menuEntry.create({
+      data: {
+        menuId: menu.id,
+        ...at,
+        position: nextPosition(siblings.map((row) => row.position)),
+        ...input,
+      },
     })
   } catch (error) {
     if (isForeignKeyError(error)) throw new UnknownRecipeError()
@@ -170,80 +181,125 @@ export async function setSlot(
 }
 
 /**
- * Empties one slot.
+ * Rewrites one dish, or removes it when nothing is left in it.
  *
- * Deletes the row rather than blanking its columns: an empty slot and an absent
- * slot must mean the same thing, and `buildWeekSlots` already makes them look
- * identical on screen. Uses `deleteMany` so clearing an already-empty slot is
- * not an error.
+ * An input with all three fields empty deletes the row, delegating to
+ * `removeEntry`: an empty entry and an absent entry must mean the same thing,
+ * and "svuota i campi per liberare lo slot" is how the drawer says so.
  *
- * @param weekStart The Monday naming the week, at UTC midnight.
- * @param day 0 for Monday through 6 for Sunday.
- * @param meal Which of the day's two meals.
+ * @param entryId The entry's id.
+ * @param input The validated entry contents.
  * @returns Nothing.
+ * @throws UnknownEntryError When the entry was removed by another session.
+ * @throws UnknownRecipeError When the recipe was deleted between the picker and the save.
  */
-export async function clearSlot(
-  weekStart: Date,
-  day: number,
-  meal: Meal
+export async function updateEntry(
+  entryId: string,
+  input: EntryInput
 ): Promise<void> {
-  const menu = await db.menu.findUnique({
-    where: { weekStart },
-    select: { id: true },
+  if (
+    input.recipeId === null &&
+    input.freeText === null &&
+    input.servings === null
+  ) {
+    return removeEntry(entryId)
+  }
+
+  const entry = await db.menuEntry.findUnique({
+    where: { id: entryId },
+    select: { menuId: true },
   })
 
-  if (menu === null) return
+  if (entry === null) throw new UnknownEntryError()
 
-  // One transaction: a delete that landed without its touch would leave the
-  // shopping list claiming to be current while an item had just left the menu.
+  try {
+    // One transaction: a write that landed without its touch would leave the
+    // shopping list claiming to be current while a dish had just changed.
+    await db.$transaction([
+      db.menuEntry.update({ where: { id: entryId }, data: input }),
+      db.menu.update({
+        where: { id: entry.menuId },
+        data: { entriesUpdatedAt: new Date() },
+      }),
+    ])
+  } catch (error) {
+    if (isForeignKeyError(error)) throw new UnknownRecipeError()
+    throw error
+  }
+}
+
+/**
+ * Takes one dish out of its meal.
+ *
+ * Removing an entry already gone is not an error: two sessions deleting the
+ * same row both meant the same thing, and the second must not see a failure.
+ * The gap left behind is not closed up — `nextPosition` appends past the
+ * highest, so a gap costs nothing.
+ *
+ * @param entryId The entry's id.
+ * @returns Nothing.
+ */
+export async function removeEntry(entryId: string): Promise<void> {
+  const entry = await db.menuEntry.findUnique({
+    where: { id: entryId },
+    select: { menuId: true },
+  })
+
+  if (entry === null) return
+
   await db.$transaction([
-    db.menuSlot.deleteMany({ where: { menuId: menu.id, day, meal } }),
+    db.menuEntry.deleteMany({ where: { id: entryId } }),
     db.menu.update({
-      where: { id: menu.id },
-      data: { slotsUpdatedAt: new Date() },
+      where: { id: entry.menuId },
+      data: { entriesUpdatedAt: new Date() },
     }),
   ])
 }
 
 /**
- * Replaces a whole week's slots in one transaction.
+ * Replaces a whole week's entries in one transaction.
  *
- * Written for the generated proposal, which arrives as fourteen slots at once.
- * Fourteen separate `setSlot` calls would not be atomic, and a failure halfway
+ * Written for the generated proposal, which arrives as a whole week at once.
+ * One `addEntry` call per dish would not be atomic, and a failure halfway
  * leaves a half-filled week — which the caller then cannot tell apart from a
  * week somebody built by hand.
  *
- * Every existing slot of the week is removed first, including free-text ones:
+ * Every existing entry of the week is removed first, free-text ones included:
  * a proposal replaces the week rather than merging into it, and the caller is
  * responsible for having asked before calling this.
  *
+ * Positions come from the order of the array, counted within each meal, so the
+ * caller never has to think about them.
+ *
  * @param weekStart The Monday naming the week, at UTC midnight.
- * @param slots The slots to write; an empty array clears the week.
+ * @param entries The dishes to write; an empty array clears the week.
  * @returns Nothing.
  * @throws UnknownRecipeError When a recipe was deleted between the proposal and the write.
  */
-export async function replaceWeekSlots(
+export async function replaceWeekEntries(
   weekStart: Date,
-  slots: readonly { day: number; meal: Meal; recipeId: string }[]
+  entries: readonly { day: number; meal: Meal; recipeId: string }[]
 ): Promise<void> {
   const menu = await db.menu.upsert({
     where: { weekStart },
     create: { weekStart },
-    update: { slotsUpdatedAt: new Date() },
+    update: { entriesUpdatedAt: new Date() },
     select: { id: true },
+  })
+
+  const used = new Map<string, number>()
+  const rows = entries.map((entry) => {
+    const key = `${entry.day}-${entry.meal}`
+    const position = used.get(key) ?? 0
+    used.set(key, position + 1)
+
+    return { menuId: menu.id, ...entry, position }
   })
 
   try {
     await db.$transaction([
-      db.menuSlot.deleteMany({ where: { menuId: menu.id } }),
-      db.menuSlot.createMany({
-        data: slots.map((slot) => ({
-          menuId: menu.id,
-          day: slot.day,
-          meal: slot.meal,
-          recipeId: slot.recipeId,
-        })),
-      }),
+      db.menuEntry.deleteMany({ where: { menuId: menu.id } }),
+      db.menuEntry.createMany({ data: rows }),
     ])
   } catch (error) {
     if (isForeignKeyError(error)) throw new UnknownRecipeError()
@@ -259,15 +315,10 @@ export async function replaceWeekSlots(
  * hidden button is not a guard.
  *
  * @param weekStart The Monday naming the week, at UTC midnight.
- * @returns True when no slot of the week carries a recipe or free text.
+ * @returns True when the week holds no entry.
  */
 export async function isWeekEmpty(weekStart: Date): Promise<boolean> {
-  const filled = await db.menuSlot.count({
-    where: {
-      menu: { weekStart },
-      OR: [{ recipeId: { not: null } }, { freeText: { not: null } }],
-    },
-  })
+  const filled = await db.menuEntry.count({ where: { menu: { weekStart } } })
 
   return filled === 0
 }

@@ -1,14 +1,17 @@
 import { describe, expect, it } from "vitest"
 
 import {
-  buildWeekSlots,
   isListStale,
-  type MenuSlotView,
+  nextPosition,
+  sortEntries,
+  type MenuEntryView,
 } from "@/lib/services/menus"
 
-const stored = (over: Partial<MenuSlotView>): MenuSlotView => ({
+const entry = (over: Partial<MenuEntryView>): MenuEntryView => ({
+  id: "e1",
   day: 0,
   meal: "LUNCH",
+  position: 0,
   recipeId: null,
   recipeTitle: null,
   freeText: null,
@@ -16,52 +19,73 @@ const stored = (over: Partial<MenuSlotView>): MenuSlotView => ({
   ...over,
 })
 
-describe("buildWeekSlots", () => {
-  it("always returns fourteen slots, even for an untouched week", () => {
-    expect(buildWeekSlots([])).toHaveLength(14)
+describe("sortEntries", () => {
+  it("orders by day first", () => {
+    const sorted = sortEntries([entry({ day: 3 }), entry({ day: 1 })])
+
+    expect(sorted.map((row) => row.day)).toEqual([1, 3])
   })
 
-  it("orders them day by day, lunch before dinner", () => {
-    const slots = buildWeekSlots([])
-    expect(slots.slice(0, 3).map((slot) => [slot.day, slot.meal])).toEqual([
-      [0, "LUNCH"],
-      [0, "DINNER"],
-      [1, "LUNCH"],
-    ])
-    expect(slots[13]).toMatchObject({ day: 6, meal: "DINNER" })
-  })
-
-  it("puts a stored slot in its own place and leaves the rest empty", () => {
-    const slots = buildWeekSlots([
-      stored({ day: 2, meal: "DINNER", recipeId: "abc", recipeTitle: "Ragù" }),
+  it("puts lunch before dinner within a day", () => {
+    const sorted = sortEntries([
+      entry({ meal: "DINNER" }),
+      entry({ meal: "LUNCH" }),
     ])
 
-    expect(slots.find((s) => s.day === 2 && s.meal === "DINNER")).toMatchObject(
-      {
-        recipeId: "abc",
-        recipeTitle: "Ragù",
-      }
-    )
-    expect(slots.filter((s) => s.recipeId !== null)).toHaveLength(1)
+    expect(sorted.map((row) => row.meal)).toEqual(["LUNCH", "DINNER"])
   })
 
-  it("keeps a free-text slot as text, with no recipe", () => {
-    const slots = buildWeekSlots([
-      stored({ day: 5, meal: "DINNER", freeText: "fuori a cena" }),
+  it("keeps a meal's dishes in the order they were added", () => {
+    const sorted = sortEntries([
+      entry({ id: "c", position: 2 }),
+      entry({ id: "a", position: 0 }),
+      entry({ id: "b", position: 1 }),
     ])
 
-    expect(slots.find((s) => s.day === 5 && s.meal === "DINNER")).toMatchObject(
-      {
-        freeText: "fuori a cena",
-        recipeId: null,
-      }
-    )
+    expect(sorted.map((row) => row.id)).toEqual(["a", "b", "c"])
   })
 
-  it("drops a row outside the week rather than growing the grid", () => {
-    // Nothing in the database constrains `day` to 0..6, so a bad row must not
-    // reach the screen as an eighth day.
-    expect(buildWeekSlots([stored({ day: 9 })])).toHaveLength(14)
+  it("breaks a shared position on the id, so the order never wobbles", () => {
+    // Two entries added in the same instant can land on one position — the
+    // model allows it on purpose. What it must not do is reorder between two
+    // renders of the same data.
+    const rows = [
+      entry({ id: "z", position: 1 }),
+      entry({ id: "a", position: 1 }),
+    ]
+
+    expect(sortEntries(rows).map((row) => row.id)).toEqual(["a", "z"])
+    expect(sortEntries([...rows].reverse()).map((row) => row.id)).toEqual([
+      "a",
+      "z",
+    ])
+  })
+
+  it("returns only what it was given — an empty week is empty, not fourteen", () => {
+    expect(sortEntries([])).toEqual([])
+  })
+
+  it("does not mutate its argument", () => {
+    const rows = [entry({ day: 3 }), entry({ day: 1 })]
+    sortEntries(rows)
+
+    expect(rows[0].day).toBe(3)
+  })
+})
+
+describe("nextPosition", () => {
+  it("starts an empty meal at zero", () => {
+    expect(nextPosition([])).toBe(0)
+  })
+
+  it("appends after the last dish rather than filling a gap", () => {
+    // A gap is what a removal leaves behind. Filling it would put the new dish
+    // in the middle of a list the user is reading top to bottom.
+    expect(nextPosition([0, 3])).toBe(4)
+  })
+
+  it("appends past a shared position", () => {
+    expect(nextPosition([0, 1, 1])).toBe(2)
   })
 })
 

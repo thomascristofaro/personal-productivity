@@ -100,7 +100,7 @@ export default async function ShoppingWeekPage({
       {list === null ? (
         <EmptyState
           title="Nessuna lista per questa settimana."
-          description="Si costruisce dal menù: le ricette che hai messo negli slot diventano righe, raggruppate per reparto."
+          description="Si costruisce dal menù: le ricette che hai messo nei pasti diventano righe, raggruppate per reparto."
         >
           <form action={regenerate}>
             <input type="hidden" name="weekStart" value={week} />

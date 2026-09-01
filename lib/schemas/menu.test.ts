@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   DaySchema,
   MealSchema,
-  SlotInputSchema,
+  EntryInputSchema,
   WeekStartSchema,
 } from "@/lib/schemas/menu"
 
@@ -60,35 +60,35 @@ describe("MealSchema", () => {
   })
 })
 
-describe("SlotInputSchema", () => {
+describe("EntryInputSchema", () => {
   const empty = { recipeId: null, freeText: null, servings: null }
 
-  it("accepts an empty slot", () => {
-    expect(SlotInputSchema.parse(empty)).toEqual(empty)
+  it("accepts an empty entry", () => {
+    expect(EntryInputSchema.parse(empty)).toEqual(empty)
   })
 
-  it("accepts a slot holding a recipe", () => {
-    const parsed = SlotInputSchema.parse({
+  it("accepts an entry holding a recipe", () => {
+    const parsed = EntryInputSchema.parse({
       ...empty,
       recipeId: "cm3xk1p2h0000abcdefghijkl",
     })
     expect(parsed.recipeId).toBe("cm3xk1p2h0000abcdefghijkl")
   })
 
-  it("accepts a slot holding a note", () => {
+  it("accepts an entry holding a note", () => {
     expect(
-      SlotInputSchema.parse({ ...empty, freeText: "fuori a cena" }).freeText
+      EntryInputSchema.parse({ ...empty, freeText: "fuori a cena" }).freeText
     ).toBe("fuori a cena")
   })
 
   it("turns a blank note into null, so it is absent rather than empty", () => {
     expect(
-      SlotInputSchema.parse({ ...empty, freeText: "  " }).freeText
+      EntryInputSchema.parse({ ...empty, freeText: "  " }).freeText
     ).toBeNull()
   })
 
-  it("rejects a slot holding both a recipe and a note", () => {
-    const result = SlotInputSchema.safeParse({
+  it("rejects an entry holding both a recipe and a note", () => {
+    const result = EntryInputSchema.safeParse({
       recipeId: "cm3xk1p2h0000abcdefghijkl",
       freeText: "fuori a cena",
       servings: null,
@@ -96,20 +96,20 @@ describe("SlotInputSchema", () => {
     expect(result.success).toBe(false)
     if (!result.success) {
       expect(result.error.issues[0].message).toBe(
-        "Uno slot può contenere una ricetta oppure una nota, non entrambe."
+        "Un piatto può essere una ricetta oppure una nota, non entrambe."
       )
     }
   })
 
   it("rejects zero servings, which would cook for nobody", () => {
-    expect(SlotInputSchema.safeParse({ ...empty, servings: 0 }).success).toBe(
+    expect(EntryInputSchema.safeParse({ ...empty, servings: 0 }).success).toBe(
       false
     )
   })
 
   it("rejects a recipe id that is not a cuid", () => {
     expect(
-      SlotInputSchema.safeParse({ ...empty, recipeId: "42" }).success
+      EntryInputSchema.safeParse({ ...empty, recipeId: "42" }).success
     ).toBe(false)
   })
 })
